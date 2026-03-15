@@ -169,6 +169,9 @@ def render_bilan_selection():
     )
     st.markdown("")
 
+    # Chargement des bilans en premier
+    bilans_df = get_patient_bilans(st.session_state.patient_id)
+
     col_back, col_evol, _ = st.columns([1, 1, 4])
     with col_back:
         if st.button("⬅️ Changer de patient"):
@@ -185,7 +188,6 @@ def render_bilan_selection():
                 st.rerun()
 
     st.markdown("---")
-    bilans_df = get_patient_bilans(st.session_state.patient_id)
 
     col_left, col_right = st.columns(2)
 
