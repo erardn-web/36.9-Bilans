@@ -9,7 +9,6 @@ from plotly.subplots import make_subplots
 from datetime import date, datetime
 import io
 import sys, os
-
 # ─── Path ─────────────────────────────────────────────────────────────────────
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -27,6 +26,7 @@ from utils.shv_tests import (
     BOLT_DESCRIPTION, interpret_bolt,
     HVT_DESCRIPTION, HVT_SYMPTOMES,
 )
+from utils.pdf_export import generate_pdf
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -621,48 +621,6 @@ def safe_num(val):
         return None
 
 
-def build_excel(bilans_df: pd.DataFrame, patient_info: dict) -> bytes:
-    """Génère un fichier Excel de synthèse d'évolution."""
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-
-        # ── Feuille 1 : Résumé ──────────────────────────────────────────────
-        rows_resume = []
-        for _, row in bilans_df.iterrows():
-            rows_resume.append({
-                "Date":          row.get("date_bilan", ""),
-                "Type":          row.get("type_bilan", ""),
-                "Praticien":     row.get("praticien", ""),
-                "HAD Anxiété":   row.get("had_score_anxiete", ""),
-                "HAD Dépression":row.get("had_score_depression", ""),
-                "BOLT (s)":      row.get("bolt_score", ""),
-                "SF36 - Fonct. physique":   row.get("sf36_pf", ""),
-                "SF36 - Limit. physique":   row.get("sf36_rp", ""),
-                "SF36 - Douleur":           row.get("sf36_bp", ""),
-                "SF36 - Santé générale":    row.get("sf36_gh", ""),
-                "SF36 - Vitalité":          row.get("sf36_vt", ""),
-                "SF36 - Vie sociale":       row.get("sf36_sf", ""),
-                "SF36 - Limit. émotionnel": row.get("sf36_re", ""),
-                "SF36 - Santé psychique":   row.get("sf36_mh", ""),
-                "HVT - Résultat":           row.get("hvt_symptomes_reproduits", ""),
-                "HVT - Retour (min)":       row.get("hvt_duree_retour", ""),
-            })
-        df_resume = pd.DataFrame(rows_resume)
-        df_resume.to_excel(writer, sheet_name="Résumé évolution", index=False)
-
-        # ── Feuille 2 : Données brutes ───────────────────────────────────────
-        bilans_df.to_excel(writer, sheet_name="Données brutes", index=False)
-
-        # ── Mise en forme basique ─────────────────────────────────────────────
-        for sheet_name in writer.sheets:
-            ws = writer.sheets[sheet_name]
-            for col in ws.columns:
-                max_len = max((len(str(cell.value or "")) for cell in col), default=10)
-                ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
-
-    return output.getvalue()
-
-
 def render_evolution():
     info     = st.session_state.patient_info
     bilans_df = get_patient_bilans(st.session_state.patient_id)
@@ -680,12 +638,13 @@ def render_evolution():
             st.rerun()
     with col_export:
         if not bilans_df.empty:
-            excel_bytes = build_excel(bilans_df, info)
+            with st.spinner("Génération du PDF…"):
+                pdf_bytes = generate_pdf(bilans_df, info)
             st.download_button(
-                label="📥 Exporter en Excel",
-                data=excel_bytes,
-                file_name=f"evolution_{info['nom']}_{info['prenom']}_{date.today()}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                label="📄 Exporter en PDF",
+                data=pdf_bytes,
+                file_name=f"evolution_SHV_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
+                mime="application/pdf",
                 type="primary",
             )
 
