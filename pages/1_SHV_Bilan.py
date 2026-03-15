@@ -27,6 +27,15 @@ from utils.shv_tests import (
 )
 from utils.pdf_export import generate_pdf
 from utils.questionnaires_print import generate_questionnaires_pdf, QUESTIONNAIRES
+from utils.clinical_data import (
+    NIJMEGEN_ITEMS, NIJMEGEN_OPTIONS, NIJMEGEN_KEYS, compute_nijmegen,
+    GAZO_FIELDS, interpret_gazo,
+    ETCO2_PATTERNS,
+    PATTERN_MODES, PATTERN_AMPLITUDES, PATTERN_RYTHMES,
+    interpret_mip_mep,
+    MRC_GRADES,
+    COMORB_CATEGORIES,
+)
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -392,8 +401,11 @@ def render_formulaire():
     st.markdown("---")
 
     # ──── Onglets ────────────────────────────────────────────────────────────
-    tab_gen, tab_had, tab_sf12, tab_bolt, tab_hvt = st.tabs([
-        "📝 Général", "😟 HAD", "📊 SF-12", "⏱️ BOLT", "🌬️ Test HV"
+    tab_gen, tab_had, tab_sf12, tab_bolt, tab_hvt, \
+    tab_nij, tab_gazo, tab_etco2, tab_pattern, tab_snif, tab_mrc, tab_comorb = st.tabs([
+        "📝 Général", "😟 HAD", "📊 SF-12", "⏱️ BOLT", "🌬️ Test HV",
+        "📋 Nijmegen", "🧪 Gazométrie", "📈 Capnographie",
+        "🔬 Pattern respi.", "💪 SNIF/PImax/PEmax", "🚶 MRC Dyspnée", "🏥 Comorbidités",
     ])
 
     collected = {}   # on accumulera toutes les valeurs ici
@@ -685,6 +697,262 @@ def render_formulaire():
         })
 
     # ═════════════════════════════════════════════════════════════════════════
+    #  TAB 6 – NIJMEGEN
+    # ═════════════════════════════════════════════════════════════════════════
+    with tab_nij:
+        st.markdown('<div class="section-title">📋 Questionnaire de Nijmegen</div>',
+                    unsafe_allow_html=True)
+        st.markdown(
+            '<div class="info-box">16 symptômes cotés de 0 (jamais) à 4 (très souvent). '
+            'Score ≥ 23 : SHV probable · 15–22 : borderline · &lt; 15 : peu probable.</div>',
+            unsafe_allow_html=True,
+        )
+        nij_answers = {}
+        for i, item in enumerate(NIJMEGEN_ITEMS):
+            key = f"nij_{i+1}"
+            val = load_val(key)
+            scores_list = [o[0] for o in NIJMEGEN_OPTIONS]
+            default_idx = scores_list.index(int(val)) if val is not None and int(val) in scores_list else 0
+            nij_answers[key] = st.radio(
+                f"{i+1}. {item}",
+                options=scores_list,
+                format_func=lambda x, opts=NIJMEGEN_OPTIONS: next(l for s, l in opts if s == x),
+                index=default_idx, horizontal=True,
+                key=f"nij_r_{i+1}",
+            )
+
+        nij_result = compute_nijmegen(nij_answers)
+        st.markdown("---")
+        st.markdown(
+            f'<div class="score-box" style="background:{nij_result["color"]};">'
+            f'Score Nijmegen : {nij_result["score"]} / 64<br>'
+            f'<small style="font-size:.8rem">{nij_result["interpretation"]}</small></div>',
+            unsafe_allow_html=True,
+        )
+        for k, v in nij_answers.items():
+            collected[k] = v
+        collected["nij_score"]          = nij_result["score"]
+        collected["nij_interpretation"] = nij_result["interpretation"]
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  TAB 7 – GAZOMÉTRIE
+    # ═════════════════════════════════════════════════════════════════════════
+    with tab_gazo:
+        st.markdown('<div class="section-title">🧪 Gazométrie</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="info-box">Valeurs normales : pH 7.35–7.45 · PaCO₂ 35–45 mmHg · '
+            'PaO₂ 75–100 mmHg · HCO₃⁻ 22–26 mmol/L · SatO₂ ≥ 95%</div>',
+            unsafe_allow_html=True,
+        )
+        g_type_opts = ["Artériel", "Veineux", "Capillaire", "Non réalisé"]
+        g_type_val  = str(load_val("gazo_type") or "Non réalisé")
+        g_type_idx  = g_type_opts.index(g_type_val) if g_type_val in g_type_opts else 3
+        gazo_type   = st.selectbox("Type de prélèvement", g_type_opts, index=g_type_idx, key="gazo_type")
+
+        gc1, gc2 = st.columns(2)
+        gazo_vals = {}
+        num_fields = [("gazo_ph","pH","7.35–7.45"), ("gazo_paco2","PaCO₂ (mmHg)","35–45"),
+                      ("gazo_pao2","PaO₂ (mmHg)","75–100"), ("gazo_hco3","HCO₃⁻ (mmol/L)","22–26"),
+                      ("gazo_sato2","SatO₂ (%)","≥ 95"), ("gazo_fio2","FiO₂ (%)","21 air ambiant")]
+        for i, (fkey, flabel, fref) in enumerate(num_fields):
+            col = gc1 if i % 2 == 0 else gc2
+            with col:
+                raw = load_val(fkey)
+                val_in = float(raw) if raw else 0.0
+                entered = st.number_input(f"{flabel} ({fref})", value=val_in,
+                                          step=0.1, format="%.2f", key=fkey)
+                gazo_vals[fkey] = entered if entered != 0.0 else ""
+                if entered and entered != 0.0:
+                    ok, msg = interpret_gazo(fkey, entered)
+                    if ok is not None:
+                        color = "#388e3c" if ok else "#d32f2f"
+                        st.markdown(f'<small style="color:{color}">{msg}</small>',
+                                    unsafe_allow_html=True)
+        gazo_notes = st.text_area("Notes / contexte", value=str(load_val("gazo_notes") or ""),
+                                  height=80, key="gazo_notes_field")
+        collected.update({"gazo_type": gazo_type, **gazo_vals, "gazo_notes": gazo_notes})
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  TAB 8 – CAPNOGRAPHIE
+    # ═════════════════════════════════════════════════════════════════════════
+    with tab_etco2:
+        st.markdown('<div class="section-title">📈 Capnographie — ETCO₂</div>',
+                    unsafe_allow_html=True)
+        st.markdown(
+            '<div class="info-box">ETCO₂ normal au repos : <strong>35–45 mmHg</strong>. '
+            'Valeur abaissée = hypocapnie = argument fort pour le SHV.</div>',
+            unsafe_allow_html=True,
+        )
+        ec1, ec2 = st.columns(2)
+        with ec1:
+            etco2_repos = st.number_input(
+                "ETCO₂ au repos (mmHg)", min_value=0.0, max_value=80.0,
+                value=float(load_val("etco2_repos") or 0), step=0.5, key="etco2_repos",
+            )
+            if etco2_repos > 0:
+                color = "#388e3c" if 35 <= etco2_repos <= 45 else "#f57c00" if etco2_repos >= 30 else "#d32f2f"
+                label = "Normal" if 35 <= etco2_repos <= 45 else "Hypocapnie" if etco2_repos < 35 else "Hypercapnie"
+                st.markdown(f'<small style="color:{color}">▶ {label}</small>', unsafe_allow_html=True)
+        with ec2:
+            etco2_effort = st.number_input(
+                "ETCO₂ post-effort (mmHg)", min_value=0.0, max_value=80.0,
+                value=float(load_val("etco2_post_effort") or 0), step=0.5, key="etco2_effort",
+            )
+
+        pat_opts  = ETCO2_PATTERNS
+        pat_val   = str(load_val("etco2_pattern") or "Normal")
+        pat_idx   = pat_opts.index(pat_val) if pat_val in pat_opts else 0
+        etco2_pat = st.selectbox("Pattern capnographique", pat_opts, index=pat_idx, key="etco2_pat")
+        etco2_notes = st.text_area("Notes", value=str(load_val("etco2_notes") or ""),
+                                   height=80, key="etco2_notes")
+        collected.update({
+            "etco2_repos": etco2_repos or "", "etco2_post_effort": etco2_effort or "",
+            "etco2_pattern": etco2_pat, "etco2_notes": etco2_notes,
+        })
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  TAB 9 – PATTERN RESPIRATOIRE
+    # ═════════════════════════════════════════════════════════════════════════
+    with tab_pattern:
+        st.markdown('<div class="section-title">🔬 Pattern respiratoire</div>',
+                    unsafe_allow_html=True)
+        pc1, pc2 = st.columns(2)
+        with pc1:
+            pat_freq = st.number_input(
+                "Fréquence respiratoire (cycles/min)", min_value=0, max_value=60,
+                value=int(load_val("pattern_frequence") or 0), step=1, key="pat_freq",
+            )
+            if pat_freq > 0:
+                color = "#388e3c" if 12 <= pat_freq <= 18 else "#f57c00" if pat_freq <= 20 else "#d32f2f"
+                st.markdown(f'<small style="color:{color}">Normale : 12–18 · Tachypnée : &gt; 20</small>',
+                            unsafe_allow_html=True)
+
+            def radio_load(label, opts, key):
+                val = str(load_val(key) or opts[0])
+                idx = opts.index(val) if val in opts else 0
+                return st.radio(label, opts, index=idx, key=key)
+
+            pat_amp  = radio_load("Amplitude", PATTERN_AMPLITUDES, "pat_amp")
+        with pc2:
+            pat_mode = radio_load("Mode ventilatoire", PATTERN_MODES, "pat_mode")
+            pat_ryt  = radio_load("Rythme", PATTERN_RYTHMES, "pat_rythme")
+
+        pat_para  = st.checkbox("Respiration paradoxale", value=bool(load_val("pattern_paradoxal")),
+                                key="pat_paradoxal")
+        pat_notes = st.text_area("Observations cliniques",
+                                 value=str(load_val("pattern_notes") or ""),
+                                 height=100, key="pat_notes")
+        collected.update({
+            "pattern_frequence": pat_freq or "", "pattern_amplitude": pat_amp,
+            "pattern_mode": pat_mode, "pattern_rythme": pat_ryt,
+            "pattern_paradoxal": "Oui" if pat_para else "Non",
+            "pattern_notes": pat_notes,
+        })
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  TAB 10 – SNIF / PImax / PEmax
+    # ═════════════════════════════════════════════════════════════════════════
+    with tab_snif:
+        st.markdown('<div class="section-title">💪 SNIF Test · PImax · PEmax</div>',
+                    unsafe_allow_html=True)
+        st.markdown(
+            '<div class="info-box">'
+            '<strong>SNIF</strong> : Sniff Nasal Inspiratory Pressure — effort inspiratoire maximal nasal. '
+            '<strong>PImax</strong> : Pression Inspiratoire Maximale (MIP). '
+            '<strong>PEmax</strong> : Pression Expiratoire Maximale (MEP). '
+            'Valeur normale : ≥ 80% de la valeur prédite.</div>',
+            unsafe_allow_html=True,
+        )
+
+        def muscle_row(label, key_val, key_pred, key_pct):
+            sc1, sc2, sc3 = st.columns(3)
+            with sc1:
+                v = st.number_input(f"{label} — Mesuré (cmH₂O)",
+                                    value=float(load_val(key_val) or 0),
+                                    step=1.0, key=key_val)
+            with sc2:
+                p = st.number_input(f"{label} — Prédit (cmH₂O)",
+                                    value=float(load_val(key_pred) or 0),
+                                    step=1.0, key=key_pred)
+            with sc3:
+                if v and p:
+                    pct, interp_txt, color = interpret_mip_mep(v, p)
+                    st.metric(f"{label} % prédit", f"{pct:.0f}%" if pct else "—")
+                    st.markdown(f'<small style="color:{color}">{interp_txt}</small>',
+                                unsafe_allow_html=True)
+                    collected[key_pct] = round(pct, 1) if pct else ""
+                else:
+                    collected[key_pct] = ""
+            collected[key_val]  = v or ""
+            collected[key_pred] = p or ""
+
+        muscle_row("SNIF",  "snif_val",  "snif_pred",  "snif_pct")
+        st.markdown("---")
+        muscle_row("PImax", "pimax_val", "pimax_pred", "pimax_pct")
+        st.markdown("---")
+        muscle_row("PEmax", "pemax_val", "pemax_pred", "pemax_pct")
+
+        snif_notes = st.text_area("Notes", value=str(load_val("snif_pimax_pemax_notes") or ""),
+                                  height=80, key="snif_notes")
+        collected["snif_pimax_pemax_notes"] = snif_notes
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  TAB 11 – MRC DYSPNÉE
+    # ═════════════════════════════════════════════════════════════════════════
+    with tab_mrc:
+        st.markdown('<div class="section-title">🚶 Échelle de dyspnée MRC</div>',
+                    unsafe_allow_html=True)
+        mrc_opts  = [g[1] for g in MRC_GRADES]
+        mrc_scores = [g[0] for g in MRC_GRADES]
+        mrc_val   = int(load_val("mrc_score") or 0)
+        mrc_idx   = mrc_scores.index(mrc_val) if mrc_val in mrc_scores else 0
+        mrc_chosen = st.radio("Grade MRC", mrc_opts, index=mrc_idx, key="mrc_radio")
+        mrc_score_val = mrc_scores[mrc_opts.index(mrc_chosen)]
+
+        mrc_colors = ["#388e3c", "#8bc34a", "#f57c00", "#e64a19", "#d32f2f"]
+        st.markdown(
+            f'<div class="score-box" style="background:{mrc_colors[mrc_score_val]};">'
+            f'MRC Grade {mrc_score_val} / 4</div>',
+            unsafe_allow_html=True,
+        )
+        collected["mrc_score"] = mrc_score_val
+
+    # ═════════════════════════════════════════════════════════════════════════
+    #  TAB 12 – COMORBIDITÉS
+    # ═════════════════════════════════════════════════════════════════════════
+    with tab_comorb:
+        st.markdown('<div class="section-title">🏥 Comorbidités & traitements</div>',
+                    unsafe_allow_html=True)
+        existing_comorb = str(load_val("comorb_list") or "").split("|")
+        existing_trait  = str(load_val("comorb_traitements") or "").split("|")
+
+        all_selected = []
+        treat_selected = []
+
+        for category, items in COMORB_CATEGORIES.items():
+            if category == "💊 Traitements en cours":
+                with st.expander(category):
+                    for item in items:
+                        if st.checkbox(item, value=item in existing_trait,
+                                       key=f"trait_{item}"):
+                            treat_selected.append(item)
+            else:
+                with st.expander(category):
+                    for item in items:
+                        if st.checkbox(item, value=item in existing_comorb,
+                                       key=f"comorb_{item}"):
+                            all_selected.append(item)
+
+        comorb_notes = st.text_area("Autres comorbidités / remarques",
+                                    value=str(load_val("comorb_notes") or ""),
+                                    height=80, key="comorb_notes")
+        collected.update({
+            "comorb_list":         "|".join(all_selected),
+            "comorb_traitements":  "|".join(treat_selected),
+            "comorb_notes":        comorb_notes,
+        })
+
+    # ═════════════════════════════════════════════════════════════════════════
     #  SAUVEGARDE
     # ═════════════════════════════════════════════════════════════════════════
     if save_top or st.button("💾 Sauvegarder le bilan", type="primary", key="save_bottom"):
@@ -760,8 +1028,9 @@ def render_evolution():
               for _, row in bilans_df.iterrows()]
 
     # ── Onglets ──────────────────────────────────────────────────────────────
-    tab_had, tab_bolt, tab_sf12, tab_hvt = st.tabs([
-        "😟 HAD", "⏱️ BOLT", "📊 SF-12", "🌬️ Test HV"
+    tab_had, tab_bolt, tab_sf12, tab_hvt, tab_nij, tab_respi, tab_musc, tab_comorb2 = st.tabs([
+        "😟 HAD", "⏱️ BOLT", "📊 SF-12", "🌬️ Test HV",
+        "📋 Nijmegen", "🫁 Respiratoire", "💪 Force musculaire", "🏥 Comorbidités",
     ])
 
     # ── HAD ──────────────────────────────────────────────────────────────────
@@ -961,10 +1230,138 @@ def render_evolution():
             )
             st.plotly_chart(fig_hvt, use_container_width=True)
 
+    # ── NIJMEGEN ─────────────────────────────────────────────────────────────
+    with tab_nij:
+        st.markdown('<div class="section-title">📋 Évolution Nijmegen</div>', unsafe_allow_html=True)
+        nij_vals = [safe_num(r.get("nij_score")) for _, r in bilans_df.iterrows()]
 
+        fig_nij = go.Figure()
+        fig_nij.add_trace(go.Scatter(
+            x=labels, y=nij_vals, mode="lines+markers+text",
+            name="Score Nijmegen", line=dict(color="#1a3c5e", width=3),
+            marker=dict(size=10),
+            text=[str(int(v)) if v else "" for v in nij_vals],
+            textposition="top center",
+        ))
+        fig_nij.add_hrect(y0=0,  y1=14, fillcolor="green",  opacity=0.07, line_width=0,
+                          annotation_text="Négatif", annotation_position="right")
+        fig_nij.add_hrect(y0=15, y1=22, fillcolor="orange", opacity=0.07, line_width=0,
+                          annotation_text="Borderline", annotation_position="right")
+        fig_nij.add_hrect(y0=23, y1=64, fillcolor="red",    opacity=0.07, line_width=0,
+                          annotation_text="Positif SHV", annotation_position="right")
+        fig_nij.add_hline(y=23, line_dash="dot", line_color="#d32f2f",
+                          annotation_text="Seuil 23", annotation_position="right")
+        fig_nij.update_layout(
+            yaxis=dict(range=[0, 66], title="Score /64"),
+            xaxis_tickangle=-20, height=380, plot_bgcolor="white",
+        )
+        st.plotly_chart(fig_nij, use_container_width=True)
+        df_nij = pd.DataFrame({"Bilan": labels, "Score Nijmegen /64": nij_vals,
+                               "Interprétation": [r.get("nij_interpretation","—")
+                                                  for _, r in bilans_df.iterrows()]})
+        st.dataframe(df_nij, use_container_width=True, hide_index=True)
 
+    # ── RESPIRATOIRE (Gazométrie + Capnographie + Pattern + MRC) ─────────────
+    with tab_respi:
+        st.markdown('<div class="section-title">🫁 Évolution — Paramètres respiratoires</div>',
+                    unsafe_allow_html=True)
 
-mode = st.session_state.mode
+        st.markdown("##### 📈 ETCO₂ au repos")
+        etco2_vals = [safe_num(r.get("etco2_repos")) for _, r in bilans_df.iterrows()]
+        if any(etco2_vals):
+            fig_etco2 = go.Figure()
+            fig_etco2.add_trace(go.Bar(
+                x=labels, y=etco2_vals,
+                marker_color=["#388e3c" if v and 35<=v<=45 else "#f57c00" if v and v>=30
+                              else "#d32f2f" if v else "#ccc" for v in etco2_vals],
+                text=[f"{v} mmHg" if v else "—" for v in etco2_vals],
+                textposition="outside",
+            ))
+            fig_etco2.add_hline(y=35, line_dash="dot", line_color="#f57c00",
+                                annotation_text="35 mmHg", annotation_position="right")
+            fig_etco2.add_hline(y=45, line_dash="dot", line_color="#388e3c",
+                                annotation_text="45 mmHg", annotation_position="right")
+            fig_etco2.update_layout(yaxis=dict(range=[0, 60], title="mmHg"),
+                                    height=300, plot_bgcolor="white", xaxis_tickangle=-20)
+            st.plotly_chart(fig_etco2, use_container_width=True)
+
+        st.markdown("##### 🚶 MRC Dyspnée")
+        mrc_vals = [safe_num(r.get("mrc_score")) for _, r in bilans_df.iterrows()]
+        if any(v is not None for v in mrc_vals):
+            fig_mrc = go.Figure()
+            fig_mrc.add_trace(go.Bar(
+                x=labels, y=mrc_vals,
+                marker_color=[
+                    ["#388e3c","#8bc34a","#f57c00","#e64a19","#d32f2f"][int(v or 0)]
+                    for v in mrc_vals
+                ],
+                text=[f"Grade {int(v)}" if v is not None else "—" for v in mrc_vals],
+                textposition="outside",
+            ))
+            fig_mrc.update_layout(yaxis=dict(range=[0, 5], title="Grade MRC"),
+                                  height=280, plot_bgcolor="white", xaxis_tickangle=-20)
+            st.plotly_chart(fig_mrc, use_container_width=True)
+
+        st.markdown("##### 🔬 Pattern et Gazométrie")
+        gazo_data = []
+        for lbl, (_, row) in zip(labels, bilans_df.iterrows()):
+            gazo_data.append({
+                "Bilan": lbl,
+                "FR (cyc/min)":  row.get("pattern_frequence", "—"),
+                "Mode":          row.get("pattern_mode", "—"),
+                "Rythme":        row.get("pattern_rythme", "—"),
+                "pH":            row.get("gazo_ph", "—"),
+                "PaCO₂ (mmHg)":  row.get("gazo_paco2", "—"),
+                "SatO₂ (%)":     row.get("gazo_sato2", "—"),
+                "ETCO₂ pattern": row.get("etco2_pattern", "—"),
+            })
+        st.dataframe(pd.DataFrame(gazo_data), use_container_width=True, hide_index=True)
+
+    # ── FORCE MUSCULAIRE ──────────────────────────────────────────────────────
+    with tab_musc:
+        st.markdown('<div class="section-title">💪 Évolution — Force musculaire respiratoire</div>',
+                    unsafe_allow_html=True)
+        musc_keys  = [("snif_pct","SNIF % prédit"), ("pimax_pct","PImax % prédit"),
+                      ("pemax_pct","PEmax % prédit")]
+        fig_musc = go.Figure()
+        colors_musc = ["#1a3c5e", "#f57c00", "#388e3c"]
+        for (mkey, mlabel), color in zip(musc_keys, colors_musc):
+            vals = [safe_num(r.get(mkey)) for _, r in bilans_df.iterrows()]
+            fig_musc.add_trace(go.Scatter(
+                x=labels, y=vals, mode="lines+markers+text",
+                name=mlabel, line=dict(color=color, width=2.5),
+                marker=dict(size=9),
+                text=[f"{int(v)}%" if v else "" for v in vals],
+                textposition="top center",
+            ))
+        fig_musc.add_hline(y=80, line_dash="dot", line_color="grey",
+                           annotation_text="80% (normal)", annotation_position="right")
+        fig_musc.update_layout(
+            yaxis=dict(range=[0, 130], title="% valeur prédite"),
+            xaxis_tickangle=-20, height=400, plot_bgcolor="white",
+            legend=dict(orientation="h"),
+        )
+        st.plotly_chart(fig_musc, use_container_width=True)
+        musc_table = [{"Bilan": lbl,
+                       "SNIF mesuré": r.get("snif_val","—"), "SNIF % prédit": r.get("snif_pct","—"),
+                       "PImax mesuré": r.get("pimax_val","—"), "PImax % prédit": r.get("pimax_pct","—"),
+                       "PEmax mesuré": r.get("pemax_val","—"), "PEmax % prédit": r.get("pemax_pct","—")}
+                      for lbl, (_, r) in zip(labels, bilans_df.iterrows())]
+        st.dataframe(pd.DataFrame(musc_table), use_container_width=True, hide_index=True)
+
+    # ── COMORBIDITÉS ──────────────────────────────────────────────────────────
+    with tab_comorb2:
+        st.markdown('<div class="section-title">🏥 Comorbidités & traitements</div>',
+                    unsafe_allow_html=True)
+        comorb_table = []
+        for lbl, (_, row) in zip(labels, bilans_df.iterrows()):
+            comorb_table.append({
+                "Bilan":         lbl,
+                "Comorbidités":  str(row.get("comorb_list","—") or "—").replace("|"," · "),
+                "Traitements":   str(row.get("comorb_traitements","—") or "—").replace("|"," · "),
+                "Notes":         str(row.get("comorb_notes","") or ""),
+            })
+        st.dataframe(pd.DataFrame(comorb_table), use_container_width=True, hide_index=True)
 
 if mode == "accueil":
     render_accueil()
