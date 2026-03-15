@@ -292,45 +292,59 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
     synth_rows.append(synth_row("HVT – Retour normal (min)", "hvt_duree_retour", " min"))
 
     col_w = [6*cm] + [(w - 6*cm) / n_bilans] * n_bilans
-    synth_table = make_table(synth_header + synth_rows, col_widths=col_w)
 
-    # Coloriser les lignes HAD, BOLT, SF36
-    extra_cmds = []
-    offset = 1   # ligne 0 = header
+    # Construire les commandes de style de base
+    base_cmds = [
+        ("FONTNAME",    (0, 0), (-1, -1), "Helvetica"),
+        ("FONTSIZE",    (0, 0), (-1, -1), 8),
+        ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [BLANC, GRIS_CLAIR]),
+        ("GRID",        (0, 0), (-1, -1), 0.3, colors.HexColor("#cccccc")),
+        ("TOPPADDING",  (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("BACKGROUND",  (0, 0), (-1, 0), BLEU_FONCE),
+        ("TEXTCOLOR",   (0, 0), (-1, 0), BLANC),
+        ("FONTNAME",    (0, 0), (-1, 0), "Helvetica-Bold"),
+    ]
+
+    # Coloriser les valeurs selon les seuils cliniques
+    sf36_key_map = {
+        "SF36 – Fonct. physique": "sf36_pf",
+        "SF36 – Limit. physique": "sf36_rp",
+        "SF36 – Douleur":         "sf36_bp",
+        "SF36 – Santé générale":  "sf36_gh",
+        "SF36 – Vitalité":        "sf36_vt",
+        "SF36 – Vie sociale":     "sf36_sf",
+        "SF36 – Limit. émotionnel": "sf36_re",
+        "SF36 – Santé psychique": "sf36_mh",
+    }
+    had_key_map = {
+        "HAD Anxiété (/21)":    "had_score_anxiete",
+        "HAD Dépression (/21)": "had_score_depression",
+    }
+
+    offset = 1
     for i, row_data in enumerate(synth_rows):
         row_idx = i + offset
         label   = row_data[0] if row_data else ""
         for j in range(1, n_bilans + 1):
-            raw_val = bilans_df.iloc[j - 1].get(
-                {"HAD Anxiété (/21)": "had_score_anxiete",
-                 "HAD Dépression (/21)": "had_score_depression",
-                 "BOLT (secondes)": "bolt_score",
-                }.get(label, ""), None
-            )
-            if "HAD" in label:
-                c = had_color(raw_val)
-            elif "BOLT" in label:
-                c = bolt_color(raw_val)
-            elif "SF36" in label:
-                raw_val = bilans_df.iloc[j - 1].get(
-                    "sf36_" + {
-                        "SF36 – Fonct. physique": "pf",
-                        "SF36 – Limit. physique": "rp",
-                        "SF36 – Douleur": "bp",
-                        "SF36 – Santé générale": "gh",
-                        "SF36 – Vitalité": "vt",
-                        "SF36 – Vie sociale": "sf",
-                        "SF36 – Limit. émotionnel": "re",
-                        "SF36 – Santé psychique": "mh",
-                    }.get(label, ""), None)
-                c = sf36_color(raw_val)
+            bilan_row = bilans_df.iloc[j - 1]
+            if label in had_key_map:
+                c = had_color(bilan_row.get(had_key_map[label]))
+            elif label == "BOLT (secondes)":
+                c = bolt_color(bilan_row.get("bolt_score"))
+            elif label in sf36_key_map:
+                c = sf36_color(bilan_row.get(sf36_key_map[label]))
             else:
                 continue
             if c != GRIS_TEXTE:
-                extra_cmds.append(("TEXTCOLOR", (j, row_idx), (j, row_idx), c))
-                extra_cmds.append(("FONTNAME",  (j, row_idx), (j, row_idx), "Helvetica-Bold"))
+                base_cmds.append(("TEXTCOLOR", (j, row_idx), (j, row_idx), c))
+                base_cmds.append(("FONTNAME",  (j, row_idx), (j, row_idx), "Helvetica-Bold"))
 
-    synth_table.setStyle(TableStyle(synth_table._cmds + extra_cmds))
+    synth_table = Table(synth_header + synth_rows, colWidths=col_w, repeatRows=1)
+    synth_table.setStyle(TableStyle(base_cmds))
     story.append(synth_table)
 
     story.append(Spacer(1, 0.3*cm))
