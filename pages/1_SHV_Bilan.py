@@ -5,7 +5,9 @@ Page : Bilan SHV – Syndrome d'Hyperventilation
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from datetime import date, datetime
+import io
 import sys, os
 
 # ─── Path ─────────────────────────────────────────────────────────────────────
@@ -72,7 +74,7 @@ def init_state():
         "patient_info": None,
         "bilan_id": None,
         "bilan_data": {},
-        "mode": "accueil",  # accueil | recherche | nouveau_patient | bilan
+        "mode": "accueil",  # accueil | recherche | nouveau_patient | bilan | formulaire | evolution
     }.items():
         if k not in st.session_state:
             st.session_state[k] = v
@@ -167,7 +169,7 @@ def render_bilan_selection():
     )
     st.markdown("")
 
-    col_back, _ = st.columns([1, 5])
+    col_back, col_evol, _ = st.columns([1, 1, 4])
     with col_back:
         if st.button("⬅️ Changer de patient"):
             st.session_state.patient_id   = None
@@ -176,6 +178,11 @@ def render_bilan_selection():
             st.session_state.bilan_data   = {}
             st.session_state.mode         = "accueil"
             st.rerun()
+    with col_evol:
+        if not bilans_df.empty and len(bilans_df) >= 1:
+            if st.button("📈 Voir l'évolution", type="primary"):
+                st.session_state.mode = "evolution"
+                st.rerun()
 
     st.markdown("---")
     bilans_df = get_patient_bilans(st.session_state.patient_id)
@@ -601,8 +608,279 @@ def render_formulaire():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  ROUTEUR PRINCIPAL
+#  SECTION 3 – ÉVOLUTION & EXPORT EXCEL
 # ═══════════════════════════════════════════════════════════════════════════════
+
+def safe_num(val):
+    try:
+        v = float(val)
+        return v if v != 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def build_excel(bilans_df: pd.DataFrame, patient_info: dict) -> bytes:
+    """Génère un fichier Excel de synthèse d'évolution."""
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+
+        # ── Feuille 1 : Résumé ──────────────────────────────────────────────
+        rows_resume = []
+        for _, row in bilans_df.iterrows():
+            rows_resume.append({
+                "Date":          row.get("date_bilan", ""),
+                "Type":          row.get("type_bilan", ""),
+                "Praticien":     row.get("praticien", ""),
+                "HAD Anxiété":   row.get("had_score_anxiete", ""),
+                "HAD Dépression":row.get("had_score_depression", ""),
+                "BOLT (s)":      row.get("bolt_score", ""),
+                "SF36 - Fonct. physique":   row.get("sf36_pf", ""),
+                "SF36 - Limit. physique":   row.get("sf36_rp", ""),
+                "SF36 - Douleur":           row.get("sf36_bp", ""),
+                "SF36 - Santé générale":    row.get("sf36_gh", ""),
+                "SF36 - Vitalité":          row.get("sf36_vt", ""),
+                "SF36 - Vie sociale":       row.get("sf36_sf", ""),
+                "SF36 - Limit. émotionnel": row.get("sf36_re", ""),
+                "SF36 - Santé psychique":   row.get("sf36_mh", ""),
+                "HVT - Résultat":           row.get("hvt_symptomes_reproduits", ""),
+                "HVT - Retour (min)":       row.get("hvt_duree_retour", ""),
+            })
+        df_resume = pd.DataFrame(rows_resume)
+        df_resume.to_excel(writer, sheet_name="Résumé évolution", index=False)
+
+        # ── Feuille 2 : Données brutes ───────────────────────────────────────
+        bilans_df.to_excel(writer, sheet_name="Données brutes", index=False)
+
+        # ── Mise en forme basique ─────────────────────────────────────────────
+        for sheet_name in writer.sheets:
+            ws = writer.sheets[sheet_name]
+            for col in ws.columns:
+                max_len = max((len(str(cell.value or "")) for cell in col), default=10)
+                ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
+
+    return output.getvalue()
+
+
+def render_evolution():
+    info     = st.session_state.patient_info
+    bilans_df = get_patient_bilans(st.session_state.patient_id)
+
+    st.markdown(
+        f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} — Évolution</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("")
+
+    col_back, col_export, _ = st.columns([1, 1.5, 4])
+    with col_back:
+        if st.button("⬅️ Retour"):
+            st.session_state.mode = "bilan"
+            st.rerun()
+    with col_export:
+        if not bilans_df.empty:
+            excel_bytes = build_excel(bilans_df, info)
+            st.download_button(
+                label="📥 Exporter en Excel",
+                data=excel_bytes,
+                file_name=f"evolution_{info['nom']}_{info['prenom']}_{date.today()}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                type="primary",
+            )
+
+    st.markdown("---")
+
+    if bilans_df.empty:
+        st.info("Aucun bilan disponible pour ce patient.")
+        return
+
+    # Trier par date
+    bilans_df = bilans_df.copy()
+    bilans_df["date_bilan"] = pd.to_datetime(bilans_df["date_bilan"], errors="coerce")
+    bilans_df = bilans_df.sort_values("date_bilan")
+    labels = [f"{row['date_bilan'].strftime('%d/%m/%y')} – {row.get('type_bilan','')}"
+              for _, row in bilans_df.iterrows()]
+
+    # ── Onglets ──────────────────────────────────────────────────────────────
+    tab_had, tab_bolt, tab_sf36, tab_hvt = st.tabs([
+        "😟 HAD", "⏱️ BOLT", "📊 SF-36", "🌬️ Test HV"
+    ])
+
+    # ── HAD ──────────────────────────────────────────────────────────────────
+    with tab_had:
+        st.markdown('<div class="section-title">😟 Évolution HAD</div>', unsafe_allow_html=True)
+
+        scores_a = [safe_num(r.get("had_score_anxiete"))   for _, r in bilans_df.iterrows()]
+        scores_d = [safe_num(r.get("had_score_depression")) for _, r in bilans_df.iterrows()]
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=labels, y=scores_a, mode="lines+markers+text",
+            name="Anxiété", line=dict(color="#f57c00", width=3),
+            marker=dict(size=10), text=[str(v) if v else "" for v in scores_a],
+            textposition="top center",
+        ))
+        fig.add_trace(go.Scatter(
+            x=labels, y=scores_d, mode="lines+markers+text",
+            name="Dépression", line=dict(color="#7b1fa2", width=3),
+            marker=dict(size=10), text=[str(v) if v else "" for v in scores_d],
+            textposition="top center",
+        ))
+        fig.add_hrect(y0=0,  y1=7,  fillcolor="green",  opacity=0.07, line_width=0,
+                      annotation_text="Normal", annotation_position="right")
+        fig.add_hrect(y0=8,  y1=10, fillcolor="orange", opacity=0.07, line_width=0,
+                      annotation_text="Douteux", annotation_position="right")
+        fig.add_hrect(y0=11, y1=21, fillcolor="red",    opacity=0.07, line_width=0,
+                      annotation_text="Pathologique", annotation_position="right")
+        fig.update_layout(
+            yaxis=dict(range=[0, 22], title="Score /21"),
+            xaxis_tickangle=-20, height=400,
+            plot_bgcolor="white", legend=dict(orientation="h"),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Tableau récap
+        df_had = pd.DataFrame({
+            "Bilan":       labels,
+            "Anxiété /21": scores_a,
+            "Dépression /21": scores_d,
+        })
+        st.dataframe(df_had, use_container_width=True, hide_index=True)
+
+    # ── BOLT ─────────────────────────────────────────────────────────────────
+    with tab_bolt:
+        st.markdown('<div class="section-title">⏱️ Évolution BOLT</div>', unsafe_allow_html=True)
+
+        bolt_vals = [safe_num(r.get("bolt_score")) for _, r in bilans_df.iterrows()]
+        colors    = []
+        for v in bolt_vals:
+            if v is None:      colors.append("#cccccc")
+            elif v < 10:       colors.append("#d32f2f")
+            elif v < 20:       colors.append("#f57c00")
+            elif v < 40:       colors.append("#fbc02d")
+            else:              colors.append("#388e3c")
+
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=labels, y=bolt_vals,
+            marker_color=colors,
+            text=[f"{v}s" if v else "—" for v in bolt_vals],
+            textposition="outside",
+        ))
+        fig.add_hline(y=20, line_dash="dot", line_color="#f57c00",
+                      annotation_text="Seuil 20s", annotation_position="right")
+        fig.add_hline(y=40, line_dash="dot", line_color="#388e3c",
+                      annotation_text="Seuil 40s", annotation_position="right")
+        fig.update_layout(
+            yaxis=dict(range=[0, max([v or 0 for v in bolt_vals] + [50]) + 10],
+                       title="Secondes"),
+            xaxis_tickangle=-20, height=380,
+            plot_bgcolor="white",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        df_bolt = pd.DataFrame({"Bilan": labels, "BOLT (s)": bolt_vals})
+        st.dataframe(df_bolt, use_container_width=True, hide_index=True)
+
+    # ── SF-36 ─────────────────────────────────────────────────────────────────
+    with tab_sf36:
+        st.markdown('<div class="section-title">📊 Évolution SF-36</div>', unsafe_allow_html=True)
+
+        dim_keys   = ["pf", "rp", "bp", "gh", "vt", "sf", "re", "mh"]
+        dim_labels = ["Fonct. physique", "Limit. physique", "Douleur",
+                      "Santé générale", "Vitalité", "Vie sociale",
+                      "Limit. émotionnel", "Santé psychique"]
+
+        # Graphique par dimension dans le temps
+        fig = make_subplots(
+            rows=2, cols=4,
+            subplot_titles=dim_labels,
+            shared_yaxes=True,
+        )
+        colors_bilans = ["#1a3c5e", "#2196f3", "#00bcd4", "#26c6da",
+                         "#80deea", "#b2ebf2", "#e0f7fa", "#f5f5f5"]
+        for i, (dk, dl) in enumerate(zip(dim_keys, dim_labels)):
+            row, col = divmod(i, 4)
+            vals = [safe_num(r.get(f"sf36_{dk}")) for _, r in bilans_df.iterrows()]
+            fig.add_trace(
+                go.Bar(x=labels, y=vals,
+                       marker_color=[colors_bilans[j % len(colors_bilans)]
+                                     for j in range(len(vals))],
+                       text=[str(v) if v else "—" for v in vals],
+                       textposition="outside",
+                       showlegend=False),
+                row=row + 1, col=col + 1,
+            )
+        fig.update_yaxes(range=[0, 115])
+        fig.update_layout(height=550, plot_bgcolor="white",
+                          margin=dict(t=40, b=60))
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Radar comparatif (si ≥ 2 bilans)
+        if len(bilans_df) >= 2:
+            st.markdown("#### 🕸️ Comparaison radar")
+            fig_radar = go.Figure()
+            palette = ["#1a3c5e", "#f57c00", "#388e3c", "#7b1fa2", "#d32f2f"]
+            for j, (_, row) in enumerate(bilans_df.iterrows()):
+                vals_r = [safe_num(row.get(f"sf36_{dk}")) or 0 for dk in dim_keys]
+                vals_r += [vals_r[0]]  # fermer le polygone
+                fig_radar.add_trace(go.Scatterpolar(
+                    r=vals_r,
+                    theta=dim_labels + [dim_labels[0]],
+                    fill="toself", opacity=0.4,
+                    name=labels[j],
+                    line=dict(color=palette[j % len(palette)]),
+                ))
+            fig_radar.update_layout(
+                polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+                height=450, showlegend=True,
+            )
+            st.plotly_chart(fig_radar, use_container_width=True)
+
+        # Tableau
+        df_sf = pd.DataFrame(
+            {**{"Bilan": labels},
+             **{dl: [safe_num(r.get(f"sf36_{dk}")) for _, r in bilans_df.iterrows()]
+                for dk, dl in zip(dim_keys, dim_labels)}}
+        )
+        st.dataframe(df_sf, use_container_width=True, hide_index=True)
+
+    # ── HVT ──────────────────────────────────────────────────────────────────
+    with tab_hvt:
+        st.markdown('<div class="section-title">🌬️ Évolution Test HV</div>', unsafe_allow_html=True)
+
+        rows_hvt = []
+        for lbl, (_, row) in zip(labels, bilans_df.iterrows()):
+            rows_hvt.append({
+                "Bilan":                lbl,
+                "Symptômes reproduits": row.get("hvt_symptomes_reproduits", "—"),
+                "Retour normal (min)":  row.get("hvt_duree_retour", "—"),
+                "Symptômes listés":     row.get("hvt_symptomes_list", "—"),
+                "Notes":                row.get("hvt_notes", "—"),
+            })
+        df_hvt = pd.DataFrame(rows_hvt)
+        st.dataframe(df_hvt, use_container_width=True, hide_index=True)
+
+        # Durée de retour dans le temps
+        durees = [safe_num(r.get("hvt_duree_retour")) for _, r in bilans_df.iterrows()]
+        if any(d for d in durees):
+            fig_hvt = go.Figure()
+            fig_hvt.add_trace(go.Bar(
+                x=labels, y=durees,
+                marker_color="#1a3c5e",
+                text=[f"{v} min" if v else "—" for v in durees],
+                textposition="outside",
+            ))
+            fig_hvt.update_layout(
+                title="Durée de retour à la normale (minutes)",
+                yaxis_title="Minutes",
+                xaxis_tickangle=-20,
+                height=340,
+                plot_bgcolor="white",
+            )
+            st.plotly_chart(fig_hvt, use_container_width=True)
+
+
+
 
 mode = st.session_state.mode
 
@@ -618,6 +896,11 @@ elif mode == "formulaire":
         st.session_state.mode = "accueil"
         st.rerun()
     render_formulaire()
+elif mode == "evolution":
+    if st.session_state.patient_info is None:
+        st.session_state.mode = "accueil"
+        st.rerun()
+    render_evolution()
 else:
     st.session_state.mode = "accueil"
     st.rerun()
