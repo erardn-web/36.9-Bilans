@@ -512,6 +512,13 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
     synth_rows.append(synth_row("MCS-12 (score mental)",     "sf12_mcs"))
     synth_rows.append([""] + [""] * n_bilans)
     synth_rows.append(synth_row("HVT – Retour normal (min)", "hvt_duree_retour", " min"))
+    synth_rows.append([""] + [""] * n_bilans)
+    synth_rows.append(synth_row("Nijmegen (/64)",            "nij_score"))
+    synth_rows.append(synth_row("ETCO₂ repos (mmHg)",        "etco2_repos"))
+    synth_rows.append(synth_row("FR (cyc/min)",              "pattern_frequence"))
+    synth_rows.append(synth_row("PImax % prédit",            "pimax_pct", "%"))
+    synth_rows.append(synth_row("PEmax % prédit",            "pemax_pct", "%"))
+    synth_rows.append(synth_row("MRC Dyspnée (grade)",       "mrc_score"))
 
     col_w = [6*cm] + [(w - 6*cm) / n_bilans] * n_bilans
 
@@ -629,6 +636,45 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
     except Exception:
         pass
 
+    # Nijmegen
+    nij_vals = [safe_num(r.get("nij_score")) for _, r in bilans_df.iterrows()]
+    if any(nij_vals):
+        story.append(Spacer(1, 0.3*cm))
+        story.append(Paragraph("Score de Nijmegen", styles["subsection"]))
+        try:
+            import matplotlib
+            matplotlib.use("Agg")
+            import matplotlib.pyplot as plt
+            fig_n, ax_n = plt.subplots(figsize=(10, 3.5))
+            x_n = range(len(labels))
+            bar_cols_n = []
+            for v in nij_vals:
+                if v is None:   bar_cols_n.append("#cccccc")
+                elif v >= 23:   bar_cols_n.append("#d32f2f")
+                elif v >= 15:   bar_cols_n.append("#f57c00")
+                else:           bar_cols_n.append("#388e3c")
+            bars_n = ax_n.bar(x_n, [v or 0 for v in nij_vals], color=bar_cols_n, width=0.5)
+            for bar, v in zip(bars_n, nij_vals):
+                if v:
+                    ax_n.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.3,
+                              str(int(v)), ha="center", fontsize=10, fontweight="bold")
+            import numpy as np2
+            ax_n.axhline(23, color="#d32f2f", linestyle="--", linewidth=1.5, label="Seuil 23 (SHV+)")
+            ax_n.axhline(15, color="#f57c00", linestyle="--", linewidth=1.5, label="Seuil 15 (borderline)")
+            xlbls_n = [l.split("—")[0].strip() for l in labels]
+            ax_n.set_xticks(list(x_n)); ax_n.set_xticklabels(xlbls_n, rotation=15, ha="right")
+            ax_n.set_ylim(0, 68); ax_n.set_ylabel("Score /64")
+            ax_n.set_title("Évolution Nijmegen", fontsize=12, fontweight="bold",
+                           color="#1a3c5e", pad=10)
+            ax_n.legend(fontsize=8); ax_n.spines[["top","right"]].set_visible(False)
+            ax_n.set_facecolor("white"); fig_n.tight_layout()
+            buf_n = io.BytesIO()
+            fig_n.savefig(buf_n, format="png", dpi=150, bbox_inches="tight", facecolor="white")
+            plt.close(fig_n); buf_n.seek(0)
+            story.append(Image(buf_n, width=17*cm, height=6*cm))
+        except Exception:
+            pass
+
     story.append(PageBreak())
 
     # ══════════════════════════════════════════════════════════════════
@@ -722,6 +768,105 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
             ("VALIGN",      (0, 0), (-1, -1), "TOP"),
         ]))
         story.append(hvt_table)
+
+        # ── Nijmegen ─────────────────────────────────────────────────────────
+        nij_score = val_str(row.get("nij_score"))
+        if nij_score != "—":
+            story.append(Paragraph("Questionnaire de Nijmegen", styles["subsection"]))
+            nij_data = [
+                ["Score Nijmegen", "Interprétation"],
+                [f"{nij_score} / 64", str(row.get("nij_interpretation","—") or "—")],
+            ]
+            story.append(make_table(nij_data, col_widths=[4*cm, w - 4*cm]))
+
+        # ── Capnographie ─────────────────────────────────────────────────────
+        etco2_r = val_str(row.get("etco2_repos"))
+        if etco2_r != "—":
+            story.append(Paragraph("Capnographie — ETCO₂", styles["subsection"]))
+            etco2_data = [
+                ["Paramètre", "Valeur"],
+                ["ETCO₂ repos (mmHg)",       etco2_r],
+                ["ETCO₂ post-effort (mmHg)", val_str(row.get("etco2_post_effort"))],
+                ["Pattern",                  str(row.get("etco2_pattern","—") or "—")],
+            ]
+            if row.get("etco2_notes"):
+                etco2_data.append(["Notes", str(row["etco2_notes"])])
+            story.append(make_table(etco2_data, col_widths=[6*cm, w - 6*cm]))
+
+        # ── Pattern respiratoire ─────────────────────────────────────────────
+        pat_freq = val_str(row.get("pattern_frequence"))
+        if pat_freq != "—":
+            story.append(Paragraph("Pattern respiratoire", styles["subsection"]))
+            pat_data = [
+                ["Paramètre", "Valeur"],
+                ["Fréquence (cyc/min)", pat_freq],
+                ["Mode",      str(row.get("pattern_mode","—")     or "—")],
+                ["Amplitude", str(row.get("pattern_amplitude","—")or "—")],
+                ["Rythme",    str(row.get("pattern_rythme","—")   or "—")],
+                ["Paradoxal", str(row.get("pattern_paradoxal","—")or "—")],
+            ]
+            if row.get("pattern_notes"):
+                pat_data.append(["Notes", str(row["pattern_notes"])])
+            story.append(make_table(pat_data, col_widths=[5*cm, w - 5*cm]))
+
+        # ── Gazométrie ───────────────────────────────────────────────────────
+        if row.get("gazo_ph"):
+            story.append(Paragraph("Gazométrie", styles["subsection"]))
+            gazo_data = [
+                ["Paramètre", "Valeur", "Référence"],
+                ["Type",          str(row.get("gazo_type","—") or "—"),  ""],
+                ["pH",            val_str(row.get("gazo_ph")),           "7.35–7.45"],
+                ["PaCO₂ (mmHg)",  val_str(row.get("gazo_paco2")),        "35–45"],
+                ["PaO₂ (mmHg)",   val_str(row.get("gazo_pao2")),         "75–100"],
+                ["HCO₃⁻ (mmol/L)",val_str(row.get("gazo_hco3")),         "22–26"],
+                ["SatO₂ (%)",     val_str(row.get("gazo_sato2")),        "≥ 95"],
+            ]
+            story.append(make_table(gazo_data, col_widths=[5*cm, 4*cm, w - 9*cm]))
+
+        # ── SNIF / PImax / PEmax ─────────────────────────────────────────────
+        if row.get("pimax_val") or row.get("snif_val"):
+            story.append(Paragraph("SNIF · PImax · PEmax", styles["subsection"]))
+            musc_data = [
+                ["Test", "Mesuré (cmH₂O)", "Prédit (cmH₂O)", "% prédit"],
+                ["SNIF",  val_str(row.get("snif_val")),
+                          val_str(row.get("snif_pred")),  val_str(row.get("snif_pct"),"%")],
+                ["PImax", val_str(row.get("pimax_val")),
+                          val_str(row.get("pimax_pred")), val_str(row.get("pimax_pct"),"%")],
+                ["PEmax", val_str(row.get("pemax_val")),
+                          val_str(row.get("pemax_pred")), val_str(row.get("pemax_pct"),"%")],
+            ]
+            story.append(make_table(musc_data,
+                         col_widths=[3*cm, (w-3*cm)/3, (w-3*cm)/3, (w-3*cm)/3]))
+
+        # ── MRC ──────────────────────────────────────────────────────────────
+        mrc_val = row.get("mrc_score")
+        if mrc_val is not None and str(mrc_val) != "":
+            story.append(Paragraph("Échelle MRC Dyspnée", styles["subsection"]))
+            mrc_labels = ["0 — Pas de dyspnée sauf effort intense",
+                          "1 — Dyspnée à la montée rapide",
+                          "2 — Marche plus lentement que les autres",
+                          "3 — S'arrête après 100 m à plat",
+                          "4 — Trop essoufflé pour quitter la maison"]
+            try:
+                mrc_label = mrc_labels[int(mrc_val)]
+            except (IndexError, ValueError):
+                mrc_label = str(mrc_val)
+            story.append(make_table([["Grade MRC", mrc_label]],
+                                    col_widths=[3*cm, w - 3*cm]))
+
+        # ── Comorbidités ─────────────────────────────────────────────────────
+        comorb = str(row.get("comorb_list","") or "").replace("|", " · ")
+        trait  = str(row.get("comorb_traitements","") or "").replace("|", " · ")
+        if comorb or trait:
+            story.append(Paragraph("Comorbidités & traitements", styles["subsection"]))
+            cm_rows = []
+            if comorb:
+                cm_rows.append(["Comorbidités", comorb])
+            if trait:
+                cm_rows.append(["Traitements",  trait])
+            if row.get("comorb_notes"):
+                cm_rows.append(["Notes", str(row["comorb_notes"])])
+            story.append(make_table(cm_rows, col_widths=[4*cm, w - 4*cm]))
 
         if i < n_bilans - 1:
             story.append(PageBreak())
