@@ -65,7 +65,7 @@ def bolt_color(score):
     return VERT
 
 
-def sf36_color(score):
+def sf12_color(score):
     s = safe_num(score)
     if s is None: return GRIS_TEXTE
     if s >= 66:   return VERT
@@ -178,8 +178,8 @@ def make_chart_bolt(bilans_df, labels):
     return fig_to_rl_image(fig, width_cm=17, height_cm=6.5)
 
 
-def make_chart_sf36_bars(bilans_df, labels):
-    """8 sous-graphiques SF-36."""
+def make_chart_sf12_bars(bilans_df, labels):
+    """8 sous-graphiques SF-12."""
     dim_keys   = ["pf", "rp", "bp", "gh", "vt", "sf", "re", "mh"]
     dim_labels_short = ["Fonct.\nphysique", "Limit.\nphysique", "Douleur",
                         "Santé\ngénérale", "Vitalité", "Vie\nsociale",
@@ -190,13 +190,13 @@ def make_chart_sf36_bars(bilans_df, labels):
     width = 0.7 / max(n, 1)
 
     fig, axes = plt.subplots(2, 4, figsize=(14, 7), sharey=True)
-    fig.suptitle("Évolution SF-36 par dimension", fontsize=13,
+    fig.suptitle("Évolution SF-12 par dimension", fontsize=13,
                  fontweight="bold", color="#1a3c5e", y=1.01)
 
     for i, (dk, dl) in enumerate(zip(dim_keys, dim_labels_short)):
         ax  = axes[i // 4][i % 4]
         for j, (_, row) in enumerate(bilans_df.iterrows()):
-            val = safe_num(row.get(f"sf36_{dk}")) or 0
+            val = safe_num(row.get(f"sf12_{dk}")) or 0
             c   = ("#388e3c" if val >= 66 else "#f57c00" if val >= 33 else "#d32f2f")
             offset = (j - (n - 1) / 2) * width
             bar = ax.bar(j, val, color=c, width=width * 0.85, zorder=3)
@@ -225,8 +225,8 @@ def make_chart_sf36_bars(bilans_df, labels):
     return fig_to_rl_image(fig, width_cm=17, height_cm=10)
 
 
-def make_chart_sf36_radar(bilans_df, labels):
-    """Radar SF-36 comparatif."""
+def make_chart_sf12_radar(bilans_df, labels):
+    """Radar SF-12 comparatif."""
     dim_keys   = ["pf", "rp", "bp", "gh", "vt", "sf", "re", "mh"]
     dim_labels_r = ["Fonct.\nphysique", "Limit.\nphysique", "Douleur",
                     "Santé\ngénérale", "Vitalité", "Vie\nsociale",
@@ -237,7 +237,7 @@ def make_chart_sf36_radar(bilans_df, labels):
 
     fig, ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(polar=True))
     for j, (_, row) in enumerate(bilans_df.iterrows()):
-        vals = [safe_num(row.get(f"sf36_{dk}")) or 0 for dk in dim_keys]
+        vals = [safe_num(row.get(f"sf12_{dk}")) or 0 for dk in dim_keys]
         vals += vals[:1]
         color = CHART_COLORS[j % len(CHART_COLORS)]
         ax.plot(angles, vals, "o-", linewidth=2, color=color,
@@ -249,7 +249,7 @@ def make_chart_sf36_radar(bilans_df, labels):
     ax.set_ylim(0, 100)
     ax.set_yticks([25, 50, 75, 100])
     ax.set_yticklabels(["25", "50", "75", "100"], size=7, color="grey")
-    ax.set_title("Comparaison SF-36 — Radar", fontsize=12,
+    ax.set_title("Comparaison SF-12 — Radar", fontsize=12,
                  fontweight="bold", color="#1a3c5e", pad=20)
     ax.legend(loc="upper right", bbox_to_anchor=(1.35, 1.15),
               fontsize=8, framealpha=0.8)
@@ -499,14 +499,17 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
     synth_rows.append([""] + [""] * n_bilans)   # séparateur
     synth_rows.append(synth_row("BOLT (secondes)",      "bolt_score", "s"))
     synth_rows.append([""] + [""] * n_bilans)
-    synth_rows.append(synth_row("SF36 – Fonct. physique",    "sf36_pf"))
-    synth_rows.append(synth_row("SF36 – Limit. physique",    "sf36_rp"))
-    synth_rows.append(synth_row("SF36 – Douleur",            "sf36_bp"))
-    synth_rows.append(synth_row("SF36 – Santé générale",     "sf36_gh"))
-    synth_rows.append(synth_row("SF36 – Vitalité",           "sf36_vt"))
-    synth_rows.append(synth_row("SF36 – Vie sociale",        "sf36_sf"))
-    synth_rows.append(synth_row("SF36 – Limit. émotionnel",  "sf36_re"))
-    synth_rows.append(synth_row("SF36 – Santé psychique",    "sf36_mh"))
+    synth_rows.append(synth_row("SF12 – Fonct. physique",    "sf12_pf"))
+    synth_rows.append(synth_row("SF12 – Limit. physique",    "sf12_rp"))
+    synth_rows.append(synth_row("SF12 – Douleur",            "sf12_bp"))
+    synth_rows.append(synth_row("SF12 – Santé générale",     "sf12_gh"))
+    synth_rows.append(synth_row("SF12 – Vitalité",           "sf12_vt"))
+    synth_rows.append(synth_row("SF12 – Vie sociale",        "sf12_sf"))
+    synth_rows.append(synth_row("SF12 – Limit. émotionnel",  "sf12_re"))
+    synth_rows.append(synth_row("SF12 – Santé psychique",    "sf12_mh"))
+    synth_rows.append([""] + [""] * n_bilans)
+    synth_rows.append(synth_row("PCS-12 (score physique)",   "sf12_pcs"))
+    synth_rows.append(synth_row("MCS-12 (score mental)",     "sf12_mcs"))
     synth_rows.append([""] + [""] * n_bilans)
     synth_rows.append(synth_row("HVT – Retour normal (min)", "hvt_duree_retour", " min"))
 
@@ -529,15 +532,15 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
     ]
 
     # Coloriser les valeurs selon les seuils cliniques
-    sf36_key_map = {
-        "SF36 – Fonct. physique": "sf36_pf",
-        "SF36 – Limit. physique": "sf36_rp",
-        "SF36 – Douleur":         "sf36_bp",
-        "SF36 – Santé générale":  "sf36_gh",
-        "SF36 – Vitalité":        "sf36_vt",
-        "SF36 – Vie sociale":     "sf36_sf",
-        "SF36 – Limit. émotionnel": "sf36_re",
-        "SF36 – Santé psychique": "sf36_mh",
+    sf12_key_map = {
+        "SF12 – Fonct. physique": "sf12_pf",
+        "SF12 – Limit. physique": "sf12_rp",
+        "SF12 – Douleur":         "sf12_bp",
+        "SF12 – Santé générale":  "sf12_gh",
+        "SF12 – Vitalité":        "sf12_vt",
+        "SF12 – Vie sociale":     "sf12_sf",
+        "SF12 – Limit. émotionnel": "sf12_re",
+        "SF12 – Santé psychique": "sf12_mh",
     }
     had_key_map = {
         "HAD Anxiété (/21)":    "had_score_anxiete",
@@ -554,8 +557,8 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
                 c = had_color(bilan_row.get(had_key_map[label]))
             elif label == "BOLT (secondes)":
                 c = bolt_color(bilan_row.get("bolt_score"))
-            elif label in sf36_key_map:
-                c = sf36_color(bilan_row.get(sf36_key_map[label]))
+            elif label in sf12_key_map:
+                c = sf12_color(bilan_row.get(sf12_key_map[label]))
             else:
                 continue
             if c != GRIS_TEXTE:
@@ -570,7 +573,7 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
     story.append(Paragraph(
         "Légende HAD : vert = normal (0–7) · orange = douteux (8–10) · rouge = pathologique (11–21)   |   "
         "BOLT : rouge < 10s · orange < 20s · jaune < 40s · vert ≥ 40s   |   "
-        "SF36 : vert ≥ 66 · orange ≥ 33 · rouge < 33",
+        "SF12 : vert ≥ 66 · orange ≥ 33 · rouge < 33",
         styles["small"],
     ))
 
@@ -600,19 +603,19 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
 
     story.append(PageBreak())
 
-    # SF-36 barres
-    story.append(Paragraph("SF-36 — Évolution par dimension", styles["subsection"]))
+    # SF-12 barres
+    story.append(Paragraph("SF-12 — Évolution par dimension", styles["subsection"]))
     try:
-        story.append(make_chart_sf36_bars(bilans_df, labels))
+        story.append(make_chart_sf12_bars(bilans_df, labels))
     except Exception:
         story.append(Paragraph("Graphique non disponible.", styles["small"]))
     story.append(Spacer(1, 0.5*cm))
 
-    # SF-36 radar (si >= 2 bilans)
+    # SF-12 radar (si >= 2 bilans)
     if n_bilans >= 2:
-        story.append(Paragraph("SF-36 — Comparaison radar", styles["subsection"]))
+        story.append(Paragraph("SF-12 — Comparaison radar", styles["subsection"]))
         try:
-            story.append(make_chart_sf36_radar(bilans_df, labels))
+            story.append(make_chart_sf12_radar(bilans_df, labels))
         except Exception:
             story.append(Paragraph("Graphique non disponible.", styles["small"]))
         story.append(Spacer(1, 0.5*cm))
@@ -671,21 +674,28 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
         ]
         story.append(make_table(bolt_data, col_widths=[4*cm, w - 4*cm]))
 
-        # ── SF-36 ───────────────────────────────────────────────────
-        story.append(Paragraph("SF-36 — Qualité de vie", styles["subsection"]))
+        # ── SF-12 ───────────────────────────────────────────────────
+        story.append(Paragraph("SF-12 — Qualité de vie", styles["subsection"]))
         sf_dims = [
-            ("Fonctionnement physique",       "sf36_pf"),
-            ("Limitations physiques",          "sf36_rp"),
-            ("Douleur physique",               "sf36_bp"),
-            ("Santé générale",                 "sf36_gh"),
-            ("Vitalité",                       "sf36_vt"),
-            ("Vie et relations sociales",      "sf36_sf"),
-            ("Limitations émotionnelles",      "sf36_re"),
-            ("Santé psychique",                "sf36_mh"),
+            ("Fonctionnement physique",       "sf12_pf"),
+            ("Limitations physiques",          "sf12_rp"),
+            ("Douleur physique",               "sf12_bp"),
+            ("Santé générale",                 "sf12_gh"),
+            ("Vitalité",                       "sf12_vt"),
+            ("Vie et relations sociales",      "sf12_sf"),
+            ("Limitations émotionnelles",      "sf12_re"),
+            ("Santé psychique",                "sf12_mh"),
         ]
         sf_header = [["Dimension", "Score /100"]]
         sf_rows   = [[label, val_str(row.get(key))] for label, key in sf_dims]
-        story.append(make_table(sf_header + sf_rows, col_widths=[10*cm, w - 10*cm]))
+        # Scores composites
+        sf_rows.append(["── Scores composites ──", ""])
+        pcs_val = val_str(row.get("sf12_pcs"))
+        mcs_val = val_str(row.get("sf12_mcs"))
+        sf_rows.append([f"PCS-12 — Score composite physique", f"{pcs_val}  (réf. 50)"])
+        sf_rows.append([f"MCS-12 — Score composite mental",   f"{mcs_val}  (réf. 50)"])
+        t = make_table(sf_header + sf_rows, col_widths=[10*cm, w - 10*cm])
+        story.append(t)
 
         # ── HVT ─────────────────────────────────────────────────────
         story.append(Paragraph("Test d'hyperventilation volontaire", styles["subsection"]))
