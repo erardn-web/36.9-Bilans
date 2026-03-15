@@ -51,25 +51,39 @@ def get_shv_headers():
         # HAD scores
         "had_score_anxiete", "had_score_depression",
         # SF-12 – items
-        "sf12_q1",
-        "sf12_q2a", "sf12_q2b",
-        "sf12_q3a", "sf12_q3b",
-        "sf12_q4a", "sf12_q4b",
-        "sf12_q5",
-        "sf12_q6a", "sf12_q6b", "sf12_q6c",
-        "sf12_q7",
-        # SF-12 scores dimensionnels (0-100)
+        "sf12_q1", "sf12_q2a", "sf12_q2b",
+        "sf12_q3a", "sf12_q3b", "sf12_q4a", "sf12_q4b",
+        "sf12_q5", "sf12_q6a", "sf12_q6b", "sf12_q6c", "sf12_q7",
+        # SF-12 scores
         "sf12_pf", "sf12_rp", "sf12_bp", "sf12_gh",
         "sf12_vt", "sf12_sf", "sf12_re", "sf12_mh",
-        # SF-12 scores composites
         "sf12_pcs", "sf12_mcs",
         # BOLT
         "bolt_score", "bolt_interpretation",
         # Test d'hyperventilation volontaire
-        "hvt_symptomes_reproduits",
-        "hvt_symptomes_list",
-        "hvt_duree_retour",
-        "hvt_notes",
+        "hvt_symptomes_reproduits", "hvt_symptomes_list",
+        "hvt_duree_retour", "hvt_notes",
+        # Nijmegen (16 items + score)
+        "nij_1","nij_2","nij_3","nij_4","nij_5","nij_6","nij_7","nij_8",
+        "nij_9","nij_10","nij_11","nij_12","nij_13","nij_14","nij_15","nij_16",
+        "nij_score", "nij_interpretation",
+        # Gazométrie
+        "gazo_type", "gazo_ph", "gazo_paco2", "gazo_pao2",
+        "gazo_hco3", "gazo_sato2", "gazo_fio2", "gazo_notes",
+        # Capnographie
+        "etco2_repos", "etco2_post_effort", "etco2_pattern", "etco2_notes",
+        # Pattern respiratoire
+        "pattern_frequence", "pattern_amplitude", "pattern_mode",
+        "pattern_rythme", "pattern_paradoxal", "pattern_notes",
+        # SNIF / PImax / PEmax
+        "snif_val", "snif_pred", "snif_pct",
+        "pimax_val", "pimax_pred", "pimax_pct",
+        "pemax_val", "pemax_pred", "pemax_pct",
+        "snif_pimax_pemax_notes",
+        # MRC dyspnée
+        "mrc_score",
+        # Comorbidités
+        "comorb_list", "comorb_traitements", "comorb_notes",
     ]
 
 
