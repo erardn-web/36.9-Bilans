@@ -26,6 +26,7 @@ from utils.shv_tests import (
     HVT_DESCRIPTION, HVT_SYMPTOMES,
 )
 from utils.pdf_export import generate_pdf
+from utils.questionnaires_print import generate_questionnaires_pdf, QUESTIONNAIRES
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -171,7 +172,7 @@ def render_bilan_selection():
     # Chargement des bilans en premier
     bilans_df = get_patient_bilans(st.session_state.patient_id)
 
-    col_back, col_evol, col_pdf, _ = st.columns([1, 1, 1.5, 2.5])
+    col_back, col_evol, col_pdf, col_print, _ = st.columns([1, 1, 1.2, 1.5, 1])
     with col_back:
         if st.button("⬅️ Changer de patient"):
             st.session_state.patient_id   = None
@@ -195,8 +196,60 @@ def render_bilan_selection():
                 file_name=f"evolution_SHV_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
                 mime="application/pdf",
             )
+    with col_print:
+        if st.button("🖨️ Imprimer questionnaires"):
+            st.session_state["show_print_modal"] = True
 
     st.markdown("---")
+
+    # ── Panneau d'impression des questionnaires ───────────────────────────────
+    if st.session_state.get("show_print_modal", False):
+        with st.container():
+            st.markdown("""
+            <div style="background:#e8f0f8; border:2px solid #1a3c5e; border-radius:10px;
+                        padding:1.2rem 1.5rem; margin-bottom:1rem;">
+                <span style="font-size:1.1rem; font-weight:700; color:#1a3c5e;">
+                🖨️ Sélectionner les questionnaires à imprimer
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            pcol1, pcol2, pcol3, pcol4 = st.columns(4)
+            with pcol1:
+                print_had  = st.checkbox("😟 HAD", value=True, key="print_had")
+            with pcol2:
+                print_sf12 = st.checkbox("📊 SF-12", value=True, key="print_sf12")
+            with pcol3:
+                print_hvt  = st.checkbox("🌬️ Test HV", value=True, key="print_hvt")
+            with pcol4:
+                print_bolt = st.checkbox("⏱️ BOLT", value=True, key="print_bolt")
+
+            selected = []
+            if print_had:  selected.append("had")
+            if print_sf12: selected.append("sf12")
+            if print_hvt:  selected.append("hvt")
+            if print_bolt: selected.append("bolt")
+
+            ga, gb, gc = st.columns([1.5, 1, 4])
+            with ga:
+                if selected:
+                    with st.spinner("Génération…"):
+                        q_pdf = generate_questionnaires_pdf(selected, info)
+                    st.download_button(
+                        label="📥 Télécharger le PDF",
+                        data=q_pdf,
+                        file_name=f"questionnaires_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
+                        mime="application/pdf",
+                        type="primary",
+                        key="dl_questionnaires",
+                    )
+                else:
+                    st.warning("Sélectionnez au moins un questionnaire.")
+            with gb:
+                if st.button("✖ Fermer", key="close_print"):
+                    st.session_state["show_print_modal"] = False
+                    st.rerun()
+
 
     col_left, col_right = st.columns(2)
 
