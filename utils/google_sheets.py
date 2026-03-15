@@ -9,7 +9,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
 ]
-SPREADSHEET_NAME = "Physio_App"
+SPREADSHEET_NAME = "36.9_Bilans"
 
 
 @st.cache_resource
