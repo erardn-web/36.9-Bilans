@@ -89,7 +89,64 @@ init_state()
 def render_accueil():
     st.markdown('<div class="page-title">🫁 Bilan SHV</div>', unsafe_allow_html=True)
     st.markdown("##### Syndrome d'hyperventilation – Gestion des patients")
+
+    # ── Bouton impression questionnaires vierges ──────────────────────────────
+    col_title, col_btn = st.columns([5, 1])
+    with col_btn:
+        if st.button("🖨️ Imprimer questionnaires", key="print_accueil"):
+            st.session_state["show_print_modal_accueil"] = True
+
     st.markdown("---")
+
+    # ── Panneau d'impression (sans patient) ───────────────────────────────────
+    if st.session_state.get("show_print_modal_accueil", False):
+        with st.container():
+            st.markdown("""
+            <div style="background:#e8f0f8; border:2px solid #1a3c5e; border-radius:10px;
+                        padding:1.2rem 1.5rem; margin-bottom:1rem;">
+                <span style="font-size:1.1rem; font-weight:700; color:#1a3c5e;">
+                🖨️ Imprimer des questionnaires vierges
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            pcol1, pcol2, pcol3, pcol4 = st.columns(4)
+            with pcol1:
+                p_had  = st.checkbox("😟 HAD",       value=True, key="pa_had")
+            with pcol2:
+                p_sf12 = st.checkbox("📊 SF-12",     value=True, key="pa_sf12")
+            with pcol3:
+                p_hvt  = st.checkbox("🌬️ Test HV",   value=True, key="pa_hvt")
+            with pcol4:
+                p_bolt = st.checkbox("⏱️ BOLT",       value=True, key="pa_bolt")
+
+            selected = []
+            if p_had:  selected.append("had")
+            if p_sf12: selected.append("sf12")
+            if p_hvt:  selected.append("hvt")
+            if p_bolt: selected.append("bolt")
+
+            ga, gb, _ = st.columns([1.5, 1, 4])
+            with ga:
+                if selected:
+                    with st.spinner("Génération…"):
+                        q_pdf = generate_questionnaires_pdf(selected, patient_info=None)
+                    st.download_button(
+                        label="📥 Télécharger le PDF",
+                        data=q_pdf,
+                        file_name=f"questionnaires_vierges_{date.today()}.pdf",
+                        mime="application/pdf",
+                        type="primary",
+                        key="dl_q_accueil",
+                    )
+                else:
+                    st.warning("Sélectionnez au moins un questionnaire.")
+            with gb:
+                if st.button("✖ Fermer", key="close_print_accueil"):
+                    st.session_state["show_print_modal_accueil"] = False
+                    st.rerun()
+
+        st.markdown("---")
 
     col_a, col_b = st.columns(2)
 
