@@ -17,10 +17,9 @@ from utils.google_sheets import (
     get_patient_bilans, save_bilan,
 )
 from utils.had import HAD_QUESTIONS, compute_had_scores
-from utils.sf36 import (
-    SF36_Q1, SF36_Q2, SF36_Q3, SF36_Q4, SF36_Q5,
-    SF36_Q6, SF36_Q7, SF36_Q8, SF36_Q9, SF36_Q10, SF36_Q11,
-    SF36_DIMENSIONS, compute_sf36_scores,
+from utils.sf12 import (
+    SF12_QUESTIONS, SF12_KEYS, SF12_DIMENSIONS,
+    compute_sf12_scores, interpret_pcs_mcs,
 )
 from utils.shv_tests import (
     BOLT_DESCRIPTION, interpret_bolt,
@@ -283,8 +282,8 @@ def render_formulaire():
     st.markdown("---")
 
     # ──── Onglets ────────────────────────────────────────────────────────────
-    tab_gen, tab_had, tab_sf36, tab_bolt, tab_hvt = st.tabs([
-        "📝 Général", "😟 HAD", "📊 SF-36", "⏱️ BOLT", "🌬️ Test HV"
+    tab_gen, tab_had, tab_sf12, tab_bolt, tab_hvt = st.tabs([
+        "📝 Général", "😟 HAD", "📊 SF-12", "⏱️ BOLT", "🌬️ Test HV"
     ])
 
     collected = {}   # on accumulera toutes les valeurs ici
@@ -382,111 +381,90 @@ def render_formulaire():
         collected["had_score_depression"] = had_scores["score_depression"]
 
     # ═════════════════════════════════════════════════════════════════════════
-    #  TAB 3 – SF-36
+    #  TAB 3 – SF-12
     # ═════════════════════════════════════════════════════════════════════════
-    with tab_sf36:
-        st.markdown('<div class="section-title">📊 SF-36 — Qualité de vie</div>',
+    with tab_sf12:
+        st.markdown('<div class="section-title">📊 SF-12 — Qualité de vie</div>',
                     unsafe_allow_html=True)
         st.markdown(
-            '<div class="info-box">36 questions mesurant 8 dimensions de la qualité de vie. '
-            'Score 0–100 par dimension (100 = meilleur état de santé possible).</div>',
+            '<div class="info-box">12 questions mesurant 8 dimensions de la qualité de vie, '
+            'et deux scores composites : <strong>PCS-12</strong> (physique) et <strong>MCS-12</strong> (mental). '
+            'Score de référence = 50 (moyenne population générale).</div>',
             unsafe_allow_html=True,
         )
 
         sf_ans = {}
+        last_intro = None
 
-        # Q1 & Q2
-        with st.expander("🔹 Section A – Santé générale (Q1-Q2)", expanded=True):
-            sf_ans["q1"] = sb("Q1. " + SF36_Q1["texte"], SF36_Q1["options"],
-                               default=load_val("sf36_q1"), key="sf_q1")
-            sf_ans["q2"] = sb("Q2. " + SF36_Q2["texte"], SF36_Q2["options"],
-                               default=load_val("sf36_q2"), key="sf_q2")
+        for q in SF12_QUESTIONS:
+            key     = q["key"]
+            options = q["options"]
+            intro   = q.get("intro")
 
-        # Q3
-        with st.expander("🔹 Section B – Fonctionnement physique (Q3)"):
-            st.markdown(f"*{SF36_Q3['intro']}*")
-            for item_key, item_label in SF36_Q3["items"]:
-                sf_ans[item_key] = sb(
-                    item_label, SF36_Q3["options"],
-                    default=load_val(f"sf36_{item_key}"),
-                    key=f"sf_{item_key}",
-                )
+            # Afficher l'intro une seule fois par groupe
+            if intro and intro != last_intro:
+                st.markdown(f"---\n*{intro}*")
+                last_intro = intro
 
-        # Q4
-        with st.expander("🔹 Section C – Limitations physiques (Q4)"):
-            st.markdown(f"*{SF36_Q4['intro']}*")
-            for item_key, item_label in SF36_Q4["items"]:
-                sf_ans[item_key] = sb(
-                    item_label, SF36_Q4["options"],
-                    default=load_val(f"sf36_{item_key}"),
-                    key=f"sf_{item_key}",
-                )
+            sf_ans[key] = sb(
+                q["texte"], options,
+                default=load_val(f"sf12_{key}"),
+                key=f"sf12_{key}",
+            )
 
-        # Q5
-        with st.expander("🔹 Section D – Limitations émotionnelles (Q5)"):
-            st.markdown(f"*{SF36_Q5['intro']}*")
-            for item_key, item_label in SF36_Q5["items"]:
-                sf_ans[item_key] = sb(
-                    item_label, SF36_Q5["options"],
-                    default=load_val(f"sf36_{item_key}"),
-                    key=f"sf_{item_key}",
-                )
-
-        # Q6
-        with st.expander("🔹 Section E – Vie sociale (Q6)"):
-            sf_ans["q6"] = sb("Q6. " + SF36_Q6["texte"], SF36_Q6["options"],
-                               default=load_val("sf36_q6"), key="sf_q6")
-
-        # Q7 & Q8
-        with st.expander("🔹 Section F – Douleur (Q7-Q8)"):
-            sf_ans["q7"] = sb("Q7. " + SF36_Q7["texte"], SF36_Q7["options"],
-                               default=load_val("sf36_q7"), key="sf_q7")
-            sf_ans["q8"] = sb("Q8. " + SF36_Q8["texte"], SF36_Q8["options"],
-                               default=load_val("sf36_q8"), key="sf_q8")
-
-        # Q9
-        with st.expander("🔹 Section G – Santé mentale & vitalité (Q9)"):
-            st.markdown(f"*{SF36_Q9['intro']}*")
-            for item_key, item_label in SF36_Q9["items"]:
-                sf_ans[item_key] = sb(
-                    item_label, SF36_Q9["options"],
-                    default=load_val(f"sf36_{item_key}"),
-                    key=f"sf_{item_key}",
-                )
-
-        # Q10 & Q11
-        with st.expander("🔹 Section H – Activités sociales & santé perçue (Q10-Q11)"):
-            sf_ans["q10"] = sb("Q10. " + SF36_Q10["texte"], SF36_Q10["options"],
-                                default=load_val("sf36_q10"), key="sf_q10")
-            st.markdown(f"*{SF36_Q11['intro']}*")
-            for item_key, item_label in SF36_Q11["items"]:
-                sf_ans[item_key] = sb(
-                    item_label, SF36_Q11["options"],
-                    default=load_val(f"sf36_{item_key}"),
-                    key=f"sf_{item_key}",
-                )
-
-        # Scores SF-36
-        sf_scores = compute_sf36_scores(sf_ans)
+        # ── Scores SF-12 ─────────────────────────────────────────────────────
+        sf_scores = compute_sf12_scores(sf_ans)
         st.markdown("---")
-        st.markdown("#### 📊 Résultats SF-36")
+        st.markdown("#### 📊 Résultats SF-12")
+
+        # Scores composites PCS / MCS en gros encadrés
+        cp1, cp2 = st.columns(2)
+        def pcs_mcs_color(s):
+            if s is None: return "#888"
+            if s >= 55:   return "#388e3c"
+            if s >= 45:   return "#2196f3"
+            if s >= 35:   return "#f57c00"
+            return "#d32f2f"
+
+        with cp1:
+            pcs = sf_scores.get("pcs")
+            st.markdown(
+                f'<div class="score-box" style="background:{pcs_mcs_color(pcs)};">'
+                f'PCS-12 : {pcs if pcs is not None else "—"}<br>'
+                f'<small style="font-size:.75rem">Score composite physique<br>'
+                f'{interpret_pcs_mcs(pcs)}</small></div>',
+                unsafe_allow_html=True,
+            )
+        with cp2:
+            mcs = sf_scores.get("mcs")
+            st.markdown(
+                f'<div class="score-box" style="background:{pcs_mcs_color(mcs)};">'
+                f'MCS-12 : {mcs if mcs is not None else "—"}<br>'
+                f'<small style="font-size:.75rem">Score composite mental<br>'
+                f'{interpret_pcs_mcs(mcs)}</small></div>',
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Graphique barres 8 dimensions
+        dim_keys_plot = ["pf", "rp", "bp", "gh", "vt", "sf", "re", "mh"]
+        dim_labels_plot = [SF12_DIMENSIONS[k] for k in dim_keys_plot]
+        scores_vals = [sf_scores.get(k) or 0 for k in dim_keys_plot]
 
         fig = go.Figure()
-        dims  = list(SF36_DIMENSIONS.values())
-        scores_vals = [sf_scores.get(k) or 0 for k in SF36_DIMENSIONS.keys()]
-
         fig.add_trace(go.Bar(
-            x=dims,
+            x=dim_labels_plot,
             y=scores_vals,
-            marker_color=["#2196f3" if s >= 50 else "#f57c00" if s >= 25 else "#d32f2f"
+            marker_color=["#388e3c" if s >= 66 else "#f57c00" if s >= 33 else "#d32f2f"
                           for s in scores_vals],
             text=[f"{s}" for s in scores_vals],
             textposition="outside",
         ))
         fig.update_layout(
-            yaxis=dict(range=[0, 110], title="Score (0–100)"),
+            yaxis=dict(range=[0, 115], title="Score (0–100)"),
             xaxis_tickangle=-30,
-            height=380,
+            height=360,
             margin=dict(t=20, b=80),
             plot_bgcolor="white",
         )
@@ -496,9 +474,9 @@ def render_formulaire():
 
         # Stocker
         for k, v in sf_ans.items():
-            collected[f"sf36_{k}"] = v
+            collected[f"sf12_{k}"] = v
         for dim_key, dim_val in sf_scores.items():
-            collected[f"sf36_{dim_key}"] = dim_val if dim_val is not None else ""
+            collected[f"sf12_{dim_key}"] = dim_val if dim_val is not None else ""
 
     # ═════════════════════════════════════════════════════════════════════════
     #  TAB 4 – BOLT
@@ -672,8 +650,8 @@ def render_evolution():
               for _, row in bilans_df.iterrows()]
 
     # ── Onglets ──────────────────────────────────────────────────────────────
-    tab_had, tab_bolt, tab_sf36, tab_hvt = st.tabs([
-        "😟 HAD", "⏱️ BOLT", "📊 SF-36", "🌬️ Test HV"
+    tab_had, tab_bolt, tab_sf12, tab_hvt = st.tabs([
+        "😟 HAD", "⏱️ BOLT", "📊 SF-12", "🌬️ Test HV"
     ])
 
     # ── HAD ──────────────────────────────────────────────────────────────────
@@ -752,53 +730,75 @@ def render_evolution():
         df_bolt = pd.DataFrame({"Bilan": labels, "BOLT (s)": bolt_vals})
         st.dataframe(df_bolt, use_container_width=True, hide_index=True)
 
-    # ── SF-36 ─────────────────────────────────────────────────────────────────
-    with tab_sf36:
-        st.markdown('<div class="section-title">📊 Évolution SF-36</div>', unsafe_allow_html=True)
+    # ── SF-12 ─────────────────────────────────────────────────────────────────
+    with tab_sf12:
+        st.markdown('<div class="section-title">📊 Évolution SF-12</div>', unsafe_allow_html=True)
 
         dim_keys   = ["pf", "rp", "bp", "gh", "vt", "sf", "re", "mh"]
         dim_labels = ["Fonct. physique", "Limit. physique", "Douleur",
                       "Santé générale", "Vitalité", "Vie sociale",
                       "Limit. émotionnel", "Santé psychique"]
 
-        # Graphique par dimension dans le temps
-        fig = make_subplots(
-            rows=2, cols=4,
-            subplot_titles=dim_labels,
-            shared_yaxes=True,
+        # ── Scores composites PCS/MCS ─────────────────────────────────────────
+        st.markdown("#### 🏅 Scores composites PCS-12 / MCS-12")
+        pcs_vals = [safe_num(r.get("sf12_pcs")) for _, r in bilans_df.iterrows()]
+        mcs_vals = [safe_num(r.get("sf12_mcs")) for _, r in bilans_df.iterrows()]
+
+        fig_comp = go.Figure()
+        fig_comp.add_trace(go.Scatter(
+            x=labels, y=pcs_vals, mode="lines+markers+text",
+            name="PCS-12 (physique)", line=dict(color="#1a3c5e", width=3),
+            marker=dict(size=10),
+            text=[str(v) if v else "" for v in pcs_vals],
+            textposition="top center",
+        ))
+        fig_comp.add_trace(go.Scatter(
+            x=labels, y=mcs_vals, mode="lines+markers+text",
+            name="MCS-12 (mental)", line=dict(color="#f57c00", width=3),
+            marker=dict(size=10),
+            text=[str(v) if v else "" for v in mcs_vals],
+            textposition="bottom center",
+        ))
+        fig_comp.add_hline(y=50, line_dash="dot", line_color="grey",
+                           annotation_text="50 (référence)", annotation_position="right")
+        fig_comp.update_layout(
+            yaxis=dict(range=[20, 70], title="Score (réf. 50)"),
+            xaxis_tickangle=-20, height=380,
+            plot_bgcolor="white", legend=dict(orientation="h"),
         )
+        st.plotly_chart(fig_comp, use_container_width=True)
+
+        # ── 8 dimensions ──────────────────────────────────────────────────────
+        st.markdown("#### 📊 Évolution par dimension")
+        fig = make_subplots(rows=2, cols=4, subplot_titles=dim_labels, shared_yaxes=True)
         colors_bilans = ["#1a3c5e", "#2196f3", "#00bcd4", "#26c6da",
                          "#80deea", "#b2ebf2", "#e0f7fa", "#f5f5f5"]
         for i, (dk, dl) in enumerate(zip(dim_keys, dim_labels)):
-            row, col = divmod(i, 4)
-            vals = [safe_num(r.get(f"sf36_{dk}")) for _, r in bilans_df.iterrows()]
+            row_i, col_i = divmod(i, 4)
+            vals = [safe_num(r.get(f"sf12_{dk}")) for _, r in bilans_df.iterrows()]
             fig.add_trace(
                 go.Bar(x=labels, y=vals,
                        marker_color=[colors_bilans[j % len(colors_bilans)]
                                      for j in range(len(vals))],
                        text=[str(v) if v else "—" for v in vals],
-                       textposition="outside",
-                       showlegend=False),
-                row=row + 1, col=col + 1,
+                       textposition="outside", showlegend=False),
+                row=row_i + 1, col=col_i + 1,
             )
         fig.update_yaxes(range=[0, 115])
-        fig.update_layout(height=550, plot_bgcolor="white",
-                          margin=dict(t=40, b=60))
+        fig.update_layout(height=550, plot_bgcolor="white", margin=dict(t=40, b=60))
         st.plotly_chart(fig, use_container_width=True)
 
-        # Radar comparatif (si ≥ 2 bilans)
+        # ── Radar comparatif ──────────────────────────────────────────────────
         if len(bilans_df) >= 2:
             st.markdown("#### 🕸️ Comparaison radar")
             fig_radar = go.Figure()
             palette = ["#1a3c5e", "#f57c00", "#388e3c", "#7b1fa2", "#d32f2f"]
             for j, (_, row) in enumerate(bilans_df.iterrows()):
-                vals_r = [safe_num(row.get(f"sf36_{dk}")) or 0 for dk in dim_keys]
-                vals_r += [vals_r[0]]  # fermer le polygone
+                vals_r = [safe_num(row.get(f"sf12_{dk}")) or 0 for dk in dim_keys]
+                vals_r += [vals_r[0]]
                 fig_radar.add_trace(go.Scatterpolar(
-                    r=vals_r,
-                    theta=dim_labels + [dim_labels[0]],
-                    fill="toself", opacity=0.4,
-                    name=labels[j],
+                    r=vals_r, theta=dim_labels + [dim_labels[0]],
+                    fill="toself", opacity=0.4, name=labels[j],
                     line=dict(color=palette[j % len(palette)]),
                 ))
             fig_radar.update_layout(
@@ -807,10 +807,11 @@ def render_evolution():
             )
             st.plotly_chart(fig_radar, use_container_width=True)
 
-        # Tableau
+        # ── Tableau récap ─────────────────────────────────────────────────────
         df_sf = pd.DataFrame(
             {**{"Bilan": labels},
-             **{dl: [safe_num(r.get(f"sf36_{dk}")) for _, r in bilans_df.iterrows()]
+             **{"PCS-12": pcs_vals, "MCS-12": mcs_vals},
+             **{dl: [safe_num(r.get(f"sf12_{dk}")) for _, r in bilans_df.iterrows()]
                 for dk, dl in zip(dim_keys, dim_labels)}}
         )
         st.dataframe(df_sf, use_container_width=True, hide_index=True)
