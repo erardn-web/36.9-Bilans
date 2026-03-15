@@ -12,8 +12,10 @@ from reportlab.lib.units import cm
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    HRFlowable, PageBreak, KeepTogether,
+    HRFlowable, PageBreak, KeepTogether, Image,
 )
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # ─── Palette couleurs ─────────────────────────────────────────────────────────
 BLEU_FONCE  = colors.HexColor("#1a3c5e")
@@ -66,6 +68,170 @@ def sf36_color(score):
     if s >= 66:   return VERT
     if s >= 33:   return ORANGE
     return ROUGE
+
+
+# ─── Génération des graphiques ────────────────────────────────────────────────
+
+CHART_COLORS = ["#1a3c5e", "#f57c00", "#388e3c", "#7b1fa2", "#d32f2f"]
+
+def fig_to_image(fig, width=700, height=320):
+    """Convertit un figure Plotly en objet Image ReportLab."""
+    png_bytes = fig.to_image(format="png", width=width, height=height, scale=2)
+    buf = io.BytesIO(png_bytes)
+    return Image(buf, width=17*cm, height=17*cm * height / width)
+
+
+def make_chart_had(bilans_df, labels):
+    """Courbe d'évolution HAD anxiété & dépression."""
+    scores_a = [safe_num(r.get("had_score_anxiete"))    for _, r in bilans_df.iterrows()]
+    scores_d = [safe_num(r.get("had_score_depression")) for _, r in bilans_df.iterrows()]
+
+    fig = go.Figure()
+    fig.add_hrect(y0=0,  y1=7,  fillcolor="green",  opacity=0.07, line_width=0)
+    fig.add_hrect(y0=8,  y1=10, fillcolor="orange", opacity=0.07, line_width=0)
+    fig.add_hrect(y0=11, y1=21, fillcolor="red",    opacity=0.07, line_width=0)
+    fig.add_trace(go.Scatter(
+        x=labels, y=scores_a, mode="lines+markers+text",
+        name="Anxiété", line=dict(color="#f57c00", width=3),
+        marker=dict(size=10),
+        text=[str(int(v)) if v is not None else "" for v in scores_a],
+        textposition="top center",
+    ))
+    fig.add_trace(go.Scatter(
+        x=labels, y=scores_d, mode="lines+markers+text",
+        name="Dépression", line=dict(color="#7b1fa2", width=3),
+        marker=dict(size=10),
+        text=[str(int(v)) if v is not None else "" for v in scores_d],
+        textposition="bottom center",
+    ))
+    fig.update_layout(
+        title="Évolution HAD",
+        yaxis=dict(range=[0, 23], title="Score /21",
+                   tickvals=[0, 7, 10, 21],
+                   ticktext=["0", "7 (Normal)", "10 (Douteux)", "21"]),
+        plot_bgcolor="white", paper_bgcolor="white",
+        legend=dict(orientation="h", y=-0.25),
+        margin=dict(t=40, b=60, l=60, r=20),
+        font=dict(family="Helvetica", size=11),
+    )
+    return fig_to_image(fig, width=700, height=340)
+
+
+def make_chart_bolt(bilans_df, labels):
+    """Barres BOLT avec seuils."""
+    bolt_vals = [safe_num(r.get("bolt_score")) for _, r in bilans_df.iterrows()]
+    bar_colors = []
+    for v in bolt_vals:
+        if v is None:    bar_colors.append("#cccccc")
+        elif v < 10:     bar_colors.append("#d32f2f")
+        elif v < 20:     bar_colors.append("#f57c00")
+        elif v < 40:     bar_colors.append("#fbc02d")
+        else:            bar_colors.append("#388e3c")
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=labels, y=bolt_vals,
+        marker_color=bar_colors,
+        text=[f"{int(v)}s" if v is not None else "—" for v in bolt_vals],
+        textposition="outside",
+    ))
+    fig.add_hline(y=20, line_dash="dot", line_color="#f57c00",
+                  annotation_text="Seuil 20s", annotation_position="right")
+    fig.add_hline(y=40, line_dash="dot", line_color="#388e3c",
+                  annotation_text="Seuil 40s", annotation_position="right")
+    ymax = max([v or 0 for v in bolt_vals] + [50]) + 15
+    fig.update_layout(
+        title="Évolution BOLT",
+        yaxis=dict(range=[0, ymax], title="Secondes"),
+        plot_bgcolor="white", paper_bgcolor="white",
+        margin=dict(t=40, b=60, l=60, r=60),
+        font=dict(family="Helvetica", size=11),
+    )
+    return fig_to_image(fig, width=700, height=320)
+
+
+def make_chart_sf36_bars(bilans_df, labels):
+    """8 sous-graphiques SF-36 par dimension."""
+    dim_keys   = ["pf", "rp", "bp", "gh", "vt", "sf", "re", "mh"]
+    dim_labels = ["Fonct. physique", "Limit. physique", "Douleur",
+                  "Santé générale", "Vitalité", "Vie sociale",
+                  "Limit. émotionnel", "Santé psychique"]
+
+    fig = make_subplots(rows=2, cols=4, subplot_titles=dim_labels, shared_yaxes=True)
+    for i, (dk, dl) in enumerate(zip(dim_keys, dim_labels)):
+        row_i, col_i = divmod(i, 4)
+        vals = [safe_num(r.get(f"sf36_{dk}")) for _, r in bilans_df.iterrows()]
+        bar_cols = []
+        for v in vals:
+            if v is None:   bar_cols.append("#cccccc")
+            elif v >= 66:   bar_cols.append("#388e3c")
+            elif v >= 33:   bar_cols.append("#f57c00")
+            else:           bar_cols.append("#d32f2f")
+        fig.add_trace(
+            go.Bar(x=labels, y=vals, marker_color=bar_cols,
+                   text=[str(int(v)) if v is not None else "—" for v in vals],
+                   textposition="outside", showlegend=False),
+            row=row_i + 1, col=col_i + 1,
+        )
+    fig.update_yaxes(range=[0, 115])
+    fig.update_layout(
+        title="Évolution SF-36 par dimension",
+        height=480, plot_bgcolor="white", paper_bgcolor="white",
+        margin=dict(t=60, b=80, l=40, r=20),
+        font=dict(family="Helvetica", size=9),
+    )
+    return fig_to_image(fig, width=750, height=480)
+
+
+def make_chart_sf36_radar(bilans_df, labels):
+    """Radar comparatif SF-36 (si >= 2 bilans)."""
+    dim_keys   = ["pf", "rp", "bp", "gh", "vt", "sf", "re", "mh"]
+    dim_labels = ["Fonct. physique", "Limit. physique", "Douleur",
+                  "Santé générale", "Vitalité", "Vie sociale",
+                  "Limit. émotionnel", "Santé psychique"]
+
+    fig = go.Figure()
+    for j, (_, row) in enumerate(bilans_df.iterrows()):
+        vals = [safe_num(row.get(f"sf36_{dk}")) or 0 for dk in dim_keys]
+        vals += [vals[0]]
+        fig.add_trace(go.Scatterpolar(
+            r=vals, theta=dim_labels + [dim_labels[0]],
+            fill="toself", opacity=0.35,
+            name=labels[j],
+            line=dict(color=CHART_COLORS[j % len(CHART_COLORS)], width=2),
+        ))
+    fig.update_layout(
+        title="Comparaison SF-36 (radar)",
+        polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+        showlegend=True,
+        legend=dict(orientation="h", y=-0.15),
+        paper_bgcolor="white",
+        margin=dict(t=50, b=80, l=40, r=40),
+        font=dict(family="Helvetica", size=10),
+    )
+    return fig_to_image(fig, width=600, height=420)
+
+
+def make_chart_hvt(bilans_df, labels):
+    """Durée de retour HVT."""
+    durees = [safe_num(r.get("hvt_duree_retour")) for _, r in bilans_df.iterrows()]
+    if not any(d for d in durees):
+        return None
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=labels, y=durees,
+        marker_color="#1a3c5e",
+        text=[f"{int(v)} min" if v is not None else "—" for v in durees],
+        textposition="outside",
+    ))
+    fig.update_layout(
+        title="Durée de retour à la normale après HVT",
+        yaxis=dict(title="Minutes"),
+        plot_bgcolor="white", paper_bgcolor="white",
+        margin=dict(t=40, b=60, l=60, r=20),
+        font=dict(family="Helvetica", size=11),
+    )
+    return fig_to_image(fig, width=700, height=300)
 
 
 # ─── Styles ───────────────────────────────────────────────────────────────────
@@ -354,6 +520,58 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
         "SF36 : vert ≥ 66 · orange ≥ 33 · rouge < 33",
         styles["small"],
     ))
+
+    story.append(PageBreak())
+
+    # ══════════════════════════════════════════════════════════════════
+    #  GRAPHIQUES D'ÉVOLUTION
+    # ══════════════════════════════════════════════════════════════════
+    story.append(Paragraph("Graphiques d'évolution", styles["section"]))
+    story.append(Spacer(1, 0.3*cm))
+
+    # HAD
+    story.append(Paragraph("Anxiété & Dépression — HAD", styles["subsection"]))
+    try:
+        story.append(make_chart_had(bilans_df, labels))
+    except Exception:
+        story.append(Paragraph("Graphique non disponible.", styles["small"]))
+    story.append(Spacer(1, 0.5*cm))
+
+    # BOLT
+    story.append(Paragraph("BOLT — Body Oxygen Level Test", styles["subsection"]))
+    try:
+        story.append(make_chart_bolt(bilans_df, labels))
+    except Exception:
+        story.append(Paragraph("Graphique non disponible.", styles["small"]))
+    story.append(Spacer(1, 0.5*cm))
+
+    story.append(PageBreak())
+
+    # SF-36 barres
+    story.append(Paragraph("SF-36 — Évolution par dimension", styles["subsection"]))
+    try:
+        story.append(make_chart_sf36_bars(bilans_df, labels))
+    except Exception:
+        story.append(Paragraph("Graphique non disponible.", styles["small"]))
+    story.append(Spacer(1, 0.5*cm))
+
+    # SF-36 radar (si >= 2 bilans)
+    if n_bilans >= 2:
+        story.append(Paragraph("SF-36 — Comparaison radar", styles["subsection"]))
+        try:
+            story.append(make_chart_sf36_radar(bilans_df, labels))
+        except Exception:
+            story.append(Paragraph("Graphique non disponible.", styles["small"]))
+        story.append(Spacer(1, 0.5*cm))
+
+    # HVT
+    try:
+        hvt_img = make_chart_hvt(bilans_df, labels)
+        if hvt_img:
+            story.append(Paragraph("Test HV — Durée de retour à la normale", styles["subsection"]))
+            story.append(hvt_img)
+    except Exception:
+        pass
 
     story.append(PageBreak())
 
