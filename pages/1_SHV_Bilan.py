@@ -1363,6 +1363,13 @@ def render_evolution():
             })
         st.dataframe(pd.DataFrame(comorb_table), use_container_width=True, hide_index=True)
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  ROUTEUR PRINCIPAL
+# ═══════════════════════════════════════════════════════════════════════════════
+
+mode = st.session_state.mode
+
 if mode == "accueil":
     render_accueil()
 elif mode == "bilan":
