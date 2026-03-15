@@ -172,7 +172,7 @@ def render_bilan_selection():
     # Chargement des bilans en premier
     bilans_df = get_patient_bilans(st.session_state.patient_id)
 
-    col_back, col_evol, _ = st.columns([1, 1, 4])
+    col_back, col_evol, col_pdf, _ = st.columns([1, 1, 1.5, 2.5])
     with col_back:
         if st.button("⬅️ Changer de patient"):
             st.session_state.patient_id   = None
@@ -186,6 +186,16 @@ def render_bilan_selection():
             if st.button("📈 Voir l'évolution", type="primary"):
                 st.session_state.mode = "evolution"
                 st.rerun()
+    with col_pdf:
+        if not bilans_df.empty:
+            with st.spinner("Génération du PDF…"):
+                pdf_bytes = generate_pdf(bilans_df, info)
+            st.download_button(
+                label="📄 Exporter PDF",
+                data=pdf_bytes,
+                file_name=f"evolution_SHV_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
+                mime="application/pdf",
+            )
 
     st.markdown("---")
 
