@@ -678,7 +678,7 @@ def render_formulaire():
                     cell_key = f"hvt_{phase_key}_{t}_{p_key}"
                     stored   = load_val(cell_key)
                     # Afficher vide si pas de valeur
-                    display  = str(int(float(stored))) if stored else ""
+                    display  = str(int(safe_float(stored))) if stored else ""
                     entered  = row_cols[j+1].text_input(
                         label="",
                         value=display,
@@ -882,7 +882,7 @@ def render_formulaire():
             col = gc1 if i % 2 == 0 else gc2
             with col:
                 raw = load_val(fkey)
-                val_in = float(raw) if raw else 0.0
+                val_in = safe_float(raw)
                 entered = st.number_input(f"{flabel} ({fref})", value=val_in,
                                           step=0.1, format="%.2f", key=fkey)
                 gazo_vals[fkey] = entered if entered != 0.0 else ""
@@ -911,7 +911,7 @@ def render_formulaire():
         with ec1:
             etco2_repos = st.number_input(
                 "ETCO₂ au repos (mmHg)", min_value=0.0, max_value=80.0,
-                value=float(load_val("etco2_repos") or 0), step=0.5, key="etco2_repos",
+                value=safe_float(load_val("etco2_repos")), step=0.5, key="etco2_repos",
             )
             if etco2_repos > 0:
                 color = "#388e3c" if 35 <= etco2_repos <= 45 else "#f57c00" if etco2_repos >= 30 else "#d32f2f"
@@ -920,7 +920,7 @@ def render_formulaire():
         with ec2:
             etco2_effort = st.number_input(
                 "ETCO₂ post-effort (mmHg)", min_value=0.0, max_value=80.0,
-                value=float(load_val("etco2_post_effort") or 0), step=0.5, key="etco2_effort",
+                value=safe_float(load_val("etco2_post_effort")), step=0.5, key="etco2_effort",
             )
 
         pat_opts  = ETCO2_PATTERNS
@@ -992,11 +992,11 @@ def render_formulaire():
             sc1, sc2, sc3 = st.columns(3)
             with sc1:
                 v = st.number_input(f"{label} — Mesuré (cmH₂O)",
-                                    value=float(load_val(key_val) or 0),
+                                    value=safe_float(load_val(key_val)),
                                     step=1.0, key=key_val)
             with sc2:
                 p = st.number_input(f"{label} — Prédit (cmH₂O)",
-                                    value=float(load_val(key_pred) or 0),
+                                    value=safe_float(load_val(key_pred)),
                                     step=1.0, key=key_pred)
             with sc3:
                 if v and p:
