@@ -496,7 +496,7 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
 
     synth_rows.append(synth_row("HAD Anxiété (/21)",    "had_score_anxiete"))
     synth_rows.append(synth_row("HAD Dépression (/21)", "had_score_depression"))
-    synth_rows.append([""] + [""] * n_bilans)   # séparateur
+    synth_rows.append([""] + [""] * n_bilans)
     synth_rows.append(synth_row("BOLT (secondes)",      "bolt_score", "s"))
     synth_rows.append([""] + [""] * n_bilans)
     synth_rows.append(synth_row("SF12 – Fonct. physique",    "sf12_pf"))
@@ -511,13 +511,28 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
     synth_rows.append(synth_row("PCS-12 (score physique)",   "sf12_pcs"))
     synth_rows.append(synth_row("MCS-12 (score mental)",     "sf12_mcs"))
     synth_rows.append([""] + [""] * n_bilans)
+    synth_rows.append(synth_row("Nijmegen (/64)",            "nij_score"))
+    synth_rows.append([""] + [""] * n_bilans)
+    synth_rows.append(synth_row("HVT – Résultat",            "hvt_symptomes_reproduits"))
     synth_rows.append(synth_row("HVT – Retour normal (min)", "hvt_duree_retour", " min"))
     synth_rows.append([""] + [""] * n_bilans)
-    synth_rows.append(synth_row("Nijmegen (/64)",            "nij_score"))
     synth_rows.append(synth_row("ETCO₂ repos (mmHg)",        "etco2_repos"))
-    synth_rows.append(synth_row("FR (cyc/min)",              "pattern_frequence"))
+    synth_rows.append(synth_row("ETCO₂ pattern",             "etco2_pattern"))
+    synth_rows.append([""] + [""] * n_bilans)
+    synth_rows.append(synth_row("Pattern – FR (cyc/min)",    "pattern_frequence"))
+    synth_rows.append(synth_row("Pattern – Mode",            "pattern_mode"))
+    synth_rows.append(synth_row("Pattern – Amplitude",       "pattern_amplitude"))
+    synth_rows.append(synth_row("Pattern – Rythme",          "pattern_rythme"))
+    synth_rows.append(synth_row("Pattern – Paradoxal",       "pattern_paradoxal"))
+    synth_rows.append([""] + [""] * n_bilans)
+    synth_rows.append(synth_row("Gazométrie – pH",           "gazo_ph"))
+    synth_rows.append(synth_row("Gazométrie – PaCO₂ (mmHg)", "gazo_paco2"))
+    synth_rows.append(synth_row("Gazométrie – SatO₂ (%)",    "gazo_sato2"))
+    synth_rows.append([""] + [""] * n_bilans)
+    synth_rows.append(synth_row("SNIF % prédit",             "snif_pct",  "%"))
     synth_rows.append(synth_row("PImax % prédit",            "pimax_pct", "%"))
     synth_rows.append(synth_row("PEmax % prédit",            "pemax_pct", "%"))
+    synth_rows.append([""] + [""] * n_bilans)
     synth_rows.append(synth_row("MRC Dyspnée (grade)",       "mrc_score"))
 
     col_w = [6*cm] + [(w - 6*cm) / n_bilans] * n_bilans
@@ -950,67 +965,78 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
             story.append(make_table(nij_data, col_widths=[4*cm, w - 4*cm]))
 
         # ── Capnographie ─────────────────────────────────────────────────────
-        etco2_r = val_str(row.get("etco2_repos"))
-        if etco2_r != "—":
+        if any(row.get(k) for k in ["etco2_repos","etco2_post_effort","etco2_pattern"]):
             story.append(Paragraph("Capnographie — ETCO₂", styles["subsection"]))
-            etco2_data = [
-                ["Paramètre", "Valeur"],
-                ["ETCO₂ repos (mmHg)",       etco2_r],
-                ["ETCO₂ post-effort (mmHg)", val_str(row.get("etco2_post_effort"))],
-                ["Pattern",                  str(row.get("etco2_pattern","—") or "—")],
-            ]
+            etco2_data = [["Paramètre", "Valeur"]]
+            if row.get("etco2_repos"):
+                etco2_data.append(["ETCO₂ repos (mmHg)", val_str(row.get("etco2_repos"))])
+            if row.get("etco2_post_effort"):
+                etco2_data.append(["ETCO₂ post-effort (mmHg)", val_str(row.get("etco2_post_effort"))])
+            if row.get("etco2_pattern"):
+                etco2_data.append(["Pattern", str(row.get("etco2_pattern") or "—")])
             if row.get("etco2_notes"):
                 etco2_data.append(["Notes", str(row["etco2_notes"])])
             story.append(make_table(etco2_data, col_widths=[6*cm, w - 6*cm]))
 
         # ── Pattern respiratoire ─────────────────────────────────────────────
-        pat_freq = val_str(row.get("pattern_frequence"))
-        if pat_freq != "—":
+        if any(row.get(k) for k in ["pattern_frequence","pattern_mode",
+                                     "pattern_amplitude","pattern_rythme","pattern_paradoxal"]):
             story.append(Paragraph("Pattern respiratoire", styles["subsection"]))
-            pat_data = [
-                ["Paramètre", "Valeur"],
-                ["Fréquence (cyc/min)", pat_freq],
-                ["Mode",      str(row.get("pattern_mode","—")     or "—")],
-                ["Amplitude", str(row.get("pattern_amplitude","—")or "—")],
-                ["Rythme",    str(row.get("pattern_rythme","—")   or "—")],
-                ["Paradoxal", str(row.get("pattern_paradoxal","—")or "—")],
-            ]
+            pat_data = [["Paramètre", "Valeur"]]
+            for lbl, key in [
+                ("Fréquence (cyc/min)", "pattern_frequence"),
+                ("Mode ventilatoire",   "pattern_mode"),
+                ("Amplitude",           "pattern_amplitude"),
+                ("Rythme",              "pattern_rythme"),
+                ("Respiration paradoxale", "pattern_paradoxal"),
+            ]:
+                v = row.get(key)
+                if v and str(v).strip():
+                    pat_data.append([lbl, str(v)])
             if row.get("pattern_notes"):
                 pat_data.append(["Notes", str(row["pattern_notes"])])
             story.append(make_table(pat_data, col_widths=[5*cm, w - 5*cm]))
 
         # ── Gazométrie ───────────────────────────────────────────────────────
-        if row.get("gazo_ph"):
+        if any(row.get(k) for k in ["gazo_ph","gazo_paco2","gazo_pao2","gazo_sato2"]):
             story.append(Paragraph("Gazométrie", styles["subsection"]))
-            gazo_data = [
-                ["Paramètre", "Valeur", "Référence"],
-                ["Type",          str(row.get("gazo_type","—") or "—"),  ""],
-                ["pH",            val_str(row.get("gazo_ph")),           "7.35–7.45"],
-                ["PaCO₂ (mmHg)",  val_str(row.get("gazo_paco2")),        "35–45"],
-                ["PaO₂ (mmHg)",   val_str(row.get("gazo_pao2")),         "75–100"],
-                ["HCO₃⁻ (mmol/L)",val_str(row.get("gazo_hco3")),         "22–26"],
-                ["SatO₂ (%)",     val_str(row.get("gazo_sato2")),        "≥ 95"],
-            ]
+            gazo_data = [["Paramètre", "Valeur", "Référence"]]
+            if row.get("gazo_type"):
+                gazo_data.append(["Type", str(row.get("gazo_type") or "—"), ""])
+            for lbl, key, ref in [
+                ("pH",             "gazo_ph",    "7.35–7.45"),
+                ("PaCO₂ (mmHg)",   "gazo_paco2", "35–45"),
+                ("PaO₂ (mmHg)",    "gazo_pao2",  "75–100"),
+                ("HCO₃⁻ (mmol/L)", "gazo_hco3",  "22–26"),
+                ("SatO₂ (%)",      "gazo_sato2", "≥ 95"),
+                ("FiO₂ (%)",       "gazo_fio2",  "21"),
+            ]:
+                if row.get(key):
+                    gazo_data.append([lbl, val_str(row.get(key)), ref])
+            if row.get("gazo_notes"):
+                gazo_data.append(["Notes", str(row["gazo_notes"]), ""])
             story.append(make_table(gazo_data, col_widths=[5*cm, 4*cm, w - 9*cm]))
 
         # ── SNIF / PImax / PEmax ─────────────────────────────────────────────
-        if row.get("pimax_val") or row.get("snif_val"):
+        if any(row.get(k) for k in ["snif_val","pimax_val","pemax_val"]):
             story.append(Paragraph("SNIF · PImax · PEmax", styles["subsection"]))
-            musc_data = [
-                ["Test", "Mesuré (cmH₂O)", "Prédit (cmH₂O)", "% prédit"],
-                ["SNIF",  val_str(row.get("snif_val")),
-                          val_str(row.get("snif_pred")),  val_str(row.get("snif_pct"),"%")],
-                ["PImax", val_str(row.get("pimax_val")),
-                          val_str(row.get("pimax_pred")), val_str(row.get("pimax_pct"),"%")],
-                ["PEmax", val_str(row.get("pemax_val")),
-                          val_str(row.get("pemax_pred")), val_str(row.get("pemax_pct"),"%")],
-            ]
+            musc_data = [["Test", "Mesuré (cmH₂O)", "Prédit (cmH₂O)", "% prédit"]]
+            for test, vk, pk, pctk in [
+                ("SNIF",  "snif_val",  "snif_pred",  "snif_pct"),
+                ("PImax", "pimax_val", "pimax_pred", "pimax_pct"),
+                ("PEmax", "pemax_val", "pemax_pred", "pemax_pct"),
+            ]:
+                if row.get(vk) or row.get(pk):
+                    musc_data.append([test, val_str(row.get(vk)),
+                                      val_str(row.get(pk)), val_str(row.get(pctk), "%")])
             story.append(make_table(musc_data,
                          col_widths=[3*cm, (w-3*cm)/3, (w-3*cm)/3, (w-3*cm)/3]))
+            if row.get("snif_pimax_pemax_notes"):
+                story.append(Paragraph(str(row["snif_pimax_pemax_notes"]), styles["note"]))
 
         # ── MRC ──────────────────────────────────────────────────────────────
         mrc_val = row.get("mrc_score")
-        if mrc_val is not None and str(mrc_val) != "":
+        if mrc_val is not None and str(mrc_val).strip() not in ("", "0"):
             story.append(Paragraph("Échelle MRC Dyspnée", styles["subsection"]))
             mrc_labels = ["0 — Pas de dyspnée sauf effort intense",
                           "1 — Dyspnée à la montée rapide",
@@ -1018,7 +1044,7 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
                           "3 — S'arrête après 100 m à plat",
                           "4 — Trop essoufflé pour quitter la maison"]
             try:
-                mrc_label = mrc_labels[int(mrc_val)]
+                mrc_label = mrc_labels[int(float(mrc_val))]
             except (IndexError, ValueError):
                 mrc_label = str(mrc_val)
             story.append(make_table([["Grade MRC", mrc_label]],
@@ -1027,13 +1053,13 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
         # ── Comorbidités ─────────────────────────────────────────────────────
         comorb = str(row.get("comorb_list","") or "").replace("|", " · ")
         trait  = str(row.get("comorb_traitements","") or "").replace("|", " · ")
-        if comorb or trait:
+        if comorb.strip() or trait.strip():
             story.append(Paragraph("Comorbidités & traitements", styles["subsection"]))
             cm_rows = []
-            if comorb:
+            if comorb.strip():
                 cm_rows.append(["Comorbidités", comorb])
-            if trait:
-                cm_rows.append(["Traitements",  trait])
+            if trait.strip():
+                cm_rows.append(["Traitements", trait])
             if row.get("comorb_notes"):
                 cm_rows.append(["Notes", str(row["comorb_notes"])])
             story.append(make_table(cm_rows, col_widths=[4*cm, w - 4*cm]))
