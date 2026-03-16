@@ -368,6 +368,14 @@ def render_bilan_selection():
 #  SECTION 2 – FORMULAIRE BILAN
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def safe_float(val, default=0.0):
+    """Convertit en float sans planter sur une chaîne invalide."""
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return default
+
+
 def load_val(key, default=None):
     """Récupère une valeur existante du bilan (si re-chargement)."""
     v = st.session_state.bilan_data.get(key)
