@@ -63,6 +63,22 @@ def get_shv_headers():
         # Test d'hyperventilation volontaire
         "hvt_symptomes_reproduits", "hvt_symptomes_list",
         "hvt_duree_retour", "hvt_notes",
+        # HVT – Grille de mesures (PetCO2, FR, SpO2, FC)
+        # Repos : 0, 1, 2, 3 min
+        "hvt_repos_0_petco2","hvt_repos_0_fr","hvt_repos_0_spo2","hvt_repos_0_fc",
+        "hvt_repos_1_petco2","hvt_repos_1_fr","hvt_repos_1_spo2","hvt_repos_1_fc",
+        "hvt_repos_2_petco2","hvt_repos_2_fr","hvt_repos_2_spo2","hvt_repos_2_fc",
+        "hvt_repos_3_petco2","hvt_repos_3_fr","hvt_repos_3_spo2","hvt_repos_3_fc",
+        # HV : 1, 2, 3 min
+        "hvt_hv_1_petco2","hvt_hv_1_fr","hvt_hv_1_spo2","hvt_hv_1_fc",
+        "hvt_hv_2_petco2","hvt_hv_2_fr","hvt_hv_2_spo2","hvt_hv_2_fc",
+        "hvt_hv_3_petco2","hvt_hv_3_fr","hvt_hv_3_spo2","hvt_hv_3_fc",
+        # Récupération : 1, 2, 3, 4, 5 min
+        "hvt_rec_1_petco2","hvt_rec_1_fr","hvt_rec_1_spo2","hvt_rec_1_fc",
+        "hvt_rec_2_petco2","hvt_rec_2_fr","hvt_rec_2_spo2","hvt_rec_2_fc",
+        "hvt_rec_3_petco2","hvt_rec_3_fr","hvt_rec_3_spo2","hvt_rec_3_fc",
+        "hvt_rec_4_petco2","hvt_rec_4_fr","hvt_rec_4_spo2","hvt_rec_4_fc",
+        "hvt_rec_5_petco2","hvt_rec_5_fr","hvt_rec_5_spo2","hvt_rec_5_fc",
         # Nijmegen (16 items + score)
         "nij_1","nij_2","nij_3","nij_4","nij_5","nij_6","nij_7","nij_8",
         "nij_9","nij_10","nij_11","nij_12","nij_13","nij_14","nij_15","nij_16",
