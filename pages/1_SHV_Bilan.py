@@ -663,18 +663,20 @@ def render_formulaire():
 
         for phase_key, phase_label, times in HVT_PHASES:
             st.markdown(f"**{phase_label}**")
-            # Header row
-            col_headers = st.columns([1.2] + [1]*len(times))
-            col_headers[0].markdown("**Paramètre**")
-            for j, t in enumerate(times):
-                col_headers[j+1].markdown(
-                    f"**{'T0' if t == 0 else f'{t} min'}**"
-                )
+            # Header row : paramètres en colonnes
+            col_headers = st.columns([1.2] + [1]*len(HVT_PARAMS))
+            col_headers[0].markdown("**Temps**")
+            for j, (p_key, p_label, *_) in enumerate(HVT_PARAMS):
+                col_headers[j+1].markdown(f"**{p_label}**")
 
-            for p_key, p_label, p_min, p_max, p_step in HVT_PARAMS:
-                row_cols = st.columns([1.2] + [1]*len(times))
-                row_cols[0].markdown(f"<small>{p_label}</small>", unsafe_allow_html=True)
-                for j, t in enumerate(times):
+            # Une ligne par time point
+            for t in times:
+                row_cols = st.columns([1.2] + [1]*len(HVT_PARAMS))
+                row_cols[0].markdown(
+                    f"<small>{'T0' if t == 0 else f'{t} min'}</small>",
+                    unsafe_allow_html=True,
+                )
+                for j, (p_key, p_label, p_min, p_max, p_step) in enumerate(HVT_PARAMS):
                     cell_key = f"hvt_{phase_key}_{t}_{p_key}"
                     stored   = load_val(cell_key)
                     val_in   = float(stored) if stored else 0.0
