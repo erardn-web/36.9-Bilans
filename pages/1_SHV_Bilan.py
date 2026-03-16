@@ -638,15 +638,129 @@ def render_formulaire():
                     unsafe_allow_html=True)
         st.markdown(HVT_DESCRIPTION)
 
-        # Symptômes reproduits
-        existing_symptomes = str(load_val("hvt_symptomes_list", "") or "").split("|")
-        symptomes_selectionnes = st.multiselect(
-            "Symptômes reproduits pendant le test :",
-            HVT_SYMPTOMES,
-            default=[s for s in existing_symptomes if s in HVT_SYMPTOMES],
-            key="hvt_symptomes",
+        # ── Grille de mesures ─────────────────────────────────────────────────
+        st.markdown("#### 📊 Grille de mesures")
+        st.markdown(
+            '<div class="info-box">Entrez les valeurs mesurées à chaque temps. '
+            'Laissez à 0 si non mesuré.</div>',
+            unsafe_allow_html=True,
         )
 
+        # Définition des phases et time points
+        HVT_PHASES = [
+            ("repos", "🟦 Repos",        [0, 1, 2, 3]),
+            ("hv",    "🔴 HV",           [1, 2, 3]),
+            ("rec",   "🟩 Récupération", [1, 2, 3, 4, 5]),
+        ]
+        HVT_PARAMS = [
+            ("petco2", "PetCO₂ (mmHg)", 0.0, 80.0, 0.5),
+            ("fr",     "FR (cyc/min)",  0.0, 60.0, 1.0),
+            ("spo2",   "SpO₂ (%)",      0.0, 100.0, 0.5),
+            ("fc",     "FC (bpm)",      0.0, 220.0, 1.0),
+        ]
+
+        hvt_grid = {}
+
+        for phase_key, phase_label, times in HVT_PHASES:
+            st.markdown(f"**{phase_label}**")
+            # Header row
+            col_headers = st.columns([1.2] + [1]*len(times))
+            col_headers[0].markdown("**Paramètre**")
+            for j, t in enumerate(times):
+                col_headers[j+1].markdown(
+                    f"**{'T0' if t == 0 else f'{t} min'}**"
+                )
+
+            for p_key, p_label, p_min, p_max, p_step in HVT_PARAMS:
+                row_cols = st.columns([1.2] + [1]*len(times))
+                row_cols[0].markdown(f"<small>{p_label}</small>", unsafe_allow_html=True)
+                for j, t in enumerate(times):
+                    cell_key = f"hvt_{phase_key}_{t}_{p_key}"
+                    stored   = load_val(cell_key)
+                    val_in   = float(stored) if stored else 0.0
+                    entered  = row_cols[j+1].number_input(
+                        label="",
+                        min_value=p_min, max_value=p_max,
+                        value=val_in, step=p_step,
+                        format="%.1f",
+                        key=f"grid_{cell_key}",
+                        label_visibility="collapsed",
+                    )
+                    hvt_grid[cell_key] = entered if entered != 0.0 else ""
+            st.markdown("---")
+
+        # Graphique temps réel des 4 paramètres
+        st.markdown("#### 📈 Visualisation")
+
+        import plotly.graph_objects as go_local
+        from plotly.subplots import make_subplots as ms_local
+
+        # Construire les séries temporelles
+        all_times_labels = (
+            ["T0", "R1'", "R2'", "R3'",
+             "HV1'", "HV2'", "HV3'",
+             "Rec1'", "Rec2'", "Rec3'", "Rec4'", "Rec5'"]
+        )
+        all_keys = (
+            [("repos", t) for t in [0,1,2,3]] +
+            [("hv",    t) for t in [1,2,3]] +
+            [("rec",   t) for t in [1,2,3,4,5]]
+        )
+
+        fig_hvt_grid = ms_local(rows=2, cols=2,
+                                subplot_titles=["PetCO₂ (mmHg)","FR (cyc/min)","SpO₂ (%)","FC (bpm)"],
+                                shared_xaxes=False)
+        param_positions = [("petco2",1,1,"#1a3c5e"), ("fr",1,2,"#f57c00"),
+                           ("spo2",2,1,"#388e3c"),  ("fc",2,2,"#7b1fa2")]
+
+        # Lignes séparatrices phases
+        phase_sep_x = [3.5, 6.5]  # entre repos/HV et HV/rec
+
+        for p_key, r, c, color in param_positions:
+            y_vals = []
+            for ph_key, t in all_keys:
+                k = f"hvt_{ph_key}_{t}_{p_key}"
+                v = hvt_grid.get(k) or load_val(k)
+                try:
+                    y_vals.append(float(v) if v else None)
+                except (TypeError, ValueError):
+                    y_vals.append(None)
+
+            fig_hvt_grid.add_trace(
+                go_local.Scatter(
+                    x=all_times_labels, y=y_vals,
+                    mode="lines+markers",
+                    line=dict(color=color, width=2.5),
+                    marker=dict(size=8),
+                    showlegend=False,
+                    connectgaps=False,
+                ),
+                row=r, col=c,
+            )
+            # Zones de couleur
+            for sep in phase_sep_x:
+                fig_hvt_grid.add_vline(x=sep, line_dash="dot",
+                                       line_color="grey", line_width=1,
+                                       row=r, col=c)
+
+        # Référence PetCO2
+        fig_hvt_grid.add_hline(y=35, line_dash="dot", line_color="#d32f2f",
+                                annotation_text="35 mmHg", row=1, col=1)
+        fig_hvt_grid.add_hline(y=45, line_dash="dot", line_color="#388e3c",
+                                annotation_text="45 mmHg", row=1, col=1)
+        # Référence SpO2
+        fig_hvt_grid.add_hline(y=95, line_dash="dot", line_color="#f57c00",
+                                annotation_text="95%", row=2, col=1)
+
+        fig_hvt_grid.update_layout(
+            height=500, plot_bgcolor="white",
+            margin=dict(t=40, b=20),
+        )
+        fig_hvt_grid.update_xaxes(tickangle=-30)
+        st.plotly_chart(fig_hvt_grid, use_container_width=True)
+
+        # ── Résultat global ───────────────────────────────────────────────────
+        st.markdown("#### 🏁 Résultat global")
         col_hvt1, col_hvt2 = st.columns(2)
         with col_hvt1:
             hvt_reproduits = st.radio(
@@ -665,28 +779,33 @@ def render_formulaire():
                 "Temps de retour à la normale (minutes)",
                 min_value=0, max_value=60,
                 value=int(load_val("hvt_duree_retour") or 0),
-                step=1,
-                key="hvt_duree",
+                step=1, key="hvt_duree",
             )
+
+        # Symptômes
+        existing_symptomes = str(load_val("hvt_symptomes_list", "") or "").split("|")
+        symptomes_selectionnes = st.multiselect(
+            "Symptômes reproduits pendant le test :",
+            HVT_SYMPTOMES,
+            default=[s for s in existing_symptomes if s in HVT_SYMPTOMES],
+            key="hvt_symptomes",
+        )
 
         hvt_notes = st.text_area(
             "Observations / notes cliniques",
             value=str(load_val("hvt_notes", "") or ""),
-            height=120,
-            key="hvt_notes_field",
+            height=100, key="hvt_notes_field",
         )
 
         if "Oui ✅" in hvt_reproduits:
             st.markdown(
                 '<div class="success-box">✅ <strong>Test positif</strong> — '
-                'Confirme le diagnostic de SHV.</div>',
-                unsafe_allow_html=True,
+                'Confirme le diagnostic de SHV.</div>', unsafe_allow_html=True,
             )
         elif "Partiellement" in hvt_reproduits:
             st.markdown(
                 '<div class="warn-box">⚠️ <strong>Test partiellement positif</strong> — '
-                'Arguments en faveur d\'un SHV.</div>',
-                unsafe_allow_html=True,
+                'Arguments en faveur d\'un SHV.</div>', unsafe_allow_html=True,
             )
 
         collected.update({
@@ -694,6 +813,7 @@ def render_formulaire():
             "hvt_symptomes_list":       "|".join(symptomes_selectionnes),
             "hvt_duree_retour":         hvt_duree if hvt_duree > 0 else "",
             "hvt_notes":                hvt_notes,
+            **hvt_grid,
         })
 
     # ═════════════════════════════════════════════════════════════════════════
