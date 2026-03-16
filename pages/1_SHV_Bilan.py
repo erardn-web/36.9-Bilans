@@ -1186,9 +1186,11 @@ def render_evolution():
               for _, row in bilans_df.iterrows()]
 
     # ── Onglets ──────────────────────────────────────────────────────────────
-    tab_had, tab_bolt, tab_sf12, tab_hvt, tab_nij, tab_respi, tab_musc, tab_comorb2 = st.tabs([
+    tab_had, tab_bolt, tab_sf12, tab_hvt, tab_nij, \
+    tab_etco2_ev, tab_pattern_ev, tab_gazo_ev, tab_musc, tab_mrc_ev, tab_comorb2 = st.tabs([
         "😟 HAD", "⏱️ BOLT", "📊 SF-12", "🌬️ Test HV",
-        "📋 Nijmegen", "🫁 Respiratoire", "💪 Force musculaire", "🏥 Comorbidités",
+        "📋 Nijmegen", "📈 Capnographie", "🔬 Pattern respi.",
+        "🧪 Gazométrie", "💪 Force musculaire", "🚶 MRC Dyspnée", "🏥 Comorbidités",
     ])
 
     # ── HAD ──────────────────────────────────────────────────────────────────
@@ -1420,12 +1422,10 @@ def render_evolution():
         st.dataframe(df_nij, use_container_width=True, hide_index=True)
 
     # ── RESPIRATOIRE (Gazométrie + Capnographie + Pattern + MRC) ─────────────
-    with tab_respi:
-        st.markdown('<div class="section-title">🫁 Évolution — Paramètres respiratoires</div>',
+    # ── CAPNOGRAPHIE ──────────────────────────────────────────────────────────
+    with tab_etco2_ev:
+        st.markdown('<div class="section-title">📈 Évolution Capnographie — ETCO₂</div>',
                     unsafe_allow_html=True)
-
-        # ── ETCO₂ ────────────────────────────────────────────────────────────
-        st.markdown("#### 📈 Capnographie — ETCO₂")
         etco2_vals = [safe_num(r.get("etco2_repos")) for _, r in bilans_df.iterrows()]
         if any(etco2_vals):
             fig_etco2 = go.Figure()
@@ -1441,19 +1441,21 @@ def render_evolution():
             fig_etco2.add_hline(y=45, line_dash="dot", line_color="#388e3c",
                                 annotation_text="45 mmHg", annotation_position="right")
             fig_etco2.update_layout(yaxis=dict(range=[0, 60], title="mmHg"),
-                                    height=300, plot_bgcolor="white", xaxis_tickangle=-20)
+                                    height=320, plot_bgcolor="white", xaxis_tickangle=-20)
             st.plotly_chart(fig_etco2, use_container_width=True)
+        else:
+            st.info("Aucune valeur ETCO₂ enregistrée.")
         etco2_table = [{"Bilan": lbl,
-                        "ETCO₂ repos (mmHg)": r.get("etco2_repos","—"),
-                        "ETCO₂ post-effort":  r.get("etco2_post_effort","—"),
-                        "Pattern":            r.get("etco2_pattern","—")}
+                        "ETCO₂ repos (mmHg)": r.get("etco2_repos","—") or "—",
+                        "ETCO₂ post-effort":  r.get("etco2_post_effort","—") or "—",
+                        "Pattern":            r.get("etco2_pattern","—") or "—"}
                        for lbl, (_, r) in zip(labels, bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(etco2_table), use_container_width=True, hide_index=True)
 
-        st.markdown("---")
-
-        # ── Pattern respiratoire ─────────────────────────────────────────────
-        st.markdown("#### 🔬 Pattern respiratoire")
+    # ── PATTERN RESPIRATOIRE ──────────────────────────────────────────────────
+    with tab_pattern_ev:
+        st.markdown('<div class="section-title">🔬 Évolution Pattern respiratoire</div>',
+                    unsafe_allow_html=True)
         pat_fr_vals = [safe_num(r.get("pattern_frequence")) for _, r in bilans_df.iterrows()]
         if any(pat_fr_vals):
             fig_fr = go.Figure()
@@ -1464,42 +1466,31 @@ def render_evolution():
                 textposition="top center",
             ))
             fig_fr.add_hline(y=12, line_dash="dot", line_color="#388e3c",
-                             annotation_text="12 (min normal)", annotation_position="right")
+                             annotation_text="12 min normal", annotation_position="right")
             fig_fr.add_hline(y=18, line_dash="dot", line_color="#f57c00",
-                             annotation_text="18 (max normal)", annotation_position="right")
+                             annotation_text="18 max normal", annotation_position="right")
             fig_fr.add_hline(y=20, line_dash="dot", line_color="#d32f2f",
-                             annotation_text="20 (tachypnée)", annotation_position="right")
+                             annotation_text="20 tachypnée", annotation_position="right")
             fig_fr.update_layout(yaxis=dict(range=[0, 35], title="Cycles/min"),
                                  title="Fréquence respiratoire",
-                                 height=300, plot_bgcolor="white", xaxis_tickangle=-20)
+                                 height=320, plot_bgcolor="white", xaxis_tickangle=-20)
             st.plotly_chart(fig_fr, use_container_width=True)
-
+        else:
+            st.info("Aucune fréquence respiratoire enregistrée.")
         pattern_table = [{"Bilan": lbl,
-                          "FR (cyc/min)":       r.get("pattern_frequence","—"),
-                          "Mode":               r.get("pattern_mode","—"),
-                          "Amplitude":          r.get("pattern_amplitude","—"),
-                          "Rythme":             r.get("pattern_rythme","—"),
-                          "Paradoxal":          r.get("pattern_paradoxal","—"),
-                          "Notes":              r.get("pattern_notes","—")}
+                          "FR (cyc/min)": r.get("pattern_frequence","—") or "—",
+                          "Mode":         r.get("pattern_mode","—") or "—",
+                          "Amplitude":    r.get("pattern_amplitude","—") or "—",
+                          "Rythme":       r.get("pattern_rythme","—") or "—",
+                          "Paradoxal":    r.get("pattern_paradoxal","—") or "—",
+                          "Notes":        r.get("pattern_notes","") or ""}
                          for lbl, (_, r) in zip(labels, bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(pattern_table), use_container_width=True, hide_index=True)
 
-        st.markdown("---")
-
-        # ── Gazométrie ───────────────────────────────────────────────────────
-        st.markdown("#### 🧪 Gazométrie")
-        gazo_table = [{"Bilan": lbl,
-                       "Type":           r.get("gazo_type","—"),
-                       "pH":             r.get("gazo_ph","—"),
-                       "PaCO₂ (mmHg)":  r.get("gazo_paco2","—"),
-                       "PaO₂ (mmHg)":   r.get("gazo_pao2","—"),
-                       "HCO₃⁻ (mmol/L)":r.get("gazo_hco3","—"),
-                       "SatO₂ (%)":     r.get("gazo_sato2","—"),
-                       "FiO₂ (%)":      r.get("gazo_fio2","—")}
-                      for lbl, (_, r) in zip(labels, bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(gazo_table), use_container_width=True, hide_index=True)
-
-        # Graphique PaCO₂
+    # ── GAZOMÉTRIE ────────────────────────────────────────────────────────────
+    with tab_gazo_ev:
+        st.markdown('<div class="section-title">🧪 Évolution Gazométrie</div>',
+                    unsafe_allow_html=True)
         paco2_vals = [safe_num(r.get("gazo_paco2")) for _, r in bilans_df.iterrows()]
         if any(paco2_vals):
             fig_paco2 = go.Figure()
@@ -1510,18 +1501,29 @@ def render_evolution():
                 textposition="top center",
             ))
             fig_paco2.add_hline(y=35, line_dash="dot", line_color="#f57c00",
-                                annotation_text="35 (hypocapnie)", annotation_position="right")
+                                annotation_text="35 hypocapnie", annotation_position="right")
             fig_paco2.add_hline(y=45, line_dash="dot", line_color="#388e3c",
-                                annotation_text="45 (normal max)", annotation_position="right")
+                                annotation_text="45 normal max", annotation_position="right")
             fig_paco2.update_layout(yaxis=dict(range=[20, 60], title="mmHg"),
-                                    title="PaCO₂",
-                                    height=280, plot_bgcolor="white", xaxis_tickangle=-20)
+                                    title="PaCO₂", height=320,
+                                    plot_bgcolor="white", xaxis_tickangle=-20)
             st.plotly_chart(fig_paco2, use_container_width=True)
+        else:
+            st.info("Aucune valeur de gazométrie enregistrée.")
+        gazo_table = [{"Bilan": lbl,
+                       "Type":            r.get("gazo_type","—") or "—",
+                       "pH":              r.get("gazo_ph","—") or "—",
+                       "PaCO₂ (mmHg)":   r.get("gazo_paco2","—") or "—",
+                       "PaO₂ (mmHg)":    r.get("gazo_pao2","—") or "—",
+                       "HCO₃⁻ (mmol/L)": r.get("gazo_hco3","—") or "—",
+                       "SatO₂ (%)":      r.get("gazo_sato2","—") or "—"}
+                      for lbl, (_, r) in zip(labels, bilans_df.iterrows())]
+        st.dataframe(pd.DataFrame(gazo_table), use_container_width=True, hide_index=True)
 
-        st.markdown("---")
-
-        # ── MRC Dyspnée ───────────────────────────────────────────────────────
-        st.markdown("#### 🚶 MRC Dyspnée")
+    # ── MRC DYSPNÉE ───────────────────────────────────────────────────────────
+    with tab_mrc_ev:
+        st.markdown('<div class="section-title">🚶 Évolution MRC Dyspnée</div>',
+                    unsafe_allow_html=True)
         mrc_vals = [safe_num(r.get("mrc_score")) for _, r in bilans_df.iterrows()]
         if any(v is not None for v in mrc_vals):
             fig_mrc = go.Figure()
@@ -1535,8 +1537,13 @@ def render_evolution():
                 textposition="outside",
             ))
             fig_mrc.update_layout(yaxis=dict(range=[0, 5], title="Grade MRC"),
-                                  height=280, plot_bgcolor="white", xaxis_tickangle=-20)
+                                  height=320, plot_bgcolor="white", xaxis_tickangle=-20)
             st.plotly_chart(fig_mrc, use_container_width=True)
+        else:
+            st.info("Aucune valeur MRC enregistrée.")
+        mrc_table = [{"Bilan": lbl, "Grade MRC": r.get("mrc_score","—") or "—"}
+                     for lbl, (_, r) in zip(labels, bilans_df.iterrows())]
+        st.dataframe(pd.DataFrame(mrc_table), use_container_width=True, hide_index=True)
 
     # ── FORCE MUSCULAIRE ──────────────────────────────────────────────────────
     with tab_musc:
