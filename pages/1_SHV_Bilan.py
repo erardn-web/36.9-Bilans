@@ -1398,7 +1398,8 @@ def render_evolution():
         st.markdown('<div class="section-title">🫁 Évolution — Paramètres respiratoires</div>',
                     unsafe_allow_html=True)
 
-        st.markdown("##### 📈 ETCO₂ au repos")
+        # ── ETCO₂ ────────────────────────────────────────────────────────────
+        st.markdown("#### 📈 Capnographie — ETCO₂")
         etco2_vals = [safe_num(r.get("etco2_repos")) for _, r in bilans_df.iterrows()]
         if any(etco2_vals):
             fig_etco2 = go.Figure()
@@ -1416,8 +1417,85 @@ def render_evolution():
             fig_etco2.update_layout(yaxis=dict(range=[0, 60], title="mmHg"),
                                     height=300, plot_bgcolor="white", xaxis_tickangle=-20)
             st.plotly_chart(fig_etco2, use_container_width=True)
+        etco2_table = [{"Bilan": lbl,
+                        "ETCO₂ repos (mmHg)": r.get("etco2_repos","—"),
+                        "ETCO₂ post-effort":  r.get("etco2_post_effort","—"),
+                        "Pattern":            r.get("etco2_pattern","—")}
+                       for lbl, (_, r) in zip(labels, bilans_df.iterrows())]
+        st.dataframe(pd.DataFrame(etco2_table), use_container_width=True, hide_index=True)
 
-        st.markdown("##### 🚶 MRC Dyspnée")
+        st.markdown("---")
+
+        # ── Pattern respiratoire ─────────────────────────────────────────────
+        st.markdown("#### 🔬 Pattern respiratoire")
+        pat_fr_vals = [safe_num(r.get("pattern_frequence")) for _, r in bilans_df.iterrows()]
+        if any(pat_fr_vals):
+            fig_fr = go.Figure()
+            fig_fr.add_trace(go.Scatter(
+                x=labels, y=pat_fr_vals, mode="lines+markers+text",
+                line=dict(color="#1a3c5e", width=2.5), marker=dict(size=9),
+                text=[str(int(v)) if v else "" for v in pat_fr_vals],
+                textposition="top center",
+            ))
+            fig_fr.add_hline(y=12, line_dash="dot", line_color="#388e3c",
+                             annotation_text="12 (min normal)", annotation_position="right")
+            fig_fr.add_hline(y=18, line_dash="dot", line_color="#f57c00",
+                             annotation_text="18 (max normal)", annotation_position="right")
+            fig_fr.add_hline(y=20, line_dash="dot", line_color="#d32f2f",
+                             annotation_text="20 (tachypnée)", annotation_position="right")
+            fig_fr.update_layout(yaxis=dict(range=[0, 35], title="Cycles/min"),
+                                 title="Fréquence respiratoire",
+                                 height=300, plot_bgcolor="white", xaxis_tickangle=-20)
+            st.plotly_chart(fig_fr, use_container_width=True)
+
+        pattern_table = [{"Bilan": lbl,
+                          "FR (cyc/min)":       r.get("pattern_frequence","—"),
+                          "Mode":               r.get("pattern_mode","—"),
+                          "Amplitude":          r.get("pattern_amplitude","—"),
+                          "Rythme":             r.get("pattern_rythme","—"),
+                          "Paradoxal":          r.get("pattern_paradoxal","—"),
+                          "Notes":              r.get("pattern_notes","—")}
+                         for lbl, (_, r) in zip(labels, bilans_df.iterrows())]
+        st.dataframe(pd.DataFrame(pattern_table), use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+
+        # ── Gazométrie ───────────────────────────────────────────────────────
+        st.markdown("#### 🧪 Gazométrie")
+        gazo_table = [{"Bilan": lbl,
+                       "Type":           r.get("gazo_type","—"),
+                       "pH":             r.get("gazo_ph","—"),
+                       "PaCO₂ (mmHg)":  r.get("gazo_paco2","—"),
+                       "PaO₂ (mmHg)":   r.get("gazo_pao2","—"),
+                       "HCO₃⁻ (mmol/L)":r.get("gazo_hco3","—"),
+                       "SatO₂ (%)":     r.get("gazo_sato2","—"),
+                       "FiO₂ (%)":      r.get("gazo_fio2","—")}
+                      for lbl, (_, r) in zip(labels, bilans_df.iterrows())]
+        st.dataframe(pd.DataFrame(gazo_table), use_container_width=True, hide_index=True)
+
+        # Graphique PaCO₂
+        paco2_vals = [safe_num(r.get("gazo_paco2")) for _, r in bilans_df.iterrows()]
+        if any(paco2_vals):
+            fig_paco2 = go.Figure()
+            fig_paco2.add_trace(go.Scatter(
+                x=labels, y=paco2_vals, mode="lines+markers+text",
+                line=dict(color="#7b1fa2", width=2.5), marker=dict(size=9),
+                text=[str(v) if v else "" for v in paco2_vals],
+                textposition="top center",
+            ))
+            fig_paco2.add_hline(y=35, line_dash="dot", line_color="#f57c00",
+                                annotation_text="35 (hypocapnie)", annotation_position="right")
+            fig_paco2.add_hline(y=45, line_dash="dot", line_color="#388e3c",
+                                annotation_text="45 (normal max)", annotation_position="right")
+            fig_paco2.update_layout(yaxis=dict(range=[20, 60], title="mmHg"),
+                                    title="PaCO₂",
+                                    height=280, plot_bgcolor="white", xaxis_tickangle=-20)
+            st.plotly_chart(fig_paco2, use_container_width=True)
+
+        st.markdown("---")
+
+        # ── MRC Dyspnée ───────────────────────────────────────────────────────
+        st.markdown("#### 🚶 MRC Dyspnée")
         mrc_vals = [safe_num(r.get("mrc_score")) for _, r in bilans_df.iterrows()]
         if any(v is not None for v in mrc_vals):
             fig_mrc = go.Figure()
@@ -1433,21 +1511,6 @@ def render_evolution():
             fig_mrc.update_layout(yaxis=dict(range=[0, 5], title="Grade MRC"),
                                   height=280, plot_bgcolor="white", xaxis_tickangle=-20)
             st.plotly_chart(fig_mrc, use_container_width=True)
-
-        st.markdown("##### 🔬 Pattern et Gazométrie")
-        gazo_data = []
-        for lbl, (_, row) in zip(labels, bilans_df.iterrows()):
-            gazo_data.append({
-                "Bilan": lbl,
-                "FR (cyc/min)":  row.get("pattern_frequence", "—"),
-                "Mode":          row.get("pattern_mode", "—"),
-                "Rythme":        row.get("pattern_rythme", "—"),
-                "pH":            row.get("gazo_ph", "—"),
-                "PaCO₂ (mmHg)":  row.get("gazo_paco2", "—"),
-                "SatO₂ (%)":     row.get("gazo_sato2", "—"),
-                "ETCO₂ pattern": row.get("etco2_pattern", "—"),
-            })
-        st.dataframe(pd.DataFrame(gazo_data), use_container_width=True, hide_index=True)
 
     # ── FORCE MUSCULAIRE ──────────────────────────────────────────────────────
     with tab_musc:
