@@ -663,32 +663,34 @@ def render_formulaire():
 
         for phase_key, phase_label, times in HVT_PHASES:
             st.markdown(f"**{phase_label}**")
-            # Header row : paramètres en colonnes
             col_headers = st.columns([1.2] + [1]*len(HVT_PARAMS))
             col_headers[0].markdown("**Temps**")
             for j, (p_key, p_label, *_) in enumerate(HVT_PARAMS):
                 col_headers[j+1].markdown(f"**{p_label}**")
 
-            # Une ligne par time point
             for t in times:
                 row_cols = st.columns([1.2] + [1]*len(HVT_PARAMS))
                 row_cols[0].markdown(
                     f"<small>{'T0' if t == 0 else f'{t} min'}</small>",
                     unsafe_allow_html=True,
                 )
-                for j, (p_key, p_label, p_min, p_max, p_step) in enumerate(HVT_PARAMS):
+                for j, (p_key, p_label, *_) in enumerate(HVT_PARAMS):
                     cell_key = f"hvt_{phase_key}_{t}_{p_key}"
                     stored   = load_val(cell_key)
-                    val_in   = float(stored) if stored else 0.0
-                    entered  = row_cols[j+1].number_input(
+                    # Afficher vide si pas de valeur
+                    display  = str(int(float(stored))) if stored else ""
+                    entered  = row_cols[j+1].text_input(
                         label="",
-                        min_value=p_min, max_value=p_max,
-                        value=val_in, step=p_step,
-                        format="%.1f",
+                        value=display,
                         key=f"grid_{cell_key}",
                         label_visibility="collapsed",
+                        placeholder="—",
                     )
-                    hvt_grid[cell_key] = entered if entered != 0.0 else ""
+                    # Stocker uniquement si valeur valide
+                    try:
+                        hvt_grid[cell_key] = int(float(entered)) if entered.strip() else ""
+                    except (ValueError, AttributeError):
+                        hvt_grid[cell_key] = ""
             st.markdown("---")
 
         # Graphique temps réel des 4 paramètres
