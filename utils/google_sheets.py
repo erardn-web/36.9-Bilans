@@ -117,20 +117,22 @@ def _ws_to_df(ws, expected_headers: list) -> pd.DataFrame:
 
 def _sync_headers(ws, expected_headers: list):
     """
-    Ajoute les colonnes manquantes à la feuille Google Sheet
-    sans toucher aux données existantes.
+    Ajoute les colonnes manquantes en une seule opération batch.
     """
-    existing = ws.row_values(1)
-    missing  = [h for h in expected_headers if h not in existing]
-    if not missing:
-        return
-    # Étendre la ligne d'en-tête
-    new_headers = existing + missing
-    ws.resize(cols=len(new_headers))
-    # Écrire uniquement les nouvelles colonnes
-    start_col = len(existing) + 1
-    for i, h in enumerate(missing):
-        ws.update_cell(1, start_col + i, h)
+    try:
+        existing = ws.row_values(1)
+        missing  = [h for h in expected_headers if h not in existing]
+        if not missing:
+            return
+        new_headers = existing + missing
+        # Resize si nécessaire
+        if len(new_headers) > ws.col_count:
+            ws.resize(cols=len(new_headers))
+        # Écrire tous les headers en une seule requête
+        ws.update([new_headers], "A1")
+    except Exception:
+        # Si la sync échoue, on continue sans bloquer l'app
+        pass
 
 
 def ensure_sheets():
