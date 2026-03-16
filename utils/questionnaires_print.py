@@ -536,13 +536,103 @@ def build_hvt(story, styles):
     story.append(Paragraph("Observations cliniques", ParagraphStyle(
         "sh4", fontSize=11, fontName="Helvetica-Bold", textColor=BLEU, spaceAfter=6,
     )))
-    notes_rows = [[""] for _ in range(5)]
-    notes_tbl = Table(notes_rows, colWidths=[W], rowHeights=[0.8*cm]*5)
+    notes_rows = [[""] for _ in range(4)]
+    notes_tbl = Table(notes_rows, colWidths=[W], rowHeights=[0.7*cm]*4)
     notes_tbl.setStyle(TableStyle([
         ("GRID",          (0, 0), (-1, -1), 0.3, GRIS_BORD),
         ("ROWBACKGROUNDS", (0, 0), (-1, -1), [BLANC, GRIS_CLAIR]),
     ]))
     story.append(notes_tbl)
+    story.append(Spacer(1, 0.5*cm))
+
+    # ── Grille de mesures ──────────────────────────────────────────────────────
+    story.append(Paragraph("Grille de mesures", ParagraphStyle(
+        "sh5", fontSize=11, fontName="Helvetica-Bold", textColor=BLEU, spaceAfter=6,
+    )))
+
+    PARAMS     = ["PetCO₂\n(mmHg)", "FR\n(cyc/min)", "SpO₂\n(%)", "FC\n(bpm)"]
+    PHASES = [
+        ("🟦 Repos",        ["T0", "1 min", "2 min", "3 min"]),
+        ("🔴 HV",           ["1 min", "2 min", "3 min"]),
+        ("🟩 Récupération", ["1 min", "2 min", "3 min", "4 min", "5 min"]),
+    ]
+
+    # Largeurs : colonne temps + 4 paramètres
+    col_w_time   = 2.2*cm
+    col_w_param  = (W - col_w_time) / 4
+
+    # En-tête globale
+    header_row = [Paragraph("<b>Temps</b>", ParagraphStyle(
+        "gh", fontSize=8, fontName="Helvetica-Bold",
+        textColor=BLANC, alignment=1,
+    ))]
+    for p in PARAMS:
+        header_row.append(Paragraph(
+            f"<b>{p}</b>",
+            ParagraphStyle("gp", fontSize=8, fontName="Helvetica-Bold",
+                           textColor=BLANC, alignment=1, leading=10),
+        ))
+
+    all_rows   = [header_row]
+    row_styles = []   # (bg_color, row_index)
+
+    for phase_label, times in PHASES:
+        # Ligne de phase (fusionnée visuellement via couleur de fond)
+        phase_row = [Paragraph(
+            f"<b>{phase_label}</b>",
+            ParagraphStyle("phase", fontSize=8, fontName="Helvetica-Bold",
+                           textColor=BLEU, leading=10),
+        )] + [""] * 4
+        all_rows.append(phase_row)
+        row_styles.append(("phase", len(all_rows) - 1))
+
+        for t_label in times:
+            data_row = [Paragraph(
+                t_label,
+                ParagraphStyle("tl", fontSize=8, fontName="Helvetica",
+                               textColor=NOIR, alignment=1),
+            )] + [""] * 4
+            all_rows.append(data_row)
+            row_styles.append(("data", len(all_rows) - 1))
+
+    grid_tbl = Table(
+        all_rows,
+        colWidths=[col_w_time] + [col_w_param] * 4,
+        repeatRows=1,
+    )
+
+    tbl_cmds = [
+        # Général
+        ("FONTSIZE",      (0, 0), (-1, -1), 8),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
+        ("GRID",          (0, 0), (-1, -1), 0.4, GRIS_BORD),
+        ("TOPPADDING",    (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        # En-tête
+        ("BACKGROUND",    (0, 0), (-1, 0),  BLEU),
+        ("TEXTCOLOR",     (0, 0), (-1, 0),  BLANC),
+        ("ROWHEIGHT",     (0, 0), (-1, 0),  0.9*cm),
+    ]
+
+    # Lignes de phase et données alternées
+    for style_type, row_idx in row_styles:
+        if style_type == "phase":
+            tbl_cmds += [
+                ("BACKGROUND",    (0, row_idx), (-1, row_idx), BLEU_CLAIR),
+                ("ALIGN",         (0, row_idx), (0, row_idx),  "LEFT"),
+                ("LEFTPADDING",   (0, row_idx), (0, row_idx),  6),
+                ("ROWHEIGHT",     (0, row_idx), (-1, row_idx), 0.7*cm),
+            ]
+        else:
+            bg = BLANC if row_idx % 2 == 0 else GRIS_CLAIR
+            tbl_cmds += [
+                ("BACKGROUND",    (0, row_idx), (-1, row_idx), bg),
+                ("ROWHEIGHT",     (0, row_idx), (-1, row_idx), 0.85*cm),
+            ]
+
+    grid_tbl.setStyle(TableStyle(tbl_cmds))
+    story.append(grid_tbl)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
