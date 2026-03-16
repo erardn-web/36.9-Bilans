@@ -89,20 +89,66 @@ def get_shv_headers():
 
 # ─── Sheet initialization ────────────────────────────────────────────────────
 
+def _ws_to_df(ws, expected_headers: list) -> pd.DataFrame:
+    """
+    Lit une feuille avec get_all_values() (plus robuste que get_all_records).
+    Aligne les colonnes sur expected_headers — ajoute les colonnes manquantes à vide.
+    """
+    all_values = ws.get_all_values()
+    if not all_values or len(all_values) < 1:
+        return pd.DataFrame(columns=expected_headers)
+
+    sheet_headers = all_values[0]
+    rows          = all_values[1:]
+
+    if not rows:
+        return pd.DataFrame(columns=expected_headers)
+
+    # Construire un DataFrame avec les headers réels de la feuille
+    df = pd.DataFrame(rows, columns=sheet_headers)
+
+    # Ajouter les colonnes attendues qui manquent (nouveaux champs)
+    for col in expected_headers:
+        if col not in df.columns:
+            df[col] = ""
+
+    return df[expected_headers]
+
+
+def _sync_headers(ws, expected_headers: list):
+    """
+    Ajoute les colonnes manquantes à la feuille Google Sheet
+    sans toucher aux données existantes.
+    """
+    existing = ws.row_values(1)
+    missing  = [h for h in expected_headers if h not in existing]
+    if not missing:
+        return
+    # Étendre la ligne d'en-tête
+    new_headers = existing + missing
+    ws.resize(cols=len(new_headers))
+    # Écrire uniquement les nouvelles colonnes
+    start_col = len(existing) + 1
+    for i, h in enumerate(missing):
+        ws.update_cell(1, start_col + i, h)
+
+
 def ensure_sheets():
     ss = get_spreadsheet()
 
     try:
-        ss.worksheet("Patients")
+        ws_p = ss.worksheet("Patients")
+        _sync_headers(ws_p, PATIENTS_HEADERS)
     except gspread.WorksheetNotFound:
-        ws = ss.add_worksheet("Patients", rows=1000, cols=len(PATIENTS_HEADERS))
-        ws.append_row(PATIENTS_HEADERS)
+        ws_p = ss.add_worksheet("Patients", rows=1000, cols=len(PATIENTS_HEADERS))
+        ws_p.append_row(PATIENTS_HEADERS)
 
     try:
-        ss.worksheet("Bilans_SHV")
+        ws_b = ss.worksheet("Bilans_SHV")
+        _sync_headers(ws_b, get_shv_headers())
     except gspread.WorksheetNotFound:
-        ws = ss.add_worksheet("Bilans_SHV", rows=5000, cols=len(get_shv_headers()))
-        ws.append_row(get_shv_headers())
+        ws_b = ss.add_worksheet("Bilans_SHV", rows=5000, cols=len(get_shv_headers()))
+        ws_b.append_row(get_shv_headers())
 
     return ss
 
@@ -112,10 +158,7 @@ def ensure_sheets():
 def get_all_patients() -> pd.DataFrame:
     ss = ensure_sheets()
     ws = ss.worksheet("Patients")
-    data = ws.get_all_records()
-    if not data:
-        return pd.DataFrame(columns=PATIENTS_HEADERS)
-    return pd.DataFrame(data)
+    return _ws_to_df(ws, PATIENTS_HEADERS)
 
 
 def create_patient(nom, prenom, date_naissance, sexe, profession) -> str:
@@ -135,10 +178,9 @@ def create_patient(nom, prenom, date_naissance, sexe, profession) -> str:
 def get_patient_bilans(patient_id: str) -> pd.DataFrame:
     ss = ensure_sheets()
     ws = ss.worksheet("Bilans_SHV")
-    data = ws.get_all_records()
-    if not data:
-        return pd.DataFrame(columns=get_shv_headers())
-    df = pd.DataFrame(data)
+    df = _ws_to_df(ws, get_shv_headers())
+    if df.empty:
+        return df
     result = df[df["patient_id"] == patient_id].copy()
     return result.reset_index(drop=True)
 
