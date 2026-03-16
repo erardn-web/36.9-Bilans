@@ -387,7 +387,18 @@ def load_val(key, default=None):
         return v
 
 
+def tab_label(base_label, keys):
+    """Ajoute ✅ si au moins une clé est renseignée dans le bilan en cours."""
+    bd = st.session_state.bilan_data
+    filled = any(
+        str(bd.get(k, "")).strip() not in ("", "0", "0.0", "None")
+        for k in keys
+    )
+    return f"{base_label} ✅" if filled else base_label
+
+
 def render_formulaire():
+
     info = st.session_state.patient_info
     bd   = st.session_state.bilan_data
 
@@ -411,9 +422,18 @@ def render_formulaire():
     # ──── Onglets ────────────────────────────────────────────────────────────
     tab_gen, tab_had, tab_sf12, tab_bolt, tab_hvt, \
     tab_nij, tab_gazo, tab_etco2, tab_pattern, tab_snif, tab_mrc, tab_comorb = st.tabs([
-        "📝 Général", "😟 HAD", "📊 SF-12", "⏱️ BOLT", "🌬️ Test HV",
-        "📋 Nijmegen", "🧪 Gazométrie", "📈 Capnographie",
-        "🔬 Pattern respi.", "💪 SNIF/PImax/PEmax", "🚶 MRC Dyspnée", "🏥 Comorbidités",
+        "📝 Général",
+        tab_label("😟 HAD",             ["had_score_anxiete","had_score_depression"]),
+        tab_label("📊 SF-12",            ["sf12_pcs","sf12_mcs"]),
+        tab_label("⏱️ BOLT",             ["bolt_score"]),
+        tab_label("🌬️ Test HV",          ["hvt_symptomes_reproduits","hvt_repos_0_petco2"]),
+        tab_label("📋 Nijmegen",         ["nij_score"]),
+        tab_label("🧪 Gazométrie",       ["gazo_ph","gazo_paco2","gazo_sato2"]),
+        tab_label("📈 Capnographie",     ["etco2_repos","etco2_pattern"]),
+        tab_label("🔬 Pattern respi.",   ["pattern_frequence","pattern_mode"]),
+        tab_label("💪 SNIF/PImax/PEmax", ["snif_val","pimax_val","pemax_val"]),
+        tab_label("🚶 MRC Dyspnée",      ["mrc_score"]),
+        tab_label("🏥 Comorbidités",     ["comorb_list","comorb_traitements"]),
     ])
 
     collected = {}   # on accumulera toutes les valeurs ici
@@ -1034,20 +1054,26 @@ def render_formulaire():
     with tab_mrc:
         st.markdown('<div class="section-title">🚶 Échelle de dyspnée MRC</div>',
                     unsafe_allow_html=True)
-        mrc_opts  = [g[1] for g in MRC_GRADES]
-        mrc_scores = [g[0] for g in MRC_GRADES]
-        mrc_val   = int(load_val("mrc_score") or 0)
-        mrc_idx   = mrc_scores.index(mrc_val) if mrc_val in mrc_scores else 0
-        mrc_chosen = st.radio("Grade MRC", mrc_opts, index=mrc_idx, key="mrc_radio")
-        mrc_score_val = mrc_scores[mrc_opts.index(mrc_chosen)]
-
-        mrc_colors = ["#388e3c", "#8bc34a", "#f57c00", "#e64a19", "#d32f2f"]
-        st.markdown(
-            f'<div class="score-box" style="background:{mrc_colors[mrc_score_val]};">'
-            f'MRC Grade {mrc_score_val} / 4</div>',
-            unsafe_allow_html=True,
-        )
-        collected["mrc_score"] = mrc_score_val
+        mrc_opts_display = ["— Non renseigné —"] + [g[1] for g in MRC_GRADES]
+        mrc_scores_map   = {g[1]: g[0] for g in MRC_GRADES}
+        mrc_stored       = load_val("mrc_score")
+        mrc_stored_label = next(
+            (g[1] for g in MRC_GRADES if str(g[0]) == str(mrc_stored)), None
+        ) if mrc_stored not in (None, "", "0") else None
+        mrc_default_idx  = mrc_opts_display.index(mrc_stored_label) if mrc_stored_label else 0
+        mrc_chosen = st.radio("Grade MRC", mrc_opts_display,
+                              index=mrc_default_idx, key="mrc_radio")
+        if mrc_chosen == "— Non renseigné —":
+            collected["mrc_score"] = ""
+        else:
+            mrc_score_val = mrc_scores_map[mrc_chosen]
+            mrc_colors = ["#388e3c", "#8bc34a", "#f57c00", "#e64a19", "#d32f2f"]
+            st.markdown(
+                f'<div class="score-box" style="background:{mrc_colors[mrc_score_val]};">'
+                f'MRC Grade {mrc_score_val} / 4</div>',
+                unsafe_allow_html=True,
+            )
+            collected["mrc_score"] = mrc_score_val
 
     # ═════════════════════════════════════════════════════════════════════════
     #  TAB 12 – COMORBIDITÉS
