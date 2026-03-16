@@ -769,7 +769,177 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
         ]))
         story.append(hvt_table)
 
-        # ── Nijmegen ─────────────────────────────────────────────────────────
+        # ── Grille de mesures HVT ────────────────────────────────────────────
+        HVT_PHASES_PDF = [
+            ("repos", "Repos",        [0, 1, 2, 3]),
+            ("hv",    "HV",           [1, 2, 3]),
+            ("rec",   "Récupération", [1, 2, 3, 4, 5]),
+        ]
+        HVT_PARAMS_PDF = ["PetCO₂\n(mmHg)", "FR\n(cyc/min)", "SpO₂\n(%)", "FC\n(bpm)"]
+        HVT_PARAM_KEYS = ["petco2", "fr", "spo2", "fc"]
+
+        # Vérifier qu'il y a au moins une valeur dans la grille
+        has_grid_data = any(
+            safe_num(row.get(f"hvt_{ph}_{t}_{pk}"))
+            for ph, _, times in HVT_PHASES_PDF
+            for t in times
+            for pk in HVT_PARAM_KEYS
+        )
+
+        if has_grid_data:
+            story.append(Paragraph("Grille de mesures HVT", styles["subsection"]))
+
+            # Tableau de données
+            col_w_t = 2*cm
+            col_w_p = (w - col_w_t) / 4
+
+            # En-tête
+            grid_header = [Paragraph("<b>Temps</b>", ParagraphStyle(
+                "gh2", fontSize=7, fontName="Helvetica-Bold",
+                textColor=BLANC, alignment=1,
+            ))]
+            for p_label in HVT_PARAMS_PDF:
+                grid_header.append(Paragraph(
+                    f"<b>{p_label}</b>",
+                    ParagraphStyle("gp2", fontSize=7, fontName="Helvetica-Bold",
+                                   textColor=BLANC, alignment=1, leading=9),
+                ))
+
+            grid_rows  = [grid_header]
+            grid_cmds  = [
+                ("FONTSIZE",      (0, 0), (-1, -1), 7),
+                ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
+                ("GRID",          (0, 0), (-1, -1), 0.3, colors.HexColor("#cccccc")),
+                ("TOPPADDING",    (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("BACKGROUND",    (0, 0), (-1, 0),  BLEU_FONCE),
+                ("ROWHEIGHT",     (0, 0), (-1, 0),  0.7*cm),
+            ]
+
+            row_idx = 1
+            for ph_key, ph_label, times in HVT_PHASES_PDF:
+                # Ligne de phase
+                phase_row = [Paragraph(
+                    f"<b>{ph_label}</b>",
+                    ParagraphStyle("plbl", fontSize=7, fontName="Helvetica-Bold",
+                                   textColor=BLEU_FONCE),
+                )] + [""] * 4
+                grid_rows.append(phase_row)
+                grid_cmds += [
+                    ("BACKGROUND",  (0, row_idx), (-1, row_idx), BLEU_CLAIR),
+                    ("ROWHEIGHT",   (0, row_idx), (-1, row_idx), 0.5*cm),
+                ]
+                row_idx += 1
+
+                for t in times:
+                    t_label = "T0" if t == 0 else f"{t} min"
+                    data_row = [Paragraph(t_label, ParagraphStyle(
+                        "tl2", fontSize=7, fontName="Helvetica", alignment=1,
+                    ))]
+                    for pk in HVT_PARAM_KEYS:
+                        v = safe_num(row.get(f"hvt_{ph_key}_{t}_{pk}"))
+                        data_row.append(str(int(v)) if v is not None else "")
+                    grid_rows.append(data_row)
+                    bg = BLANC if row_idx % 2 == 0 else GRIS_CLAIR
+                    grid_cmds += [
+                        ("BACKGROUND", (0, row_idx), (-1, row_idx), bg),
+                        ("ROWHEIGHT",  (0, row_idx), (-1, row_idx), 0.6*cm),
+                    ]
+                    row_idx += 1
+
+            grid_tbl_pdf = Table(grid_rows, colWidths=[col_w_t] + [col_w_p]*4)
+            grid_tbl_pdf.setStyle(TableStyle(grid_cmds))
+            story.append(grid_tbl_pdf)
+            story.append(Spacer(1, 0.4*cm))
+
+            # Graphique matplotlib 4 panneaux
+            story.append(Paragraph("Graphiques HVT", styles["subsection"]))
+            try:
+                all_time_labels = (
+                    ["T0","R1'","R2'","R3'",
+                     "HV1'","HV2'","HV3'",
+                     "Rec1'","Rec2'","Rec3'","Rec4'","Rec5'"]
+                )
+                all_keys_seq = (
+                    [("repos", t) for t in [0,1,2,3]] +
+                    [("hv",    t) for t in [1,2,3]] +
+                    [("rec",   t) for t in [1,2,3,4,5]]
+                )
+                param_info = [
+                    ("petco2", "PetCO₂ (mmHg)", "#1a3c5e",
+                     [(35,"--","#d32f2f","35"), (45,"--","#388e3c","45")]),
+                    ("fr",     "FR (cyc/min)",   "#f57c00", []),
+                    ("spo2",   "SpO₂ (%)",       "#388e3c",
+                     [(95,"--","#f57c00","95%")]),
+                    ("fc",     "FC (bpm)",        "#7b1fa2", []),
+                ]
+
+                fig, axes = plt.subplots(2, 2, figsize=(14, 7))
+                fig.suptitle("Test d'hyperventilation volontaire — Paramètres",
+                             fontsize=12, fontweight="bold", color="#1a3c5e")
+                axes_flat = [axes[0][0], axes[0][1], axes[1][0], axes[1][1]]
+
+                for ax, (pk, p_label, color, refs) in zip(axes_flat, param_info):
+                    y_vals = []
+                    for ph_key, t in all_keys_seq:
+                        v = safe_num(row.get(f"hvt_{ph_key}_{t}_{pk}"))
+                        y_vals.append(v)
+
+                    # Masquer les None
+                    x_plot = [i for i, v in enumerate(y_vals) if v is not None]
+                    y_plot = [v for v in y_vals if v is not None]
+
+                    if x_plot:
+                        ax.plot(x_plot, y_plot, "o-", color=color,
+                                linewidth=2, markersize=6)
+                        for xi, yi in zip(x_plot, y_plot):
+                            ax.annotate(str(int(yi)), (xi, yi),
+                                        textcoords="offset points", xytext=(0,6),
+                                        ha="center", fontsize=7, color=color)
+
+                    for ref_y, ref_ls, ref_col, ref_lbl in refs:
+                        ax.axhline(ref_y, linestyle=ref_ls, color=ref_col,
+                                   linewidth=1, alpha=0.7, label=f"{ref_lbl}")
+
+                    # Séparateurs de phase
+                    ax.axvline(3.5, linestyle=":", color="grey", linewidth=1)
+                    ax.axvline(6.5, linestyle=":", color="grey", linewidth=1)
+
+                    # Zones colorées
+                    ax.axvspan(-0.5, 3.5, alpha=0.04, color="#2196f3")
+                    ax.axvspan(3.5,  6.5, alpha=0.04, color="#f44336")
+                    ax.axvspan(6.5,  11.5, alpha=0.04, color="#4caf50")
+
+                    ax.set_xticks(range(len(all_time_labels)))
+                    ax.set_xticklabels(all_time_labels, rotation=30,
+                                       ha="right", fontsize=7)
+                    ax.set_title(p_label, fontsize=9, fontweight="bold",
+                                 color="#1a3c5e")
+                    ax.set_xlim(-0.5, 11.5)
+                    ax.spines[["top","right"]].set_visible(False)
+                    ax.set_facecolor("white")
+                    ax.grid(axis="y", alpha=0.3)
+                    if refs:
+                        ax.legend(fontsize=7, framealpha=0.7)
+
+                    # Annotations phases
+                    ax.text(1.5,  ax.get_ylim()[1] * 0.97, "Repos",
+                            ha="center", fontsize=7, color="#2196f3", alpha=0.7)
+                    ax.text(5,    ax.get_ylim()[1] * 0.97, "HV",
+                            ha="center", fontsize=7, color="#f44336", alpha=0.7)
+                    ax.text(9,    ax.get_ylim()[1] * 0.97, "Récup.",
+                            ha="center", fontsize=7, color="#4caf50", alpha=0.7)
+
+                fig.tight_layout()
+                buf_hvt = io.BytesIO()
+                fig.savefig(buf_hvt, format="png", dpi=150,
+                            bbox_inches="tight", facecolor="white")
+                plt.close(fig)
+                buf_hvt.seek(0)
+                story.append(Image(buf_hvt, width=17*cm, height=9*cm))
+            except Exception as e:
+                story.append(Paragraph(f"Graphique non disponible.", styles["small"]))
         nij_score = val_str(row.get("nij_score"))
         if nij_score != "—":
             story.append(Paragraph("Questionnaire de Nijmegen", styles["subsection"]))
