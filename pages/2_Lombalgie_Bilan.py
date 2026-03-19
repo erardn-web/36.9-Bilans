@@ -247,9 +247,9 @@ def render_formulaire():
     st.markdown("---")
     collected = {}
 
-    tab_gen, tab_s, tab_flags, tab_o, tab_diag, tab_a, tab_p, tab_q = st.tabs([
+    tab_gen, tab_s, tab_flags, tab_o, tab_diag, tab_pronostic, tab_p, tab_q = st.tabs([
         "📝 Général", "🟦 S – Subjectif", "🚩 Drapeaux",
-        "🔬 O – Objectif", "🩺 Diagnostics", "💡 A – Appréciation",
+        "🔬 O – Objectif", "🩺 Raisonnement clinique", "🔮 A – Pronostic",
         "📋 P – Plan", "📊 Questionnaires",
     ])
 
@@ -553,11 +553,11 @@ def render_formulaire():
         collected.update({"diag_notes": diag_notes})
 
     # ── APPRÉCIATION ──────────────────────────────────────────────────────────
-    with tab_a:
-        st.markdown('<div class="soap-label">A — Appréciation</div>', unsafe_allow_html=True)
+    with tab_pronostic:
+        st.markdown('<div class="soap-label">A — Pronostic</div>', unsafe_allow_html=True)
         st.markdown("")
-        st.markdown('<div class="info-box">Synthèse clinique, interprétation et pronostic.</div>', unsafe_allow_html=True)
-        appreciation = st.text_area("Appréciation clinique", value=lv("a_appreciation",""), height=200, key="la_appr")
+        st.markdown('<div class="info-box">Pronostic et synthèse clinique : facteurs favorables, défavorables, objectifs à long terme.</div>', unsafe_allow_html=True)
+        appreciation = st.text_area("Appréciation clinique", value=lv("a_appreciation",""), height=200, key="la_appr", placeholder="Pronostic favorable / réservé / défavorable... Facteurs favorables : ... Facteurs défavorables : ...")
         collected["a_appreciation"] = appreciation
 
     # ── PLAN ──────────────────────────────────────────────────────────────────
