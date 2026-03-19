@@ -337,3 +337,259 @@ def generate_questionnaires_lombalgie_pdf(selected, patient_info=None):
 
     doc.build(story, onFirstPage=hf, onLaterPages=hf)
     return buffer.getvalue()
+"""
+Questionnaires complets pour saisie in-app — Lombalgie
+ODI, Tampa Scale (TSK-17), Örebro
+Avec calcul automatique des scores.
+"""
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  OSWESTRY DISABILITY INDEX (ODI) — 10 sections, score 0–5 par section
+# ═══════════════════════════════════════════════════════════════════════════════
+
+ODI_SECTIONS = [
+    ("odi_s1", "1. Intensité de la douleur", [
+        "Pas de douleur actuellement",
+        "La douleur est très légère actuellement",
+        "La douleur est modérée actuellement",
+        "La douleur est assez sévère actuellement",
+        "La douleur est très sévère actuellement",
+        "La douleur est la pire imaginable actuellement",
+    ]),
+    ("odi_s2", "2. Soins personnels (se laver, s'habiller…)", [
+        "Je me prends en charge normalement sans douleur supplémentaire",
+        "Je me prends en charge normalement mais c'est très douloureux",
+        "Se prendre en charge est douloureux — je suis lent(e) et prudent(e)",
+        "J'ai besoin d'aide mais j'arrive à gérer la plupart de mes soins",
+        "J'ai besoin d'aide chaque jour pour la plupart de mes soins",
+        "Je ne m'habille pas, me lave avec difficulté et reste au lit",
+    ]),
+    ("odi_s3", "3. Soulever des charges", [
+        "Je peux soulever des charges lourdes sans douleur",
+        "Je peux soulever des charges lourdes mais avec douleur supplémentaire",
+        "La douleur m'empêche de soulever des charges lourdes du sol",
+        "La douleur m'empêche de soulever des charges lourdes (je peux soulever du léger si bien placé)",
+        "Je peux soulever des charges très légères uniquement",
+        "Je ne peux rien soulever ni porter",
+    ]),
+    ("odi_s4", "4. Marche", [
+        "La douleur ne m'empêche pas de marcher quelle que soit la distance",
+        "La douleur m'empêche de marcher plus d'un kilomètre",
+        "La douleur m'empêche de marcher plus de 500 mètres",
+        "La douleur m'empêche de marcher plus de 100 mètres",
+        "Je ne marche qu'avec une canne ou des béquilles",
+        "Je suis au lit la plupart du temps et dois me traîner pour aller aux toilettes",
+    ]),
+    ("odi_s5", "5. Position assise", [
+        "Je peux rester assis(e) aussi longtemps que je veux sans douleur",
+        "Je peux rester assis(e) aussi longtemps que je veux avec légère douleur",
+        "La douleur m'empêche de rester assis(e) plus d'une heure",
+        "La douleur m'empêche de rester assis(e) plus de 30 minutes",
+        "La douleur m'empêche de rester assis(e) plus de 10 minutes",
+        "La douleur m'empêche totalement de m'asseoir",
+    ]),
+    ("odi_s6", "6. Position debout", [
+        "Je peux rester debout aussi longtemps que je veux sans douleur",
+        "Je peux rester debout aussi longtemps que je veux mais avec douleur",
+        "La douleur m'empêche de rester debout plus d'une heure",
+        "La douleur m'empêche de rester debout plus de 30 minutes",
+        "La douleur m'empêche de rester debout plus de 10 minutes",
+        "La douleur m'empêche totalement de rester debout",
+    ]),
+    ("odi_s7", "7. Sommeil", [
+        "Mon sommeil n'est jamais perturbé par la douleur",
+        "Mon sommeil est parfois perturbé par la douleur",
+        "Je dors moins de 6 heures à cause de la douleur",
+        "Je dors moins de 4 heures à cause de la douleur",
+        "Je dors moins de 2 heures à cause de la douleur",
+        "La douleur m'empêche totalement de dormir",
+    ]),
+    ("odi_s8", "8. Vie sexuelle (si applicable)", [
+        "Ma vie sexuelle est normale sans douleur supplémentaire",
+        "Ma vie sexuelle est normale mais provoque une douleur supplémentaire",
+        "Ma vie sexuelle est presque normale mais est très douloureuse",
+        "Ma vie sexuelle est sévèrement limitée par la douleur",
+        "Ma vie sexuelle est presque absente en raison de la douleur",
+        "La douleur empêche toute vie sexuelle",
+    ]),
+    ("odi_s9", "9. Vie sociale", [
+        "Ma vie sociale est normale sans douleur supplémentaire",
+        "Ma vie sociale est normale mais augmente le degré de douleur",
+        "La douleur n'affecte pas les activités légères mais limite les activités énergiques",
+        "La douleur a limité ma vie sociale — je sors moins souvent",
+        "La douleur a limité ma vie sociale à ma maison",
+        "Je n'ai pas de vie sociale à cause de la douleur",
+    ]),
+    ("odi_s10", "10. Voyages / transports", [
+        "Je peux voyager n'importe où sans douleur supplémentaire",
+        "Je peux voyager n'importe où mais avec douleur",
+        "La douleur est sévère mais je gère les trajets de plus de 2 heures",
+        "La douleur me restreint à des trajets de moins d'une heure",
+        "La douleur me restreint à des trajets courts de moins de 30 minutes",
+        "La douleur m'empêche de voyager sauf pour des soins médicaux",
+    ]),
+]
+
+ODI_KEYS = [s[0] for s in ODI_SECTIONS]
+
+
+def compute_odi(answers: dict) -> dict:
+    """answers = {"odi_s1": 2, "odi_s2": 0, ...} (0–5 par section)"""
+    scores = []
+    for key, _, _ in ODI_SECTIONS:
+        v = answers.get(key)
+        if v is not None:
+            scores.append(int(v))
+    if not scores:
+        return {"score": None, "interpretation": "", "color": "#888"}
+    total = sum(scores)
+    max_possible = len(scores) * 5
+    pct = round(total / max_possible * 100)
+    if pct <= 20:
+        interp, color = "Incapacité minimale (0–20%)", "#388e3c"
+    elif pct <= 40:
+        interp, color = "Incapacité modérée (21–40%)", "#8bc34a"
+    elif pct <= 60:
+        interp, color = "Incapacité sévère (41–60%)", "#f57c00"
+    elif pct <= 80:
+        interp, color = "Incapacité très sévère (61–80%)", "#e64a19"
+    else:
+        interp, color = "Grabataire / exagération (>80%)", "#d32f2f"
+    return {"score": pct, "interpretation": interp, "color": color, "raw": total}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  TAMPA SCALE FOR KINESIOPHOBIA (TSK-17) — 17 items, score 1–4
+# ═══════════════════════════════════════════════════════════════════════════════
+
+TAMPA_SCALE = ["1 — Pas du tout d'accord", "2 — Plutôt pas d'accord",
+               "3 — Plutôt d'accord", "4 — Tout à fait d'accord"]
+TAMPA_SCALE_VALUES = [1, 2, 3, 4]
+
+# Items inversés (R) : scores inversés pour le calcul (1→4, 2→3, 3→2, 4→1)
+TAMPA_REVERSED = {8, 12, 16}  # indices 1-based
+
+TAMPA_ITEMS = [
+    ("tampa_1",  False, "J'ai peur de me blesser si je fais de l'exercice."),
+    ("tampa_2",  False, "Si j'essayais de surmonter ma douleur, celle-ci augmenterait."),
+    ("tampa_3",  False, "Mon corps me dit que quelque chose ne va pas vraiment."),
+    ("tampa_4",  False, "Ma blessure a mis mon corps en danger toute ma vie."),
+    ("tampa_5",  False, "Les gens ne prennent pas ma condition médicale assez au sérieux."),
+    ("tampa_6",  False, "Ma blessure a mis mon corps en danger de façon permanente."),
+    ("tampa_7",  False, "La douleur signifie toujours que j'ai subi une blessure corporelle."),
+    ("tampa_8",  True,  "Simplement parce que quelque chose aggrave ma douleur ne signifie pas qu'elle est dangereuse."),
+    ("tampa_9",  False, "J'ai peur de me blesser accidentellement."),
+    ("tampa_10", False, "Le plus sûr est de faire attention à ne pas faire de mouvements inutiles."),
+    ("tampa_11", False, "Je n'aurais pas autant de douleur si quelque chose de potentiellement grave ne se passait pas."),
+    ("tampa_12", True,  "Bien que ma condition soit douloureuse, je me sentirais mieux si j'étais plus actif(ve)."),
+    ("tampa_13", False, "La douleur me signale que je dois arrêter ce que je fais pour ne pas me blesser."),
+    ("tampa_14", False, "Ce n'est pas vraiment sûr pour quelqu'un avec ma condition d'être physiquement actif(ve)."),
+    ("tampa_15", False, "Je risque trop facilement de me blesser."),
+    ("tampa_16", True,  "Même si quelque chose me fait très mal, je ne pense pas que ce soit dangereux."),
+    ("tampa_17", False, "Personne ne devrait faire de l'exercice physique quand il souffre de douleur."),
+]
+
+TAMPA_KEYS = [t[0] for t in TAMPA_ITEMS]
+
+
+def compute_tampa(answers: dict) -> dict:
+    """answers = {"tampa_1": 3, "tampa_2": 1, ...} (1–4)"""
+    total = 0
+    count = 0
+    for i, (key, reversed_item, _) in enumerate(TAMPA_ITEMS):
+        v = answers.get(key)
+        if v is not None:
+            score = int(v)
+            if reversed_item:
+                score = 5 - score  # inversion : 1→4, 2→3, 3→2, 4→1
+            total += score
+            count += 1
+    if count == 0:
+        return {"score": None, "interpretation": "", "color": "#888"}
+    if count < 17:
+        # Extrapolation si items manquants
+        total = round(total / count * 17)
+    if total <= 37:
+        interp, color = "Kinésiophobie faible (≤ 37)", "#388e3c"
+    elif total <= 44:
+        interp, color = "Kinésiophobie modérée (38–44)", "#f57c00"
+    else:
+        interp, color = "Kinésiophobie élevée (> 44)", "#d32f2f"
+    return {"score": total, "interpretation": interp, "color": color}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  ÖREBRO — items sur échelle 0–10
+# ═══════════════════════════════════════════════════════════════════════════════
+
+OREBRO_ITEMS = [
+    ("orebro_1",
+     "Quelle est l'intensité de votre douleur en ce moment ?",
+     "0 = pas de douleur  ·  10 = douleur insupportable"),
+    ("orebro_2",
+     "Dans quelle mesure votre douleur est-elle présente en permanence pendant vos heures d'éveil ?",
+     "0 = jamais  ·  10 = toujours"),
+    ("orebro_3",
+     "Dans quelle mesure la douleur perturbe-t-elle votre sommeil ?",
+     "0 = pas du tout  ·  10 = complètement"),
+    ("orebro_4",
+     "Dans quelle mesure avez-vous peur que l'activité physique aggrave votre douleur ?",
+     "0 = pas du tout  ·  10 = extrêmement"),
+    ("orebro_5",
+     "Dans quelle mesure pensez-vous que votre douleur disparaîtra ?",
+     "0 = pas du tout  ·  10 = complètement"),
+    ("orebro_6",
+     "Quelle confiance avez-vous dans le fait de retourner au travail dans les 3 prochains mois ?",
+     "0 = aucune confiance  ·  10 = très confiant(e)"),
+    ("orebro_7",
+     "Dans quelle mesure pensez-vous que vous pouvez effectuer un travail malgré la douleur ?",
+     "0 = pas du tout  ·  10 = totalement"),
+    ("orebro_8",
+     "Activités légères à la maison (cuisiner, ranger) — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
+     "0 = pas d'effet  ·  10 = incapable de faire"),
+    ("orebro_9",
+     "Activités lourdes à la maison (nettoyer, jardiner) — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
+     "0 = pas d'effet  ·  10 = incapable de faire"),
+    ("orebro_10",
+     "Activités sociales (conversations, visites) — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
+     "0 = pas d'effet  ·  10 = incapable de faire"),
+    ("orebro_11",
+     "Déplacements (transports en commun, conduire) — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
+     "0 = pas d'effet  ·  10 = incapable de faire"),
+    ("orebro_12",
+     "Loisirs légers — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
+     "0 = pas d'effet  ·  10 = incapable de faire"),
+    ("orebro_13",
+     "Travail ou études — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
+     "0 = pas d'effet  ·  10 = incapable de faire"),
+]
+
+# Items à inverser pour le scoring (5, 6, 7 : plus = mieux → on inverse)
+OREBRO_INVERTED = {"orebro_5", "orebro_6", "orebro_7"}
+
+OREBRO_KEYS = [o[0] for o in OREBRO_ITEMS]
+
+
+def compute_orebro(answers: dict) -> dict:
+    """answers = {"orebro_1": 6, "orebro_2": 4, ...} (0–10)"""
+    total = 0
+    count = 0
+    for key, _, _ in OREBRO_ITEMS:
+        v = answers.get(key)
+        if v is not None:
+            score = int(v)
+            if key in OREBRO_INVERTED:
+                score = 10 - score
+            total += score
+            count += 1
+    if count == 0:
+        return {"score": None, "interpretation": "", "color": "#888"}
+    # Normalisation sur 100
+    pct = round(total / (count * 10) * 100)
+    if pct <= 50:
+        interp, color = "Risque faible de chronicisation (≤ 50)", "#388e3c"
+    elif pct <= 74:
+        interp, color = "Risque moyen de chronicisation (51–74)", "#f57c00"
+    else:
+        interp, color = "Risque élevé de chronicisation (≥ 75)", "#d32f2f"
+    return {"score": pct, "interpretation": interp, "color": color, "raw": total}
