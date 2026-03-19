@@ -278,13 +278,13 @@ def render_formulaire():
             loc_stored = lv_list("s_douleur_localisation")
             localisation = st.multiselect("Localisation", LOCALISATIONS,
                 default=[x for x in loc_stored if x in LOCALISATIONS], key="ls_loc")
-            irradiation = st.text_input("Irradiation", value=lv("s_douleur_irradiation",""), key="ls_irr")
-            td_stored = lv("s_type_douleur", TYPES_DOULEUR[0])
-            td_idx = TYPES_DOULEUR.index(td_stored) if td_stored in TYPES_DOULEUR else 0
-            type_douleur = st.selectbox("Type de douleur", TYPES_DOULEUR, index=td_idx, key="ls_type")
-            rd_stored = lv("s_rythme_douleur", RYTHME_DOULEUR[0])
-            rd_idx = RYTHME_DOULEUR.index(rd_stored) if rd_stored in RYTHME_DOULEUR else 0
-            rythme = st.selectbox("Rythme", RYTHME_DOULEUR, index=rd_idx, key="ls_rythme")
+            # Type de douleur — avec option vide en premier
+            TYPES_DOULEUR_OPT = ["— Non renseigné —"] + TYPES_DOULEUR
+            td_stored = lv("s_type_douleur", "")
+            td_idx = TYPES_DOULEUR_OPT.index(td_stored) if td_stored in TYPES_DOULEUR_OPT else 0
+            type_douleur_sel = st.selectbox("Type de douleur", TYPES_DOULEUR_OPT,
+                index=td_idx, key="ls_type")
+            type_douleur = "" if type_douleur_sel == "— Non renseigné —" else type_douleur_sel
         with sc2:
             eva_repos = st.slider("EVA repos (0–10)", 0, 10, lv_int("s_eva_repos",0), key="ls_eva_r")
             eva_mvt   = st.slider("EVA mouvement (0–10)", 0, 10, lv_int("s_eva_mouvement",0), key="ls_eva_m")
@@ -312,20 +312,37 @@ def render_formulaire():
             atcd       = st.text_area("Antécédents", value=lv("s_antecedents",""), height=80, key="ls_atcd")
             traitements= st.text_area("Traitements en cours", value=lv("s_traitements_en_cours",""), height=80, key="ls_trait")
         st.markdown('<div class="section-title">Impact fonctionnel</div>', unsafe_allow_html=True)
+
+        # Cases à cocher
+        ck1, ck2, _ = st.columns([1, 1, 2])
+        with ck1:
+            arret_travail = st.checkbox(
+                "Arrêt de travail",
+                value=lv("s_arret_travail","") == "Oui",
+                key="ls_arret",
+            )
+        with ck2:
+            reveil_nuit = st.checkbox(
+                "Se réveille la nuit à cause de la douleur",
+                value=lv("s_reveil_nuit","") == "Oui",
+                key="ls_reveil",
+            )
+
         si1,si2,si3 = st.columns(3)
         with si1: impact_avd  = st.text_area("Impact AVD", value=lv("s_impact_avd",""), height=80, key="ls_avd")
         with si2: impact_trav = st.text_area("Impact travail/loisirs", value=lv("s_impact_travail",""), height=80, key="ls_trav")
-        with si3: impact_somm = st.text_area("Impact sommeil", value=lv("s_impact_sommeil",""), height=80, key="ls_somm")
+        with si3: impact_somm = st.text_area("Notes sommeil", value=lv("s_impact_sommeil",""), height=80, key="ls_somm")
         collected.update({
             "s_motif_consultation":motif, "s_douleur_localisation":"|".join(localisation),
-            "s_douleur_irradiation":irradiation, "s_eva_repos":eva_repos,
-            "s_eva_mouvement":eva_mvt, "s_eva_nuit":eva_nuit,
-            "s_type_douleur":type_douleur, "s_rythme_douleur":rythme,
+            "s_eva_repos":eva_repos, "s_eva_mouvement":eva_mvt, "s_eva_nuit":eva_nuit,
+            "s_type_douleur":type_douleur,
             "s_facteurs_aggravants":"|".join(aggravants), "s_facteurs_soulageants":"|".join(soulageants),
             "s_debut_douleur":debut, "s_mode_debut":mode_debut, "s_duree_episode":duree_ep,
             "s_episodes_anterieurs":episodes, "s_antecedents":atcd,
-            "s_traitements_en_cours":traitements, "s_impact_avd":impact_avd,
-            "s_impact_travail":impact_trav, "s_impact_sommeil":impact_somm,
+            "s_traitements_en_cours":traitements,
+            "s_arret_travail": "Oui" if arret_travail else "Non",
+            "s_reveil_nuit":   "Oui" if reveil_nuit else "Non",
+            "s_impact_avd":impact_avd, "s_impact_travail":impact_trav, "s_impact_sommeil":impact_somm,
         })
 
     # ── DRAPEAUX ──────────────────────────────────────────────────────────────
