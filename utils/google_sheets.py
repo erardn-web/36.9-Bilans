@@ -238,14 +238,15 @@ def get_lombalgie_headers():
         "groupe_clinique",
         # SOAP – Subjectif
         "s_motif_consultation",
-        "s_douleur_localisation", "s_douleur_irradiation",
+        "s_douleur_localisation",
         "s_eva_repos", "s_eva_mouvement", "s_eva_nuit",
-        "s_type_douleur", "s_rythme_douleur",
+        "s_type_douleur",
         "s_facteurs_aggravants", "s_facteurs_soulageants",
         "s_debut_douleur", "s_mode_debut",
         "s_duree_episode", "s_episodes_anterieurs",
         "s_antecedents", "s_traitements_en_cours",
         "s_impact_avd", "s_impact_travail", "s_impact_sommeil",
+        "s_arret_travail", "s_reveil_nuit",
         # Drapeaux rouges / jaunes
         "drapeaux_rouges_list", "drapeaux_rouges_notes",
         "drapeaux_jaunes_list", "drapeaux_jaunes_notes",
