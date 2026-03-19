@@ -4,6 +4,8 @@ Page : Bilan Lombalgie — Formulaire SOAP complet
 
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from datetime import date
 import sys, os
 
@@ -23,6 +25,7 @@ from utils.lombalgie_data import (
     TESTS_CLINIQUES, RESULTATS_TEST,
 )
 from utils.questionnaires_lombalgie import generate_questionnaires_lombalgie_pdf
+from utils.pdf_lombalgie import generate_pdf_lombalgie
 
 st.set_page_config(page_title="Bilan Lombalgie", page_icon="🦴",
                    layout="wide", initial_sidebar_state="collapsed")
@@ -52,7 +55,6 @@ def init_state():
                   "lomb_bilan_id":None,"lomb_bilan_data":{},"lomb_mode":"accueil"}.items():
         if k not in st.session_state:
             st.session_state[k] = v
-
 init_state()
 
 
@@ -165,7 +167,7 @@ def render_bilan_selection():
     st.markdown(f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} — {info.get("date_naissance","—")} — ID : {info["patient_id"]}</div>',
                 unsafe_allow_html=True)
     st.markdown("")
-    col_back,col_print,_ = st.columns([1,1.5,4])
+    col_back,col_print,col_evol,col_pdf,_ = st.columns([1,1.5,1.2,1.2,1])
     with col_back:
         if st.button("⬅️ Changer de patient"):
             for k in ["lomb_patient_id","lomb_patient_info","lomb_bilan_id"]:
@@ -176,6 +178,21 @@ def render_bilan_selection():
     with col_print:
         if st.button("🖨️ Imprimer questionnaires", key="print_lomb_pat_btn"):
             st.session_state["show_print_lomb_patient"] = True
+    with col_evol:
+        if not bilans_df.empty:
+            if st.button("📈 Voir l'évolution", type="primary", key="lomb_evol_btn"):
+                st.session_state.lomb_mode = "evolution"
+                st.rerun()
+    with col_pdf:
+        if not bilans_df.empty:
+            with st.spinner("PDF…"):
+                pdf_bytes = generate_pdf_lombalgie(bilans_df, info)
+            st.download_button(
+                label="📄 Exporter PDF",
+                data=pdf_bytes,
+                file_name=f"evolution_lombalgie_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
+                mime="application/pdf",
+            )
     if st.session_state.get("show_print_lomb_patient", False):
         _render_print_panel(patient_info=info, key_prefix="pat")
     st.markdown("---")
@@ -610,6 +627,254 @@ def render_formulaire():
         st.balloons()
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+#  ÉVOLUTION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def safe_n(val):
+    try:
+        v = float(val)
+        return v if v != 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def render_evolution():
+    info      = st.session_state.lomb_patient_info
+    bilans_df = get_patient_bilans_lombalgie(st.session_state.lomb_patient_id)
+
+    st.markdown(
+        f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} — Évolution Lombalgie</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("")
+
+    col_back, col_pdf, _ = st.columns([1, 1.5, 4])
+    with col_back:
+        if st.button("⬅️ Retour"):
+            st.session_state.lomb_mode = "bilan"
+            st.rerun()
+    with col_pdf:
+        if not bilans_df.empty:
+            with st.spinner("Génération du PDF…"):
+                pdf_bytes = generate_pdf_lombalgie(bilans_df, info)
+            st.download_button(
+                label="📄 Exporter en PDF",
+                data=pdf_bytes,
+                file_name=f"evolution_lombalgie_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
+                mime="application/pdf",
+                type="primary",
+            )
+
+    st.markdown("---")
+
+    if bilans_df.empty:
+        st.info("Aucun bilan disponible.")
+        return
+
+    # Trier par date
+    bilans_df = bilans_df.copy()
+    bilans_df["date_bilan"] = pd.to_datetime(bilans_df["date_bilan"], errors="coerce")
+    bilans_df = bilans_df.sort_values("date_bilan").reset_index(drop=True)
+    labels = [
+        f"{r['date_bilan'].strftime('%d/%m/%y')} – {r.get('type_bilan','')}"
+        for _, r in bilans_df.iterrows()
+    ]
+
+    tab_doul, tab_q, tab_mob, tab_luom, tab_soap = st.tabs([
+        "🩸 Douleur (EVA)", "📊 Questionnaires", "🦴 Mobilité",
+        "🏃 Luomajoki", "📋 SOAP synthèse",
+    ])
+
+    # ── EVA ──────────────────────────────────────────────────────────────────
+    with tab_doul:
+        st.markdown('<div class="section-title">🩸 Évolution des EVA</div>', unsafe_allow_html=True)
+        fig_eva = go.Figure()
+        for key, label, color in [
+            ("s_eva_repos",    "EVA Repos",     "#388e3c"),
+            ("s_eva_mouvement","EVA Mouvement", "#f57c00"),
+            ("s_eva_nuit",     "EVA Nuit",      "#7b1fa2"),
+        ]:
+            vals = [safe_n(r.get(key)) for _, r in bilans_df.iterrows()]
+            fig_eva.add_trace(go.Scatter(
+                x=labels, y=vals, mode="lines+markers+text",
+                name=label, line=dict(color=color, width=2.5),
+                marker=dict(size=9),
+                text=[str(int(v)) if v is not None else "" for v in vals],
+                textposition="top center",
+            ))
+        for y, col, lbl in [(3,"#388e3c","3 légère"),(6,"#f57c00","6 modérée")]:
+            fig_eva.add_hline(y=y, line_dash="dot", line_color=col,
+                              annotation_text=lbl, annotation_position="right")
+        fig_eva.update_layout(
+            yaxis=dict(range=[0,11], title="EVA /10"),
+            xaxis_tickangle=-20, height=380,
+            plot_bgcolor="white", legend=dict(orientation="h"),
+        )
+        st.plotly_chart(fig_eva, use_container_width=True)
+        df_eva = pd.DataFrame({
+            "Bilan": labels,
+            "EVA repos": [safe_n(r.get("s_eva_repos")) for _, r in bilans_df.iterrows()],
+            "EVA mouvement": [safe_n(r.get("s_eva_mouvement")) for _, r in bilans_df.iterrows()],
+            "EVA nuit": [safe_n(r.get("s_eva_nuit")) for _, r in bilans_df.iterrows()],
+            "Groupe": [r.get("groupe_clinique","—") for _, r in bilans_df.iterrows()],
+        })
+        st.dataframe(df_eva, use_container_width=True, hide_index=True)
+
+    # ── QUESTIONNAIRES ────────────────────────────────────────────────────────
+    with tab_q:
+        st.markdown('<div class="section-title">📊 Évolution des questionnaires</div>',
+                    unsafe_allow_html=True)
+        fig_q = make_subplots(rows=1, cols=3,
+                              subplot_titles=["ODI (%)", "Tampa (/68)", "Örebro (/100)"])
+        q_configs = [
+            ("odi_score",    "#1a3c5e", [(20,"#388e3c"),(40,"#8bc34a"),(60,"#f57c00"),(80,"#e64a19")], 1),
+            ("tampa_score",  "#f57c00", [(37,"#388e3c"),(44,"#f57c00")], 2),
+            ("orebro_score", "#7b1fa2", [(50,"#388e3c"),(74,"#f57c00")], 3),
+        ]
+        for key, color, thresholds, col in q_configs:
+            vals = [safe_n(r.get(key)) for _, r in bilans_df.iterrows()]
+            fig_q.add_trace(go.Scatter(
+                x=labels, y=vals, mode="lines+markers+text",
+                line=dict(color=color, width=2.5), marker=dict(size=9),
+                text=[str(int(v)) if v is not None else "" for v in vals],
+                textposition="top center", showlegend=False,
+            ), row=1, col=col)
+            for thr, tc in thresholds:
+                fig_q.add_hline(y=thr, line_dash="dot", line_color=tc, row=1, col=col)
+        fig_q.update_xaxes(tickangle=-20)
+        fig_q.update_layout(height=380, plot_bgcolor="white", margin=dict(t=40,b=60))
+        st.plotly_chart(fig_q, use_container_width=True)
+        df_q = pd.DataFrame({
+            "Bilan": labels,
+            "ODI (%)": [safe_n(r.get("odi_score")) for _, r in bilans_df.iterrows()],
+            "Interprétation ODI": [r.get("odi_interpretation","—") for _, r in bilans_df.iterrows()],
+            "Tampa (/68)": [safe_n(r.get("tampa_score")) for _, r in bilans_df.iterrows()],
+            "Örebro (/100)": [safe_n(r.get("orebro_score")) for _, r in bilans_df.iterrows()],
+        })
+        st.dataframe(df_q, use_container_width=True, hide_index=True)
+
+    # ── MOBILITÉ ──────────────────────────────────────────────────────────────
+    with tab_mob:
+        st.markdown('<div class="section-title">🦴 Évolution mobilité lombaire</div>',
+                    unsafe_allow_html=True)
+        mob_keys = [
+            ("o_extension_mob",  "Extension"),
+            ("o_lat_droite_mob", "Latéroflexion D"),
+            ("o_lat_gauche_mob", "Latéroflexion G"),
+            ("o_rot_droite_mob", "Rotation D"),
+            ("o_rot_gauche_mob", "Rotation G"),
+        ]
+        MOB_NUM = {"1/3": 1, "2/3": 2, "3/3": 3}
+        mob_table = [{"Bilan": lbl} for lbl in labels]
+        for key, klabel in mob_keys:
+            for i, (_, row) in enumerate(bilans_df.iterrows()):
+                mob_table[i][klabel] = row.get(key, "—") or "—"
+
+        # Graphique barres groupées
+        fig_mob = go.Figure()
+        colors_mob = ["#1a3c5e","#f57c00","#388e3c","#7b1fa2","#d32f2f"]
+        for (key, klabel), color in zip(mob_keys, colors_mob):
+            vals = [MOB_NUM.get(r.get(key,""), None) for _, r in bilans_df.iterrows()]
+            fig_mob.add_trace(go.Bar(
+                name=klabel, x=labels, y=vals,
+                marker_color=color,
+                text=[r.get(key,"—") or "—" for _, r in bilans_df.iterrows()],
+                textposition="outside",
+            ))
+        fig_mob.update_layout(
+            barmode="group", yaxis=dict(range=[0,4], tickvals=[1,2,3],
+            ticktext=["1/3","2/3","3/3"], title="Amplitude"),
+            xaxis_tickangle=-20, height=380, plot_bgcolor="white",
+            legend=dict(orientation="h"),
+        )
+        st.plotly_chart(fig_mob, use_container_width=True)
+
+        # Schober
+        schober_vals = [safe_n(r.get("o_schober")) for _, r in bilans_df.iterrows()]
+        if any(schober_vals):
+            fig_sch = go.Figure()
+            fig_sch.add_trace(go.Scatter(
+                x=labels, y=schober_vals, mode="lines+markers+text",
+                line=dict(color="#1a3c5e", width=2.5), marker=dict(size=9),
+                text=[str(v) if v else "" for v in schober_vals],
+                textposition="top center",
+            ))
+            fig_sch.add_hline(y=5, line_dash="dot", line_color="#388e3c",
+                              annotation_text="5 cm (normal)", annotation_position="right")
+            fig_sch.update_layout(title="Schober modifié (cm)", yaxis_title="cm",
+                                  height=280, plot_bgcolor="white", xaxis_tickangle=-20)
+            st.plotly_chart(fig_sch, use_container_width=True)
+
+        st.dataframe(pd.DataFrame(mob_table), use_container_width=True, hide_index=True)
+
+    # ── LUOMAJOKI ─────────────────────────────────────────────────────────────
+    with tab_luom:
+        st.markdown('<div class="section-title">🏃 Évolution tests de Luomajoki</div>',
+                    unsafe_allow_html=True)
+        luom_vals = [safe_n(r.get("o_luomajoki_score")) for _, r in bilans_df.iterrows()]
+        if any(luom_vals):
+            fig_luom = go.Figure()
+            fig_luom.add_trace(go.Bar(
+                x=labels, y=luom_vals,
+                marker_color=["#d32f2f" if v and v>=3 else "#f57c00" if v and v>=1
+                              else "#388e3c" for v in luom_vals],
+                text=[f"{int(v)}/6" if v is not None else "—" for v in luom_vals],
+                textposition="outside",
+            ))
+            fig_luom.add_hline(y=3, line_dash="dot", line_color="#d32f2f",
+                               annotation_text="Seuil 3 (significatif)", annotation_position="right")
+            fig_luom.update_layout(
+                yaxis=dict(range=[0,7], title="Nombre d'échecs /6"),
+                height=320, plot_bgcolor="white", xaxis_tickangle=-20,
+            )
+            st.plotly_chart(fig_luom, use_container_width=True)
+        else:
+            st.info("Aucun test de Luomajoki enregistré.")
+
+        LUOM_NOMS = ["Waiters Bow","Pelvic Tilt","Knee Lift",
+                     "One-Leg Stance","Sitting Knee Ext.","Prone Knee Bend"]
+        LUOM_KEYS = ["o_luom_waiters_bow","o_luom_pelvic_tilt","o_luom_knee_lift",
+                     "o_luom_one_leg_stance","o_luom_sitting_knee_ext","o_luom_prone_knee_bend"]
+        luom_table = [{"Bilan": lbl} for lbl in labels]
+        for nom, key in zip(LUOM_NOMS, LUOM_KEYS):
+            for i, (_, row) in enumerate(bilans_df.iterrows()):
+                luom_table[i][nom] = row.get(key,"—") or "—"
+        luom_table_with_score = [{**row, "Score /6": bilans_df.iloc[i].get("o_luomajoki_score","—")}
+                                  for i, row in enumerate(luom_table)]
+        st.dataframe(pd.DataFrame(luom_table_with_score), use_container_width=True, hide_index=True)
+
+    # ── SOAP SYNTHÈSE ─────────────────────────────────────────────────────────
+    with tab_soap:
+        st.markdown('<div class="section-title">📋 Synthèse SOAP par bilan</div>',
+                    unsafe_allow_html=True)
+        for lbl, (_, row) in zip(labels, bilans_df.iterrows()):
+            with st.expander(f"📄 {lbl} — Groupe {row.get('groupe_clinique','—') or '—'}"):
+                col_s, col_a = st.columns(2)
+                with col_s:
+                    st.markdown("**🟦 Subjectif**")
+                    st.markdown(f"Motif : {row.get('s_motif_consultation','—') or '—'}")
+                    st.markdown(f"Localisation : {str(row.get('s_douleur_localisation','')).replace('|',' · ') or '—'}")
+                    st.markdown(f"Type douleur : {row.get('s_type_douleur','—') or '—'}")
+                    st.markdown(f"EVA repos/mvt/nuit : {row.get('s_eva_repos','—')} / {row.get('s_eva_mouvement','—')} / {row.get('s_eva_nuit','—')}")
+                    arret = row.get('s_arret_travail','—') or '—'
+                    reveil = row.get('s_reveil_nuit','—') or '—'
+                    st.markdown(f"Arrêt travail : **{arret}** | Réveil nocturne : **{reveil}**")
+                with col_a:
+                    st.markdown("**💡 Appréciation**")
+                    st.markdown(row.get('a_appreciation','—') or '—')
+                col_o, col_p = st.columns(2)
+                with col_o:
+                    st.markdown("**🔬 Objectif (scores)**")
+                    st.markdown(f"ODI : {row.get('odi_score','—') or '—'}%")
+                    st.markdown(f"Tampa : {row.get('tampa_score','—') or '—'}/68")
+                    st.markdown(f"Örebro : {row.get('orebro_score','—') or '—'}")
+                    st.markdown(f"Luomajoki : {row.get('o_luomajoki_score','—') or '—'}/6 échecs")
+                with col_p:
+                    st.markdown("**📋 Plan**")
+                    st.markdown(row.get('p_objectifs','—') or '—')
+
+
 # ── ROUTEUR ───────────────────────────────────────────────────────────────────
 mode = st.session_state.lomb_mode
 if mode == "accueil":
@@ -622,5 +887,9 @@ elif mode == "formulaire":
     if not st.session_state.lomb_patient_info:
         st.session_state.lomb_mode = "accueil"; st.rerun()
     render_formulaire()
+elif mode == "evolution":
+    if not st.session_state.lomb_patient_info:
+        st.session_state.lomb_mode = "accueil"; st.rerun()
+    render_evolution()
 else:
     st.session_state.lomb_mode = "accueil"; st.rerun()
