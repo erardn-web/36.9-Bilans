@@ -24,7 +24,12 @@ from utils.lombalgie_data import (
     TYPES_DOULEUR, RYTHME_DOULEUR,
     TESTS_CLINIQUES, RESULTATS_TEST,
 )
-from utils.questionnaires_lombalgie import generate_questionnaires_lombalgie_pdf
+from utils.questionnaires_lombalgie import (
+    generate_questionnaires_lombalgie_pdf,
+    ODI_SECTIONS, ODI_KEYS, compute_odi,
+    TAMPA_ITEMS, TAMPA_KEYS, TAMPA_SCALE, TAMPA_SCALE_VALUES, compute_tampa,
+    OREBRO_ITEMS, OREBRO_KEYS, compute_orebro,
+)
 from utils.pdf_lombalgie import generate_pdf_lombalgie
 
 st.set_page_config(page_title="Bilan Lombalgie", page_icon="🦴",
@@ -579,44 +584,126 @@ def render_formulaire():
 
     # ── QUESTIONNAIRES ────────────────────────────────────────────────────────
     with tab_q:
-        st.markdown('<div class="section-title">📊 Scores des questionnaires</div>', unsafe_allow_html=True)
-        st.markdown('<div class="info-box">Entrez les scores calculés après avoir fait remplir les questionnaires papier au patient.</div>', unsafe_allow_html=True)
-        qc1,qc2,qc3 = st.columns(3)
-        with qc1:
-            st.markdown("**📊 Oswestry (ODI)**")
-            odi_score = st.number_input("Score ODI (%)", 0, 100, lv_int("odi_score",0), 1, key="lq_odi")
-            if odi_score > 0:
-                if odi_score<=20: oi,oc="#388e3c","Incapacité minimale (0–20%)"
-                elif odi_score<=40: oc,oi="#8bc34a","Incapacité modérée (21–40%)"
-                elif odi_score<=60: oc,oi="#f57c00","Incapacité sévère (41–60%)"
-                elif odi_score<=80: oc,oi="#e64a19","Incapacité très sévère (61–80%)"
-                else: oc,oi="#d32f2f","Grabataire / exagération (>80%)"
-                st.markdown(f'<div class="score-box" style="background:{oc};font-size:0.9rem;">{odi_score}% — {oi}</div>', unsafe_allow_html=True)
-                collected.update({"odi_score":odi_score,"odi_interpretation":oi})
+        st.markdown('<div class="section-title">📊 Questionnaires</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="info-box">Le patient remplit les questionnaires directement ici. '
+            'Les scores sont calculés automatiquement.</div>',
+            unsafe_allow_html=True,
+        )
+
+        q_tab_odi, q_tab_tampa, q_tab_orebro = st.tabs([
+            "📊 Oswestry (ODI)", "😨 Tampa Scale", "🧠 Örebro",
+        ])
+
+        # ── ODI ──────────────────────────────────────────────────────────────
+        with q_tab_odi:
+            st.markdown("**Oswestry Disability Index** — Cochez UNE seule réponse par section.")
+            odi_answers = {}
+            for key, title, options in ODI_SECTIONS:
+                stored = lv_int(key, -1)
+                # -1 = non répondu
+                opts_with_empty = ["— Non répondu —"] + options
+                default_idx = stored + 1 if 0 <= stored <= 5 else 0
+                chosen = st.radio(
+                    title, opts_with_empty,
+                    index=default_idx,
+                    key=f"q_{key}",
+                )
+                if chosen != "— Non répondu —":
+                    odi_answers[key] = options.index(chosen)
+                    collected[key] = options.index(chosen)
+                else:
+                    collected[key] = ""
+
+            odi_result = compute_odi(odi_answers)
+            if odi_result["score"] is not None:
+                st.markdown("---")
+                st.markdown(
+                    f'<div class="score-box" style="background:{odi_result["color"]};">'
+                    f'ODI : {odi_result["score"]}% — {odi_result["interpretation"]}</div>',
+                    unsafe_allow_html=True,
+                )
+                collected.update({"odi_score": odi_result["score"],
+                                   "odi_interpretation": odi_result["interpretation"]})
             else:
-                collected.update({"odi_score":"","odi_interpretation":""})
-        with qc2:
-            st.markdown("**😨 Tampa Scale (TSK-17)**")
-            tampa_score = st.number_input("Score Tampa", 0, 68, lv_int("tampa_score",0), 1, key="lq_tampa")
-            if tampa_score > 0:
-                if tampa_score<=37: tc,ti="#388e3c","Kinésiophobie faible (≤ 37)"
-                elif tampa_score<=44: tc,ti="#f57c00","Kinésiophobie modérée (38–44)"
-                else: tc,ti="#d32f2f","Kinésiophobie élevée (> 44)"
-                st.markdown(f'<div class="score-box" style="background:{tc};font-size:0.9rem;">{tampa_score}/68 — {ti}</div>', unsafe_allow_html=True)
-                collected.update({"tampa_score":tampa_score,"tampa_interpretation":ti})
+                collected.update({"odi_score": "", "odi_interpretation": ""})
+
+        # ── TAMPA ─────────────────────────────────────────────────────────────
+        with q_tab_tampa:
+            st.markdown(
+                "**Tampa Scale for Kinesiophobia (TSK-17)** — "
+                "1 = Pas du tout d'accord · 2 = Plutôt pas d'accord · "
+                "3 = Plutôt d'accord · 4 = Tout à fait d'accord"
+            )
+            st.markdown(
+                '<div class="info-box"><small>(R) = item inversé pour le calcul du score</small></div>',
+                unsafe_allow_html=True,
+            )
+            tampa_answers = {}
+            for key, reversed_item, text in TAMPA_ITEMS:
+                num = int(key.split("_")[1])
+                stored = lv_int(key, 0)
+                r_label = " *(R)*" if reversed_item else ""
+                default_idx = stored - 1 if 1 <= stored <= 4 else 0
+                chosen_val = st.radio(
+                    f"{num}.{r_label} {text}",
+                    options=TAMPA_SCALE_VALUES,
+                    format_func=lambda x: TAMPA_SCALE[x-1],
+                    index=default_idx,
+                    horizontal=True,
+                    key=f"q_{key}",
+                )
+                tampa_answers[key] = chosen_val
+                collected[key] = chosen_val
+
+            tampa_result = compute_tampa(tampa_answers)
+            if tampa_result["score"] is not None:
+                st.markdown("---")
+                st.markdown(
+                    f'<div class="score-box" style="background:{tampa_result["color"]};">'
+                    f'Tampa : {tampa_result["score"]}/68 — {tampa_result["interpretation"]}</div>',
+                    unsafe_allow_html=True,
+                )
+                collected.update({"tampa_score": tampa_result["score"],
+                                   "tampa_interpretation": tampa_result["interpretation"]})
             else:
-                collected.update({"tampa_score":"","tampa_interpretation":""})
-        with qc3:
-            st.markdown("**🧠 Örebro**")
-            orebro_score = st.number_input("Score Örebro", 0, 100, lv_int("orebro_score",0), 1, key="lq_orebro")
-            if orebro_score > 0:
-                if orebro_score<=50: oc2,oi2="#388e3c","Risque faible (≤ 50)"
-                elif orebro_score<=74: oc2,oi2="#f57c00","Risque moyen (51–74)"
-                else: oc2,oi2="#d32f2f","Risque élevé (≥ 75)"
-                st.markdown(f'<div class="score-box" style="background:{oc2};font-size:0.9rem;">{orebro_score} — {oi2}</div>', unsafe_allow_html=True)
-                collected.update({"orebro_score":orebro_score,"orebro_interpretation":oi2})
+                collected.update({"tampa_score": "", "tampa_interpretation": ""})
+
+        # ── ÖREBRO ────────────────────────────────────────────────────────────
+        with q_tab_orebro:
+            st.markdown(
+                "**Örebro Musculoskeletal Pain Questionnaire** — "
+                "Entourez le chiffre qui correspond le mieux à votre situation."
+            )
+            orebro_answers = {}
+            for key, question, hint in OREBRO_ITEMS:
+                num = int(key.split("_")[1])
+                stored = lv_int(key, -1)
+                default_idx = stored if 0 <= stored <= 10 else 5
+                st.markdown(f"**{num}. {question}**")
+                st.markdown(f"<small style='color:#888'>{hint}</small>", unsafe_allow_html=True)
+                val = st.slider(
+                    label=f"orebro_{num}",
+                    min_value=0, max_value=10,
+                    value=default_idx,
+                    key=f"q_{key}",
+                    label_visibility="collapsed",
+                )
+                orebro_answers[key] = val
+                collected[key] = val
+
+            orebro_result = compute_orebro(orebro_answers)
+            if orebro_result["score"] is not None:
+                st.markdown("---")
+                st.markdown(
+                    f'<div class="score-box" style="background:{orebro_result["color"]};">'
+                    f'Örebro : {orebro_result["score"]}/100 — {orebro_result["interpretation"]}</div>',
+                    unsafe_allow_html=True,
+                )
+                collected.update({"orebro_score": orebro_result["score"],
+                                   "orebro_interpretation": orebro_result["interpretation"]})
             else:
-                collected.update({"orebro_score":"","orebro_interpretation":""})
+                collected.update({"orebro_score": "", "orebro_interpretation": ""})
 
     # ── SAUVEGARDE ────────────────────────────────────────────────────────────
     if save_top or st.button("💾 Sauvegarder le bilan", type="primary", key="lomb_save_bot"):
