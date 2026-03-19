@@ -66,14 +66,15 @@ with col1:
 
 with col2:
     st.markdown("""
-    <div class="module-card coming-soon">
+    <div class="module-card">
         <div class="module-icon">🦴</div>
-        <div class="module-name">Bilan Musculo-squelettique</div>
-        <div class="module-sub">Bientôt disponible</div>
+        <div class="module-name">Bilan Lombalgie</div>
+        <div class="module-sub">Lombalgie chronique & aiguë</div>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
-    st.button("🔒 Bientôt disponible", use_container_width=True, disabled=True, key="btn2")
+    if st.button("➡️ Accéder au bilan Lombalgie", use_container_width=True, key="btn2"):
+        st.switch_page("pages/2_Lombalgie_Bilan.py")
 
 with col3:
     st.markdown("""
