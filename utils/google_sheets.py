@@ -252,9 +252,12 @@ def get_lombalgie_headers():
         "drapeaux_jaunes_list", "drapeaux_jaunes_notes",
         # SOAP – Objectif
         "o_posture_notes",
-        "o_schober", "o_flexion_cm", "o_extension_deg",
-        "o_lat_droite_deg", "o_lat_gauche_deg",
-        "o_rot_droite_deg", "o_rot_gauche_deg",
+        "o_schober", "o_flexion_cm",
+        "o_extension_mob", "o_lat_droite_mob", "o_lat_gauche_mob",
+        "o_rot_droite_mob", "o_rot_gauche_mob",
+        "o_luomajoki_score",
+        "o_luom_waiters_bow", "o_luom_pelvic_tilt", "o_luom_knee_lift",
+        "o_luom_one_leg_stance", "o_luom_sitting_knee_ext", "o_luom_prone_knee_bend",
         # Tests neurologiques
         "o_lasegue_droit", "o_lasegue_gauche", "o_lasegue_croise",
         "o_reflexe_rotulien", "o_reflexe_achilleen",
