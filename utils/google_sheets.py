@@ -225,3 +225,57 @@ def save_bilan(bilan_data: dict) -> str:
     row = [str(bilan_data.get(h, "")) for h in headers]
     ws.append_row(row)
     return new_id
+
+# ─── Bilans Lombalgie ─────────────────────────────────────────────────────────
+
+LOMBALGIE_HEADERS_BASE = [
+    "bilan_id", "patient_id", "date_bilan", "type_bilan",
+    "praticien", "notes_generales",
+]
+
+def get_lombalgie_headers():
+    """Headers de base — à enrichir au fur et à mesure des questionnaires."""
+    return LOMBALGIE_HEADERS_BASE.copy()
+
+
+def ensure_lombalgie_sheet():
+    ss = get_spreadsheet()
+    try:
+        ws = ss.worksheet("Bilans_Lombalgie")
+        _sync_headers(ws, get_lombalgie_headers())
+    except gspread.WorksheetNotFound:
+        ws = ss.add_worksheet("Bilans_Lombalgie", rows=5000,
+                              cols=len(get_lombalgie_headers()))
+        ws.append_row(get_lombalgie_headers())
+    return ss
+
+
+def get_patient_bilans_lombalgie(patient_id: str) -> pd.DataFrame:
+    ss = ensure_lombalgie_sheet()
+    ws = ss.worksheet("Bilans_Lombalgie")
+    df = _ws_to_df(ws, get_lombalgie_headers())
+    if df.empty:
+        return df
+    result = df[df["patient_id"] == patient_id].copy()
+    return result.reset_index(drop=True)
+
+
+def save_bilan_lombalgie(bilan_data: dict) -> str:
+    ss = ensure_lombalgie_sheet()
+    ws = ss.worksheet("Bilans_Lombalgie")
+    headers  = get_lombalgie_headers()
+    bilan_id = bilan_data.get("bilan_id")
+
+    if bilan_id:
+        all_values = ws.get_all_values()
+        for i, row_vals in enumerate(all_values[1:], start=2):
+            if row_vals and row_vals[0] == bilan_id:
+                row = [str(bilan_data.get(h, "")) for h in headers]
+                ws.update(f"A{i}", [row])
+                return bilan_id
+
+    new_id = str(uuid.uuid4())[:8].upper()
+    bilan_data["bilan_id"] = new_id
+    row = [str(bilan_data.get(h, "")) for h in headers]
+    ws.append_row(row)
+    return new_id
