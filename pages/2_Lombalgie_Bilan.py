@@ -379,37 +379,144 @@ def render_formulaire():
         st.markdown("")
         st.markdown('<div class="section-title">Posture & observation</div>', unsafe_allow_html=True)
         posture_notes = st.text_area("Observation posturale", value=lv("o_posture_notes",""), height=80, key="lo_posture")
+
+        # ── Mobilité lombaire ─────────────────────────────────────────────────
         st.markdown('<div class="section-title">Mobilité lombaire</div>', unsafe_allow_html=True)
-        mo1,mo2,mo3,mo4 = st.columns(4)
+        st.markdown(
+            '<div class="info-box"><small>1/3 = très limité · 2/3 = modérément limité · '
+            '3/3 = amplitude complète (normale)</small></div>',
+            unsafe_allow_html=True,
+        )
+
+        MOB_OPTS = ["— Non renseigné —", "1/3", "2/3", "3/3"]
+
+        def mob_select(label, key):
+            stored = lv(key, "")
+            idx = MOB_OPTS.index(stored) if stored in MOB_OPTS else 0
+            chosen = st.selectbox(label, MOB_OPTS, index=idx, key=f"lo_{key}")
+            return "" if chosen == "— Non renseigné —" else chosen
+
+        mo1, mo2, mo3, mo4 = st.columns(4)
         with mo1:
-            schober = st.number_input("Schober modifié (cm)", 0.0, 30.0, lv_float("o_schober"), 0.5, key="lo_schober")
-            flex_cm = st.number_input("Flexion doigt-sol (cm)", 0.0, 50.0, lv_float("o_flexion_cm"), 0.5, key="lo_flex")
+            schober = st.number_input("Schober modifié (cm)", 0.0, 30.0,
+                lv_float("o_schober"), 0.5, key="lo_schober")
+            flex_cm = st.number_input("Flexion doigt-sol (cm)", 0.0, 50.0,
+                lv_float("o_flexion_cm"), 0.5, key="lo_flex")
         with mo2:
-            ext_deg = st.number_input("Extension (°)", 0.0, 90.0, lv_float("o_extension_deg"), 1.0, key="lo_ext")
+            ext_mob  = mob_select("Extension", "o_extension_mob")
         with mo3:
-            lat_d = st.number_input("Latéroflexion D (°)", 0.0, 90.0, lv_float("o_lat_droite_deg"), 1.0, key="lo_latd")
-            lat_g = st.number_input("Latéroflexion G (°)", 0.0, 90.0, lv_float("o_lat_gauche_deg"), 1.0, key="lo_latg")
+            lat_d_mob = mob_select("Latéroflexion Droite", "o_lat_droite_mob")
+            lat_g_mob = mob_select("Latéroflexion Gauche", "o_lat_gauche_mob")
         with mo4:
-            rot_d = st.number_input("Rotation D (°)", 0.0, 90.0, lv_float("o_rot_droite_deg"), 1.0, key="lo_rotd")
-            rot_g = st.number_input("Rotation G (°)", 0.0, 90.0, lv_float("o_rot_gauche_deg"), 1.0, key="lo_rotg")
+            rot_d_mob = mob_select("Rotation Droite", "o_rot_droite_mob")
+            rot_g_mob = mob_select("Rotation Gauche", "o_rot_gauche_mob")
+
+        # ── Tests cliniques ───────────────────────────────────────────────────
         st.markdown('<div class="section-title">Tests cliniques</div>', unsafe_allow_html=True)
         test_collected = {}
-        for section_name, tests in TESTS_CLINIQUES.items():
+
+        # Tous les tests sauf contrôle moteur (remplacé par Luomajoki)
+        TESTS_SANS_CM = {k: v for k, v in TESTS_CLINIQUES.items()
+                         if k != "Tests de contrôle moteur"}
+
+        for section_name, tests in TESTS_SANS_CM.items():
             with st.expander(section_name):
-                tc1,tc2 = st.columns(2)
-                for i,test in enumerate(tests):
+                tc1, tc2 = st.columns(2)
+                for i, test in enumerate(tests):
                     skey = "lo_" + test.lower().replace(" ","_").replace("/","_").replace("(","").replace(")","")[:30]
-                    sv = lv(f"o_{skey}", RESULTATS_TEST[0])
-                    idx = RESULTATS_TEST.index(sv) if sv in RESULTATS_TEST else 0
-                    with (tc1 if i%2==0 else tc2):
+                    sv   = lv(f"o_{skey}", RESULTATS_TEST[0])
+                    idx  = RESULTATS_TEST.index(sv) if sv in RESULTATS_TEST else 0
+                    with (tc1 if i % 2 == 0 else tc2):
                         chosen = st.selectbox(test, RESULTATS_TEST, index=idx, key=f"test_{skey}")
                         test_collected[f"o_{skey}"] = chosen if chosen != "—" else ""
-        tests_notes = st.text_area("Notes complémentaires", value=lv("o_tests_notes",""), height=80, key="lo_notes")
-        collected.update({"o_posture_notes":posture_notes,
-            "o_schober":schober or "","o_flexion_cm":flex_cm or "",
-            "o_extension_deg":ext_deg or "","o_lat_droite_deg":lat_d or "",
-            "o_lat_gauche_deg":lat_g or "","o_rot_droite_deg":rot_d or "",
-            "o_rot_gauche_deg":rot_g or "","o_tests_notes":tests_notes,**test_collected})
+
+        # ── Tests de Luomajoki ────────────────────────────────────────────────
+        with st.expander("Tests de Luomajoki — Contrôle du mouvement lombaire"):
+            st.markdown(
+                '<div class="info-box"><small>'
+                '<b>Batterie de 6 tests de contrôle du mouvement lombaire</b> (Luomajoki et al., 2007). '
+                'Résultat : ✅ Réussi (contrôle correct) · ❌ Échoué (perte de contrôle lombaire). '
+                'Score total sur 6 — un score ≥ 3 échecs est cliniquement significatif.'
+                '</small></div>',
+                unsafe_allow_html=True,
+            )
+            LUOM_TESTS = [
+                ("luom_waiters_bow",
+                 "1. Waiters Bow (hip hinge)",
+                 "Le patient se penche en avant en fléchissant les hanches sans flexion lombaire. "
+                 "Échec si flexion ou extension lombaire compensatoire."),
+                ("luom_pelvic_tilt",
+                 "2. Pelvic Tilt (debout)",
+                 "Le patient effectue une antéversion et rétroversion pelviennes. "
+                 "Échec si mouvement lombaire au lieu du mouvement pelvien pur."),
+                ("luom_knee_lift",
+                 "3. Knee Lift (debout)",
+                 "Le patient lève le genou jusqu'à 90° en unipodal. "
+                 "Échec si inclinaison lombaire ou rotation du bassin."),
+                ("luom_one_leg_stance",
+                 "4. One-Leg Stance (station unipodale)",
+                 "Le patient maintient l'équilibre sur un pied pendant 10 secondes. "
+                 "Échec si oscillation lombaire ou chute du bassin > 2 cm."),
+                ("luom_sitting_knee_ext",
+                 "5. Sitting Knee Extension (ASLR assis)",
+                 "Le patient étend le genou en position assise. "
+                 "Échec si flexion lombaire compensatoire."),
+                ("luom_prone_knee_bend",
+                 "6. Prone Knee Bend (décubitus ventral)",
+                 "Le patient fléchit le genou à 90° en décubitus ventral. "
+                 "Échec si antéversion pelvienne ou extension lombaire compensatoire."),
+            ]
+
+            LUOM_OPTS = ["— Non testé —", "✅ Réussi", "❌ Échoué"]
+            luom_scores = []
+            lc1, lc2 = st.columns(2)
+            for i, (lkey, lname, ldesc) in enumerate(LUOM_TESTS):
+                stored_luom = lv(f"o_{lkey}", "")
+                idx_luom    = LUOM_OPTS.index(stored_luom) if stored_luom in LUOM_OPTS else 0
+                with (lc1 if i % 2 == 0 else lc2):
+                    st.markdown(f"**{lname}**")
+                    st.markdown(f"<small style='color:#666'>{ldesc}</small>",
+                                unsafe_allow_html=True)
+                    chosen_luom = st.radio(
+                        label=lname, options=LUOM_OPTS, index=idx_luom,
+                        horizontal=True, key=f"luom_{lkey}",
+                        label_visibility="collapsed",
+                    )
+                    test_collected[f"o_{lkey}"] = chosen_luom if chosen_luom != "— Non testé —" else ""
+                    if chosen_luom == "❌ Échoué":
+                        luom_scores.append(1)
+
+            # Score total Luomajoki
+            n_testes = sum(1 for _, lname, _ in LUOM_TESTS
+                           if lv(f"o_{LUOM_TESTS[[t[0] for t in LUOM_TESTS].index(_[0])][0]}", "") != ""
+                           for _ in [(_,)] if False)
+            n_echecs = len(luom_scores)
+            if n_echecs > 0:
+                color_luom = "#d32f2f" if n_echecs >= 3 else "#f57c00" if n_echecs >= 1 else "#388e3c"
+                st.markdown(
+                    f'<div class="score-box" style="background:{color_luom};font-size:1rem;margin-top:0.5rem;">'
+                    f'{n_echecs} / 6 tests échoués'
+                    f'{"  — Dysfonction de contrôle moteur significative" if n_echecs >= 3 else ""}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+            test_collected["o_luomajoki_score"] = n_echecs if n_echecs > 0 else ""
+
+        tests_notes = st.text_area("Notes complémentaires (objectif)",
+            value=lv("o_tests_notes",""), height=80, key="lo_notes")
+
+        collected.update({
+            "o_posture_notes":  posture_notes,
+            "o_schober":        schober or "",
+            "o_flexion_cm":     flex_cm or "",
+            "o_extension_mob":  ext_mob,
+            "o_lat_droite_mob": lat_d_mob,
+            "o_lat_gauche_mob": lat_g_mob,
+            "o_rot_droite_mob": rot_d_mob,
+            "o_rot_gauche_mob": rot_g_mob,
+            "o_tests_notes":    tests_notes,
+            **test_collected,
+        })
 
     # ── DIAGNOSTICS ───────────────────────────────────────────────────────────
     with tab_diag:
