@@ -228,14 +228,54 @@ def save_bilan(bilan_data: dict) -> str:
 
 # ─── Bilans Lombalgie ─────────────────────────────────────────────────────────
 
-LOMBALGIE_HEADERS_BASE = [
-    "bilan_id", "patient_id", "date_bilan", "type_bilan",
-    "praticien", "notes_generales",
-]
-
 def get_lombalgie_headers():
-    """Headers de base — à enrichir au fur et à mesure des questionnaires."""
-    return LOMBALGIE_HEADERS_BASE.copy()
+    """Headers complets du bilan Lombalgie."""
+    return [
+        # Identification
+        "bilan_id", "patient_id", "date_bilan", "type_bilan",
+        "praticien", "notes_generales",
+        # Classification
+        "groupe_clinique",
+        # SOAP – Subjectif
+        "s_motif_consultation",
+        "s_douleur_localisation", "s_douleur_irradiation",
+        "s_eva_repos", "s_eva_mouvement", "s_eva_nuit",
+        "s_type_douleur", "s_rythme_douleur",
+        "s_facteurs_aggravants", "s_facteurs_soulageants",
+        "s_debut_douleur", "s_mode_debut",
+        "s_duree_episode", "s_episodes_anterieurs",
+        "s_antecedents", "s_traitements_en_cours",
+        "s_impact_avd", "s_impact_travail", "s_impact_sommeil",
+        # Drapeaux rouges / jaunes
+        "drapeaux_rouges_list", "drapeaux_rouges_notes",
+        "drapeaux_jaunes_list", "drapeaux_jaunes_notes",
+        # SOAP – Objectif
+        "o_posture_notes",
+        "o_schober", "o_flexion_cm", "o_extension_deg",
+        "o_lat_droite_deg", "o_lat_gauche_deg",
+        "o_rot_droite_deg", "o_rot_gauche_deg",
+        # Tests neurologiques
+        "o_lasegue_droit", "o_lasegue_gauche", "o_lasegue_croise",
+        "o_reflexe_rotulien", "o_reflexe_achilleen",
+        "o_sensibilite_notes", "o_force_notes",
+        # Tests SI
+        "o_faber", "o_gaenslen", "o_compression_si", "o_distraction_si",
+        # Tests contrôle moteur
+        "o_tva", "o_trendelenburg", "o_pont_fessier",
+        # Autres tests
+        "o_valsalva", "o_tests_notes",
+        # Diagnostics différentiels
+        "diag_principal", "diag_diff_list", "diag_notes",
+        # SOAP – Appréciation
+        "a_appreciation",
+        # SOAP – Plan
+        "p_objectifs", "p_traitement", "p_frequence", "p_duree",
+        "p_education", "p_autogestion",
+        # Questionnaires
+        "odi_score", "odi_interpretation",
+        "tampa_score", "tampa_interpretation",
+        "orebro_score", "orebro_interpretation",
+    ]
 
 
 def ensure_lombalgie_sheet():
