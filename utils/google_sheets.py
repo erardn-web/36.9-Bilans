@@ -206,23 +206,21 @@ def get_patient_bilans(patient_id: str) -> pd.DataFrame:
 def save_bilan(bilan_data: dict) -> str:
     ss = ensure_sheets()
     ws = ss.worksheet("Bilans_SHV")
-    headers = get_shv_headers()
-
+    # Utiliser l'ordre RÉEL des colonnes de la feuille
+    actual_headers = ws.row_values(1)
     bilan_id = bilan_data.get("bilan_id")
 
     if bilan_id:
-        # Mise à jour d'une ligne existante
-        all_data = ws.get_all_records()
-        for i, record in enumerate(all_data):
-            if record.get("bilan_id") == bilan_id:
-                row = [str(bilan_data.get(h, "")) for h in headers]
-                ws.update(f"A{i + 2}", [row])
+        all_data = ws.get_all_values()
+        for i, row_vals in enumerate(all_data[1:], start=2):
+            if row_vals and row_vals[0] == bilan_id:
+                row = [str(bilan_data.get(h, "")) for h in actual_headers]
+                ws.update(f"A{i}", [row])
                 return bilan_id
 
-    # Nouveau bilan
     new_id = str(uuid.uuid4())[:8].upper()
     bilan_data["bilan_id"] = new_id
-    row = [str(bilan_data.get(h, "")) for h in headers]
+    row = [str(bilan_data.get(h, "")) for h in actual_headers]
     ws.append_row(row)
     return new_id
 
@@ -276,8 +274,18 @@ def get_lombalgie_headers():
         "p_objectifs", "p_traitement", "p_frequence", "p_duree",
         "p_education", "p_autogestion",
         # Questionnaires
+        # ODI items (s1–s10) + score
+        "odi_s1","odi_s2","odi_s3","odi_s4","odi_s5",
+        "odi_s6","odi_s7","odi_s8","odi_s9","odi_s10",
         "odi_score", "odi_interpretation",
+        # Tampa items (1–17) + score
+        "tampa_1","tampa_2","tampa_3","tampa_4","tampa_5","tampa_6",
+        "tampa_7","tampa_8","tampa_9","tampa_10","tampa_11","tampa_12",
+        "tampa_13","tampa_14","tampa_15","tampa_16","tampa_17",
         "tampa_score", "tampa_interpretation",
+        # Örebro items (1–13) + score
+        "orebro_1","orebro_2","orebro_3","orebro_4","orebro_5","orebro_6","orebro_7",
+        "orebro_8","orebro_9","orebro_10","orebro_11","orebro_12","orebro_13",
         "orebro_score", "orebro_interpretation",
     ]
 
@@ -307,19 +315,20 @@ def get_patient_bilans_lombalgie(patient_id: str) -> pd.DataFrame:
 def save_bilan_lombalgie(bilan_data: dict) -> str:
     ss = ensure_lombalgie_sheet()
     ws = ss.worksheet("Bilans_Lombalgie")
-    headers  = get_lombalgie_headers()
+    # Utiliser l'ordre RÉEL des colonnes de la feuille, pas l'ordre attendu
+    actual_headers = ws.row_values(1)
     bilan_id = bilan_data.get("bilan_id")
 
     if bilan_id:
         all_values = ws.get_all_values()
         for i, row_vals in enumerate(all_values[1:], start=2):
             if row_vals and row_vals[0] == bilan_id:
-                row = [str(bilan_data.get(h, "")) for h in headers]
+                row = [str(bilan_data.get(h, "")) for h in actual_headers]
                 ws.update(f"A{i}", [row])
                 return bilan_id
 
     new_id = str(uuid.uuid4())[:8].upper()
     bilan_data["bilan_id"] = new_id
-    row = [str(bilan_data.get(h, "")) for h in headers]
+    row = [str(bilan_data.get(h, "")) for h in actual_headers]
     ws.append_row(row)
     return new_id
