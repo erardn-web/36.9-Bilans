@@ -487,9 +487,6 @@ def render_formulaire():
                         luom_scores.append(1)
 
             # Score total Luomajoki
-            n_testes = sum(1 for _, lname, _ in LUOM_TESTS
-                           if lv(f"o_{LUOM_TESTS[[t[0] for t in LUOM_TESTS].index(_[0])][0]}", "") != ""
-                           for _ in [(_,)] if False)
             n_echecs = len(luom_scores)
             if n_echecs > 0:
                 color_luom = "#d32f2f" if n_echecs >= 3 else "#f57c00" if n_echecs >= 1 else "#388e3c"
