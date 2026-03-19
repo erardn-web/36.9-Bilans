@@ -19,7 +19,7 @@ from utils.lombalgie_data import (
     GROUPES_CLINIQUES, GROUPES_OPTIONS, GROUPES_CODES,
     GROUPES_DESC, GROUPES_COLORS,
     DRAPEAUX_ROUGES, DRAPEAUX_JAUNES,
-    DIAG_DIFF, LOCALISATIONS,
+    LOCALISATIONS,
     FACTEURS_AGGRAVANTS, FACTEURS_SOULAGEANTS,
     TYPES_DOULEUR, RYTHME_DOULEUR,
     TESTS_CLINIQUES, RESULTATS_TEST,
@@ -280,8 +280,13 @@ def render_formulaire():
                 f'{groupe_chosen}<br><small style="font-size:0.8rem;font-weight:400;">'
                 f'{GROUPES_DESC[groupe_code]}</small></div>',
                 unsafe_allow_html=True)
+        st.markdown("---")
+        st.markdown('<div class="section-title">🩺 Diagnostic principal</div>', unsafe_allow_html=True)
+        diag_principal = st.text_input("Diagnostic principal retenu",
+            value=lv("diag_principal",""), key="ld_principal")
         collected.update({"date_bilan":str(bilan_date),"type_bilan":bilan_type,
-                          "praticien":praticien,"notes_generales":notes_gen,"groupe_clinique":groupe_code})
+                          "praticien":praticien,"notes_generales":notes_gen,
+                          "groupe_clinique":groupe_code,"diag_principal":diag_principal})
 
     # ── SUBJECTIF ─────────────────────────────────────────────────────────────
     with tab_s:
@@ -534,17 +539,18 @@ def render_formulaire():
 
     # ── DIAGNOSTICS ───────────────────────────────────────────────────────────
     with tab_diag:
-        st.markdown('<div class="section-title">🩺 Hypothèses diagnostiques</div>', unsafe_allow_html=True)
-        diag_principal = st.text_input("Diagnostic principal", value=lv("diag_principal",""), key="ld_principal")
-        diag_stored = lv_list("diag_diff_list")
-        diag_sel = []
-        for category, items in DIAG_DIFF.items():
-            with st.expander(category):
-                for item in items:
-                    if st.checkbox(item, value=item in diag_stored, key=f"diag_{item.replace(' ','_')[:40]}"):
-                        diag_sel.append(item)
-        diag_notes = st.text_area("Raisonnement clinique", value=lv("diag_notes",""), height=100, key="ld_notes")
-        collected.update({"diag_principal":diag_principal,"diag_diff_list":"|".join(diag_sel),"diag_notes":diag_notes})
+        st.markdown('<div class="section-title">🩺 Raisonnement clinique</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="info-box">Notez ici votre raisonnement clinique : hypothèses, '
+            'diagnostics différentiels, éléments qui orientent ou excluent certains diagnostics.</div>',
+            unsafe_allow_html=True,
+        )
+        diag_notes = st.text_area("Raisonnement clinique",
+            value=lv("diag_notes",""), height=300, key="ld_notes",
+            placeholder="Ex : Arguments en faveur d'un syndrome facettaire : extension plus douloureuse que flexion, "
+                        "soulagement en décharge... Hypothèse myofasciale écartée car..."
+        )
+        collected.update({"diag_notes": diag_notes})
 
     # ── APPRÉCIATION ──────────────────────────────────────────────────────────
     with tab_a:
