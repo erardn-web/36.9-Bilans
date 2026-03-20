@@ -2,6 +2,11 @@
 Génération des questionnaires papier imprimables (version patient).
 HAD, SF-12, Test HV, BOLT — mise en page soignée pour impression A4.
 """
+import sys, os as _os
+_here = _os.path.dirname(_os.path.abspath(__file__))
+_root = _os.path.dirname(_here)
+if _root not in sys.path: sys.path.insert(0, _root)
+
 
 import io
 from reportlab.lib.pagesizes import A4
@@ -15,7 +20,7 @@ from reportlab.platypus import (
 )
 
 # ─── Couleurs ─────────────────────────────────────────────────────────────────
-from utils.pdf_theme import (
+from pdf_theme import (
     TERRA, BLEU, BLEU_LIGHT, GRIS, GRIS_BORD, BLANC, NOIR, GRIS_TEXTE,
     VERT, ORANGE, ROUGE, USEFUL_W, MARGIN, make_header_footer, get_logo,
 )
