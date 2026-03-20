@@ -1,6 +1,11 @@
 """
 Génération du rapport PDF d'évolution — Bilan Lombalgie
 """
+import sys, os as _os
+_here = _os.path.dirname(_os.path.abspath(__file__))
+_root = _os.path.dirname(_here)
+if _root not in sys.path: sys.path.insert(0, _root)
+
 
 import io
 import numpy as np
@@ -18,7 +23,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from utils.pdf_theme import (
+from pdf_theme import (
     TERRA, TERRA_LIGHT, BLEU, BLEU_LIGHT, GRIS, GRIS_BORD, GRIS_TEXTE,
     NOIR, BLANC, BLEU, ORANGE, ROUGE, JAUNE,
     USEFUL_W, MARGIN,
