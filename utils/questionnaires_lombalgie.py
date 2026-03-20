@@ -15,13 +15,15 @@ from reportlab.platypus import (
 )
 from datetime import date
 
-VERT       = colors.HexColor("#2e5a1c")
-VERT_CLAIR = colors.HexColor("#e8f5e0")
-GRIS_CLAIR = colors.HexColor("#f5f5f5")
-GRIS_BORD  = colors.HexColor("#cccccc")
-BLANC      = colors.white
-NOIR       = colors.HexColor("#222222")
-W = A4[0] - 3*cm
+from utils.pdf_theme import (
+    TERRA, BLEU, BLEU_LIGHT, GRIS, GRIS_BORD, BLANC, NOIR, GRIS_TEXTE,
+    BLEU, ORANGE, ROUGE, USEFUL_W, MARGIN, make_header_footer, get_logo,
+)
+GRIS_CLAIR = GRIS
+BLEU_CLAIR = BLEU_LIGHT
+BLEU_FONCE = BLEU
+BLEU_CLAIR = BLEU_LIGHT
+W = USEFUL_W
 CHECKBOX = "☐"
 
 def make_styles():
@@ -41,7 +43,7 @@ def section_header(title, subtitle=""):
     tbl = Table([[Paragraph(title, ParagraphStyle("th", fontSize=13,
         fontName="Helvetica-Bold", textColor=BLANC))]], colWidths=[W])
     tbl.setStyle(TableStyle([
-        ("BACKGROUND",(0,0),(-1,-1),VERT),
+        ("BACKGROUND",(0,0),(-1,-1),BLEU),
         ("TOPPADDING",(0,0),(-1,-1),7),
         ("BOTTOMPADDING",(0,0),(-1,-1),7),
         ("LEFTPADDING",(0,0),(-1,-1),10),
@@ -52,26 +54,6 @@ def section_header(title, subtitle=""):
             fontName="Helvetica-Oblique", textColor=colors.HexColor("#555"), spaceAfter=4)))
     return items
 
-def make_hf(patient_info):
-    nom = f"{patient_info.get('nom','')} {patient_info.get('prenom','')}" if patient_info else ""
-    def hf(c, doc):
-        c.saveState()
-        w, h = A4
-        c.setFillColor(VERT); c.rect(0, h-1.1*cm, w, 1.1*cm, fill=1, stroke=0)
-        c.setFillColor(BLANC); c.setFont("Helvetica-Bold", 9)
-        c.drawString(1.5*cm, h-0.75*cm, "36.9 Bilans — Questionnaires Lombalgie")
-        if nom.strip():
-            c.setFont("Helvetica", 9)
-            c.drawCentredString(w/2, h-0.75*cm, f"Patient : {nom}")
-        c.setFont("Helvetica", 8)
-        c.drawRightString(w-1.5*cm, h-0.75*cm, f"Page {doc.page}")
-        c.setStrokeColor(GRIS_BORD); c.setLineWidth(0.5)
-        c.line(1.5*cm, 1.1*cm, w-1.5*cm, 1.1*cm)
-        c.setFillColor(colors.HexColor("#888")); c.setFont("Helvetica", 7)
-        c.drawString(1.5*cm, 0.6*cm, "Document confidentiel")
-        c.drawRightString(w-1.5*cm, 0.6*cm, f"Généré le {date.today().strftime('%d/%m/%Y')}")
-        c.restoreState()
-    return hf
 
 def radio_v(num, question, options, styles):
     q_text = f"{num}. {question}" if question else str(num)
@@ -93,9 +75,9 @@ def score_footer(label, max_score, guide):
     tbl.setStyle(TableStyle([
         ("FONTNAME",(0,0),(0,0),"Helvetica-Bold"),
         ("FONTSIZE",(0,0),(-1,-1),9),
-        ("TEXTCOLOR",(0,0),(0,0),VERT),
-        ("BACKGROUND",(0,0),(-1,-1),VERT_CLAIR),
-        ("BOX",(0,0),(-1,-1),1,VERT),
+        ("TEXTCOLOR",(0,0),(0,0),BLEU),
+        ("BACKGROUND",(0,0),(-1,-1),BLEU_CLAIR),
+        ("BOX",(0,0),(-1,-1),1,BLEU),
         ("TOPPADDING",(0,0),(-1,-1),6),
         ("BOTTOMPADDING",(0,0),(-1,-1),6),
         ("LEFTPADDING",(0,0),(-1,-1),8),
@@ -281,7 +263,7 @@ def build_orebro(story, styles):
     col_w = [7*cm] + [0.75*cm]*11
     act_tbl = Table(act_header + act_rows, colWidths=col_w)
     act_tbl.setStyle(TableStyle([
-        ("BACKGROUND",(0,0),(-1,0),VERT),
+        ("BACKGROUND",(0,0),(-1,0),BLEU),
         ("TEXTCOLOR",(0,0),(-1,0),BLANC),
         ("FONTNAME",(0,0),(-1,-1),"Helvetica"),
         ("FONTSIZE",(0,0),(-1,-1),7),
@@ -309,19 +291,19 @@ def generate_questionnaires_lombalgie_pdf(selected, patient_info=None):
         leftMargin=1.5*cm, rightMargin=1.5*cm, topMargin=2*cm, bottomMargin=1.8*cm)
     styles = make_styles()
     story  = []
-    hf     = make_hf(patient_info)
+    hf = make_header_footer("36.9 Bilans — Questionnaires", f"{patient_info.get('nom','')} {patient_info.get('prenom','')}" if patient_info else "")
 
     story.append(Spacer(1, 2*cm))
     story.append(Paragraph("Questionnaires — Bilan Lombalgie",
         ParagraphStyle("gt", fontSize=22, fontName="Helvetica-Bold",
-                       textColor=VERT, alignment=TA_CENTER, spaceAfter=6)))
+                       textColor=BLEU, alignment=TA_CENTER, spaceAfter=6)))
     if patient_info:
         story.append(Paragraph(
             f"Patient : {patient_info.get('nom','')} {patient_info.get('prenom','')}",
             ParagraphStyle("gs", fontSize=12, fontName="Helvetica",
                            textColor=colors.HexColor("#555"), alignment=TA_CENTER)))
     story.append(Spacer(1, 0.3*cm))
-    story.append(HRFlowable(width="100%", thickness=2, color=VERT))
+    story.append(HRFlowable(width="100%", thickness=2, color=BLEU))
     story.append(Spacer(1, 0.4*cm))
     for key in selected:
         if key in QUESTIONNAIRES_LOMB:
@@ -565,7 +547,7 @@ OREBRO_ITEMS = [
 ]
 
 # Items à inverser pour le scoring (5, 6, 7 : plus = mieux → on inverse)
-OREBRO_INVERTED = {"orebro_5", "orebro_6", "orebro_7"}
+OREBRO_INBLEUED = {"orebro_5", "orebro_6", "orebro_7"}
 
 OREBRO_KEYS = [o[0] for o in OREBRO_ITEMS]
 
@@ -578,7 +560,7 @@ def compute_orebro(answers: dict) -> dict:
         v = answers.get(key)
         if v is not None:
             score = int(v)
-            if key in OREBRO_INVERTED:
+            if key in OREBRO_INBLEUED:
                 score = 10 - score
             total += score
             count += 1
