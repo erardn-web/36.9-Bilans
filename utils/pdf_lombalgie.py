@@ -313,7 +313,17 @@ def generate_pdf_lombalgie(bilans_df, patient_info: dict) -> bytes:
     story.append(make_table(bil_rows, col_widths=[1*cm,3*cm,5*cm,3*cm,W-12*cm]))
     story.append(PageBreak())
 
-    # ── Tableau de synthèse ───────────────────────────────────────────────────
+    # ── Helpers pour filtrer les données vides ───────────────────────────────
+    def has_data(key):
+        """Retourne True si au moins un bilan a une valeur non vide pour cette clé."""
+        return any(safe_n(r.get(key)) is not None for _, r in bilans_df.iterrows())
+
+    def has_data_str(key):
+        """Retourne True si au moins un bilan a une valeur textuelle non vide."""
+        return any(str(r.get(key,"") or "").strip() not in ("","—","None")
+                   for _, r in bilans_df.iterrows())
+
+    # ── Tableau de synthèse (seulement les lignes avec données) ──────────────
     story.append(section_header("Synthèse des scores"))
     story.append(Spacer(1, 0.2*cm))
 
@@ -324,73 +334,118 @@ def generate_pdf_lombalgie(bilans_df, patient_info: dict) -> bytes:
     def srow(label, key, suffix=""):
         return [label] + [val_s(r.get(key), suffix) for _, r in bilans_df.iterrows()]
 
-    synth_rows += [
-        srow("EVA Repos (/10)",     "s_eva_repos"),
-        srow("EVA Mouvement (/10)", "s_eva_mouvement"),
-        srow("EVA Nuit (/10)",      "s_eva_nuit"),
-        ["Groupe clinique"] + [r.get("groupe_clinique","—") or "—" for _, r in bilans_df.iterrows()],
-        [""] + [""]*n,
-        srow("ODI (%)",             "odi_score",   "%"),
-        srow("Tampa (/68)",         "tampa_score"),
-        srow("Örebro",              "orebro_score"),
-        [""] + [""]*n,
-        srow("Luomajoki (/6 échecs)","o_luomajoki_score"),
-        srow("Schober (cm)",        "o_schober",   " cm"),
-        srow("Extension",           "o_extension_mob"),
-        srow("Latéroflexion Droite","o_lat_droite_mob"),
-        srow("Latéroflexion Gauche","o_lat_gauche_mob"),
-        srow("Rotation Droite",     "o_rot_droite_mob"),
-        srow("Rotation Gauche",     "o_rot_gauche_mob"),
-        [""] + [""]*n,
-        ["Arrêt travail"] + [r.get("s_arret_travail","—") or "—" for _, r in bilans_df.iterrows()],
-        ["Réveil nocturne"] + [r.get("s_reveil_nuit","—") or "—" for _, r in bilans_df.iterrows()],
-        ["Drapeaux rouges (nb)"] + [
-            str(len([x for x in str(r.get("drapeaux_rouges_list","")).split("|") if x]))
-            for _, r in bilans_df.iterrows()],
-        ["Drapeaux jaunes (nb)"] + [
-            str(len([x for x in str(r.get("drapeaux_jaunes_list","")).split("|") if x]))
-            for _, r in bilans_df.iterrows()],
-    ]
+    def add_srow(label, key, suffix=""):
+        if has_data(key):
+            synth_rows.append(srow(label, key, suffix))
 
-    synth_tbl = make_table(synth_header + synth_rows, col_widths=col_w)
-    story.append(synth_tbl)
-    story.append(Spacer(1, 0.3*cm))
-    story.append(Paragraph(
-        "ODI : 0–20% minimal · 21–40% modéré · 41–60% sévère · >60% très sévère  |  "
-        "Tampa : ≤37 faible · 38–44 modéré · >44 élevé  |  "
-        "Örebro : ≤50 faible · 51–74 moyen · ≥75 élevé  |  "
-        "Luomajoki : ≥3 échecs = dysfonction significative",
-        styles["small"]))
+    def add_srow_str(label, key):
+        if has_data_str(key):
+            synth_rows.append(["Groupe clinique"] + [r.get(key,"—") or "—" for _, r in bilans_df.iterrows()])
+
+    def sep():
+        if synth_rows and synth_rows[-1] != [""] + [""]*n:
+            synth_rows.append([""] + [""]*n)
+
+    add_srow("EVA Repos (/10)",     "s_eva_repos")
+    add_srow("EVA Mouvement (/10)", "s_eva_mouvement")
+    add_srow("EVA Nuit (/10)",      "s_eva_nuit")
+    add_srow_str("Groupe clinique", "groupe_clinique")
+    sep()
+    add_srow("ODI (%)",              "odi_score",   "%")
+    add_srow("Tampa (/68)",          "tampa_score")
+    add_srow("Örebro",               "orebro_score")
+    sep()
+    add_srow("Luomajoki (/6 échecs)","o_luomajoki_score")
+    add_srow("Schober (cm)",         "o_schober",   " cm")
+    if has_data_str("o_extension_mob"):
+        synth_rows.append(["Extension"] + [r.get("o_extension_mob","—") or "—" for _, r in bilans_df.iterrows()])
+    if has_data_str("o_lat_droite_mob"):
+        synth_rows.append(["Latéroflexion Droite"] + [r.get("o_lat_droite_mob","—") or "—" for _, r in bilans_df.iterrows()])
+    if has_data_str("o_lat_gauche_mob"):
+        synth_rows.append(["Latéroflexion Gauche"] + [r.get("o_lat_gauche_mob","—") or "—" for _, r in bilans_df.iterrows()])
+    if has_data_str("o_rot_droite_mob"):
+        synth_rows.append(["Rotation Droite"] + [r.get("o_rot_droite_mob","—") or "—" for _, r in bilans_df.iterrows()])
+    if has_data_str("o_rot_gauche_mob"):
+        synth_rows.append(["Rotation Gauche"] + [r.get("o_rot_gauche_mob","—") or "—" for _, r in bilans_df.iterrows()])
+    sep()
+    if has_data_str("s_arret_travail"):
+        synth_rows.append(["Arrêt travail"] + [r.get("s_arret_travail","—") or "—" for _, r in bilans_df.iterrows()])
+    if has_data_str("s_reveil_nuit"):
+        synth_rows.append(["Réveil nocturne"] + [r.get("s_reveil_nuit","—") or "—" for _, r in bilans_df.iterrows()])
+    # Drapeaux — seulement si au moins un a été coché
+    dr_counts = [len([x for x in str(r.get("drapeaux_rouges_list","")).split("|") if x]) for _, r in bilans_df.iterrows()]
+    dj_counts = [len([x for x in str(r.get("drapeaux_jaunes_list","")).split("|") if x]) for _, r in bilans_df.iterrows()]
+    if any(c > 0 for c in dr_counts):
+        synth_rows.append(["Drapeaux rouges (nb)"] + [str(c) for c in dr_counts])
+    if any(c > 0 for c in dj_counts):
+        synth_rows.append(["Drapeaux jaunes (nb)"] + [str(c) for c in dj_counts])
+
+    # Supprimer les séparateurs en fin de liste
+    while synth_rows and synth_rows[-1] == [""] + [""]*n:
+        synth_rows.pop()
+
+    if synth_rows:
+        synth_tbl = make_table(synth_header + synth_rows, col_widths=col_w)
+        story.append(synth_tbl)
+        story.append(Spacer(1, 0.3*cm))
+        # Légende uniquement pour les indicateurs présents
+        legend_parts = []
+        if has_data("odi_score"):   legend_parts.append("ODI : 0–20% minimal · 21–40% modéré · 41–60% sévère · >60% très sévère")
+        if has_data("tampa_score"): legend_parts.append("Tampa : ≤37 faible · 38–44 modéré · >44 élevé")
+        if has_data("orebro_score"):legend_parts.append("Örebro : ≤50 faible · 51–74 moyen · ≥75 élevé")
+        if has_data("o_luomajoki_score"): legend_parts.append("Luomajoki : ≥3 échecs = dysfonction significative")
+        if legend_parts:
+            story.append(Paragraph("  |  ".join(legend_parts), styles["small"]))
     story.append(PageBreak())
 
-    # ── Graphiques ────────────────────────────────────────────────────────────
-    story.append(section_header("Graphiques d'évolution"))
-    story.append(Spacer(1, 0.3*cm))
+    # ── Graphiques (seulement si données présentes) ───────────────────────────
+    charts_added = False
 
-    story.append(Paragraph("EVA — Douleur", styles["subsection"]))
-    try: story.append(chart_eva(bilans_df, labels))
-    except: story.append(Paragraph("Graphique non disponible.", styles["small"]))
+    if has_data("s_eva_repos") or has_data("s_eva_mouvement") or has_data("s_eva_nuit"):
+        if not charts_added:
+            story.append(section_header("Graphiques d'évolution"))
+            story.append(Spacer(1, 0.3*cm))
+            charts_added = True
+        story.append(Paragraph("EVA — Douleur", styles["subsection"]))
+        try: story.append(chart_eva(bilans_df, labels))
+        except: story.append(Paragraph("Graphique non disponible.", styles["small"]))
+        story.append(Spacer(1, 0.5*cm))
 
-    story.append(Spacer(1, 0.5*cm))
-    story.append(Paragraph("Questionnaires fonctionnels", styles["subsection"]))
-    try: story.append(chart_questionnaires(bilans_df, labels))
-    except: story.append(Paragraph("Graphique non disponible.", styles["small"]))
+    if has_data("odi_score") or has_data("tampa_score") or has_data("orebro_score"):
+        if not charts_added:
+            story.append(section_header("Graphiques d'évolution"))
+            story.append(Spacer(1, 0.3*cm))
+            charts_added = True
+        story.append(Paragraph("Questionnaires fonctionnels", styles["subsection"]))
+        try: story.append(chart_questionnaires(bilans_df, labels))
+        except: story.append(Paragraph("Graphique non disponible.", styles["small"]))
+        story.append(Spacer(1, 0.5*cm))
 
-    story.append(PageBreak())
+    mob_keys = ["o_extension_mob","o_lat_droite_mob","o_lat_gauche_mob","o_rot_droite_mob","o_rot_gauche_mob","o_schober"]
+    if any(has_data(k) or has_data_str(k) for k in mob_keys):
+        if not charts_added:
+            story.append(section_header("Graphiques d'évolution"))
+            story.append(Spacer(1, 0.3*cm))
+            charts_added = True
+        story.append(Paragraph("Mobilité lombaire", styles["subsection"]))
+        try: story.append(chart_mobilite(bilans_df, labels))
+        except: story.append(Paragraph("Graphique non disponible.", styles["small"]))
+        story.append(Spacer(1, 0.5*cm))
 
-    story.append(Paragraph("Mobilité lombaire", styles["subsection"]))
-    try: story.append(chart_mobilite(bilans_df, labels))
-    except: story.append(Paragraph("Graphique non disponible.", styles["small"]))
+    if has_data("o_luomajoki_score"):
+        if not charts_added:
+            story.append(section_header("Graphiques d'évolution"))
+            story.append(Spacer(1, 0.3*cm))
+            charts_added = True
+        luom_img = None
+        try: luom_img = chart_luomajoki(bilans_df, labels)
+        except: pass
+        if luom_img:
+            story.append(Paragraph("Tests de Luomajoki", styles["subsection"]))
+            story.append(luom_img)
 
-    story.append(Spacer(1, 0.5*cm))
-    luom_img = None
-    try: luom_img = chart_luomajoki(bilans_df, labels)
-    except: pass
-    if luom_img:
-        story.append(Paragraph("Tests de Luomajoki", styles["subsection"]))
-        story.append(luom_img)
-
-    story.append(PageBreak())
+    if charts_added:
+        story.append(PageBreak())
 
     # ── Détail bilan par bilan ────────────────────────────────────────────────
     story.append(section_header("Détail des bilans"))
