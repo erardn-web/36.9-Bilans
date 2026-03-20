@@ -2,6 +2,11 @@
 Génération du rapport PDF d'évolution SHV
 Utilise ReportLab Platypus pour un rendu professionnel.
 """
+import sys, os as _os
+_here = _os.path.dirname(_os.path.abspath(__file__))
+_root = _os.path.dirname(_here)
+if _root not in sys.path: sys.path.insert(0, _root)
+
 
 import io
 from datetime import date
@@ -20,7 +25,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
 
-from utils.pdf_theme import (
+from pdf_theme import (
     TERRA, TERRA_LIGHT, BLEU, BLEU_LIGHT, GRIS, GRIS_BORD, GRIS_TEXTE,
     NOIR, BLANC, VERT, ORANGE, ROUGE, JAUNE,
     USEFUL_W, MARGIN, HEADER_H,
