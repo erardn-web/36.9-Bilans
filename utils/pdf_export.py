@@ -489,51 +489,66 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
     synth_header = [["Indicateur"] + [f"B{i+1}" for i in range(n_bilans)]]
     synth_rows   = []
 
+    def has_data(key):
+        return any(safe_num(r.get(key)) is not None for _, r in bilans_df.iterrows())
+
+    def has_data_str(key):
+        return any(str(r.get(key,"") or "").strip() not in ("","—","None")
+                   for _, r in bilans_df.iterrows())
+
+    def sep():
+        if synth_rows and synth_rows[-1] != [""] + [""]*n_bilans:
+            synth_rows.append([""] + [""]*n_bilans)
+
     def synth_row(label, key, suffix="", color_fn=None):
         vals = [val_str(r.get(key), suffix) for _, r in bilans_df.iterrows()]
         row  = [label] + vals
         return row
 
-    synth_rows.append(synth_row("HAD Anxiété (/21)",    "had_score_anxiete"))
-    synth_rows.append(synth_row("HAD Dépression (/21)", "had_score_depression"))
-    synth_rows.append([""] + [""] * n_bilans)
-    synth_rows.append(synth_row("BOLT (secondes)",      "bolt_score", "s"))
-    synth_rows.append([""] + [""] * n_bilans)
-    synth_rows.append(synth_row("SF12 – Fonct. physique",    "sf12_pf"))
-    synth_rows.append(synth_row("SF12 – Limit. physique",    "sf12_rp"))
-    synth_rows.append(synth_row("SF12 – Douleur",            "sf12_bp"))
-    synth_rows.append(synth_row("SF12 – Santé générale",     "sf12_gh"))
-    synth_rows.append(synth_row("SF12 – Vitalité",           "sf12_vt"))
-    synth_rows.append(synth_row("SF12 – Vie sociale",        "sf12_sf"))
-    synth_rows.append(synth_row("SF12 – Limit. émotionnel",  "sf12_re"))
-    synth_rows.append(synth_row("SF12 – Santé psychique",    "sf12_mh"))
-    synth_rows.append([""] + [""] * n_bilans)
-    synth_rows.append(synth_row("PCS-12 (score physique)",   "sf12_pcs"))
-    synth_rows.append(synth_row("MCS-12 (score mental)",     "sf12_mcs"))
-    synth_rows.append([""] + [""] * n_bilans)
-    synth_rows.append(synth_row("Nijmegen (/64)",            "nij_score"))
-    synth_rows.append([""] + [""] * n_bilans)
-    synth_rows.append(synth_row("HVT – Résultat",            "hvt_symptomes_reproduits"))
-    synth_rows.append(synth_row("HVT – Retour normal (min)", "hvt_duree_retour", " min"))
-    synth_rows.append([""] + [""] * n_bilans)
-    synth_rows.append(synth_row("ETCO₂ repos (mmHg)",        "etco2_repos"))
-    synth_rows.append(synth_row("ETCO₂ pattern",             "etco2_pattern"))
-    synth_rows.append([""] + [""] * n_bilans)
-    synth_rows.append(synth_row("Pattern – FR (cyc/min)",    "pattern_frequence"))
-    synth_rows.append(synth_row("Pattern – Mode",            "pattern_mode"))
-    synth_rows.append(synth_row("Pattern – Amplitude",       "pattern_amplitude"))
-    synth_rows.append(synth_row("Pattern – Rythme",          "pattern_rythme"))
-    synth_rows.append(synth_row("Pattern – Paradoxal",       "pattern_paradoxal"))
-    synth_rows.append([""] + [""] * n_bilans)
-    synth_rows.append(synth_row("Gazométrie – pH",           "gazo_ph"))
-    synth_rows.append(synth_row("Gazométrie – PaCO₂ (mmHg)", "gazo_paco2"))
-    synth_rows.append(synth_row("Gazométrie – SatO₂ (%)",    "gazo_sato2"))
-    synth_rows.append([""] + [""] * n_bilans)
-    synth_rows.append(synth_row("SNIF % prédit",             "snif_pct",  "%"))
-    synth_rows.append(synth_row("PImax % prédit",            "pimax_pct", "%"))
-    synth_rows.append(synth_row("PEmax % prédit",            "pemax_pct", "%"))
-    synth_rows.append([""] + [""] * n_bilans)
-    synth_rows.append(synth_row("MRC Dyspnée (grade)",       "mrc_score"))
+    def add_row(label, key, suffix=""):
+        if has_data(key) or has_data_str(key):
+            synth_rows.append(synth_row(label, key, suffix))
+
+    add_row("HAD Anxiété (/21)",    "had_score_anxiete")
+    add_row("HAD Dépression (/21)", "had_score_depression")
+    sep()
+    add_row("BOLT (secondes)", "bolt_score", "s")
+    sep()
+    add_row("SF12 – Fonct. physique",    "sf12_pf")
+    add_row("SF12 – Limit. physique",    "sf12_rp")
+    add_row("SF12 – Douleur",            "sf12_bp")
+    add_row("SF12 – Santé générale",     "sf12_gh")
+    add_row("SF12 – Vitalité",           "sf12_vt")
+    add_row("SF12 – Vie sociale",        "sf12_sf")
+    add_row("SF12 – Limit. émotionnel",  "sf12_re")
+    add_row("SF12 – Santé psychique",    "sf12_mh")
+    sep()
+    add_row("PCS-12 (score physique)",   "sf12_pcs")
+    add_row("MCS-12 (score mental)",     "sf12_mcs")
+    sep()
+    add_row("Nijmegen (/64)",            "nij_score")
+    sep()
+    add_row("HVT – Résultat",            "hvt_symptomes_reproduits")
+    add_row("HVT – Retour normal (min)", "hvt_duree_retour", " min")
+    sep()
+    add_row("ETCO₂ repos (mmHg)",        "etco2_repos")
+    add_row("ETCO₂ pattern",             "etco2_pattern")
+    sep()
+    add_row("Pattern – FR (cyc/min)",    "pattern_frequence")
+    add_row("Pattern – Mode",            "pattern_mode")
+    add_row("Pattern – Amplitude",       "pattern_amplitude")
+    add_row("Pattern – Rythme",          "pattern_rythme")
+    add_row("Pattern – Paradoxal",       "pattern_paradoxal")
+    sep()
+    add_row("Gazométrie – pH",           "gazo_ph")
+    add_row("Gazométrie – PaCO₂ (mmHg)", "gazo_paco2")
+    add_row("Gazométrie – SatO₂ (%)",    "gazo_sato2")
+    sep()
+    add_row("SNIF % prédit",             "snif_pct",  "%")
+    add_row("PImax % prédit",            "pimax_pct", "%")
+    add_row("PEmax % prédit",            "pemax_pct", "%")
+    sep()
+    add_row("MRC Dyspnée (grade)",       "mrc_score")
 
     col_w = [6*cm] + [(w - 6*cm) / n_bilans] * n_bilans
 
@@ -586,6 +601,10 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
             if c != GRIS_TEXTE:
                 base_cmds.append(("TEXTCOLOR", (j, row_idx), (j, row_idx), c))
                 base_cmds.append(("FONTNAME",  (j, row_idx), (j, row_idx), "Helvetica-Bold"))
+
+    # Supprimer séparateurs en fin de liste
+    while synth_rows and synth_rows[-1] == [""] + [""]*n_bilans:
+        synth_rows.pop()
 
     synth_table = Table(synth_header + synth_rows, colWidths=col_w, repeatRows=1)
     synth_table.setStyle(TableStyle(base_cmds))
