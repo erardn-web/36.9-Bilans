@@ -20,15 +20,19 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
 
-# ─── Palette couleurs ─────────────────────────────────────────────────────────
-BLEU_FONCE  = colors.HexColor("#1a3c5e")
-BLEU_CLAIR  = colors.HexColor("#e0ecf8")
-ORANGE      = colors.HexColor("#f57c00")
-VERT        = colors.HexColor("#388e3c")
-ROUGE       = colors.HexColor("#d32f2f")
-GRIS_CLAIR  = colors.HexColor("#f5f5f5")
-GRIS_TEXTE  = colors.HexColor("#555555")
-BLANC       = colors.white
+from utils.pdf_theme import (
+    TERRA, TERRA_LIGHT, BLEU, BLEU_LIGHT, GRIS, GRIS_BORD, GRIS_TEXTE,
+    NOIR, BLANC, VERT, ORANGE, ROUGE, JAUNE,
+    USEFUL_W, MARGIN, HEADER_H,
+    make_header_footer, make_styles, make_table, section_band, make_cover,
+    get_logo,
+)
+# Aliases pour compatibilité interne
+BLEU = BLEU
+BLEU_LIGHT = BLEU_LIGHT
+GRIS = GRIS
+CHART_COLORS_NEW = ["#2B57A7", "#C4603A", "#388e3c", "#7b1fa2", "#f57c00",
+                    "#0097a7", "#e64a19", "#5d4037"]
 
 
 def safe_num(val):
@@ -75,8 +79,7 @@ def sf12_color(score):
 
 # ─── Utilitaires graphiques ───────────────────────────────────────────────────
 
-CHART_COLORS = ["#1a3c5e", "#f57c00", "#388e3c", "#7b1fa2", "#d32f2f",
-                "#0097a7", "#e64a19", "#5d4037"]
+
 
 def fig_to_rl_image(fig, width_cm=17, height_cm=8):
     """Convertit une figure matplotlib en Image ReportLab."""
@@ -287,110 +290,13 @@ def make_chart_hvt(bilans_df, labels):
     return fig_to_rl_image(fig, width_cm=17, height_cm=5.5)
 
 
-# ─── Styles ───────────────────────────────────────────────────────────────────
-
-def make_styles():
-    base = getSampleStyleSheet()
-    styles = {
-        "title": ParagraphStyle(
-            "title", parent=base["Title"],
-            fontSize=22, textColor=BLEU_FONCE,
-            spaceAfter=4, alignment=TA_CENTER,
-        ),
-        "subtitle": ParagraphStyle(
-            "subtitle", parent=base["Normal"],
-            fontSize=11, textColor=GRIS_TEXTE,
-            spaceAfter=2, alignment=TA_CENTER,
-        ),
-        "section": ParagraphStyle(
-            "section", parent=base["Heading1"],
-            fontSize=13, textColor=BLANC,
-            spaceBefore=14, spaceAfter=6,
-            backColor=BLEU_FONCE,
-            leftIndent=-6, rightIndent=-6,
-            borderPadding=(4, 6, 4, 6),
-        ),
-        "subsection": ParagraphStyle(
-            "subsection", parent=base["Heading2"],
-            fontSize=11, textColor=BLEU_FONCE,
-            spaceBefore=10, spaceAfter=4,
-            borderPadding=(2, 0, 2, 0),
-        ),
-        "normal": ParagraphStyle(
-            "normal", parent=base["Normal"],
-            fontSize=9, textColor=GRIS_TEXTE, spaceAfter=2,
-        ),
-        "small": ParagraphStyle(
-            "small", parent=base["Normal"],
-            fontSize=8, textColor=GRIS_TEXTE,
-        ),
-        "bold": ParagraphStyle(
-            "bold", parent=base["Normal"],
-            fontSize=9, textColor=BLEU_FONCE, fontName="Helvetica-Bold",
-        ),
-        "center": ParagraphStyle(
-            "center", parent=base["Normal"],
-            fontSize=9, alignment=TA_CENTER,
-        ),
-        "note": ParagraphStyle(
-            "note", parent=base["Normal"],
-            fontSize=8, textColor=GRIS_TEXTE,
-            leftIndent=10, spaceAfter=4,
-            borderPadding=4,
-        ),
-    }
-    return styles
+# make_styles() imported from pdf_theme
 
 
-# ─── Entête de page ───────────────────────────────────────────────────────────
-
-def make_header_footer(canvas_obj, doc):
-    canvas_obj.saveState()
-    w, h = A4
-    # Bandeau haut
-    canvas_obj.setFillColor(BLEU_FONCE)
-    canvas_obj.rect(0, h - 1.2*cm, w, 1.2*cm, fill=1, stroke=0)
-    canvas_obj.setFillColor(BLANC)
-    canvas_obj.setFont("Helvetica-Bold", 10)
-    canvas_obj.drawString(1.5*cm, h - 0.85*cm, "36.9 Bilans — Rapport d'évolution SHV")
-    canvas_obj.setFont("Helvetica", 8)
-    canvas_obj.drawRightString(w - 1.5*cm, h - 0.85*cm, f"Page {doc.page}")
-    # Ligne pied de page
-    canvas_obj.setStrokeColor(BLEU_CLAIR)
-    canvas_obj.setLineWidth(0.5)
-    canvas_obj.line(1.5*cm, 1.2*cm, w - 1.5*cm, 1.2*cm)
-    canvas_obj.setFillColor(GRIS_TEXTE)
-    canvas_obj.setFont("Helvetica", 7)
-    canvas_obj.drawString(1.5*cm, 0.7*cm, "Document confidentiel — Usage médical")
-    canvas_obj.drawRightString(w - 1.5*cm, 0.7*cm, f"Généré le {date.today().strftime('%d/%m/%Y')}")
-    canvas_obj.restoreState()
+# make_header_footer() imported from pdf_theme
 
 
-# ─── Table générique ──────────────────────────────────────────────────────────
-
-def make_table(data, col_widths=None, header=True):
-    """data : liste de listes. Première ligne = en-têtes si header=True."""
-    t = Table(data, colWidths=col_widths, repeatRows=1 if header else 0)
-    cmds = [
-        ("FONTNAME",    (0, 0), (-1, -1), "Helvetica"),
-        ("FONTSIZE",    (0, 0), (-1, -1), 8),
-        ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [BLANC, GRIS_CLAIR]),
-        ("GRID",        (0, 0), (-1, -1), 0.3, colors.HexColor("#cccccc")),
-        ("TOPPADDING",  (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-    ]
-    if header:
-        cmds += [
-            ("BACKGROUND",  (0, 0), (-1, 0), BLEU_FONCE),
-            ("TEXTCOLOR",   (0, 0), (-1, 0), BLANC),
-            ("FONTNAME",    (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE",    (0, 0), (-1, 0), 8),
-        ]
-    t.setStyle(TableStyle(cmds))
-    return t
+# make_table() imported from pdf_theme
 
 
 # ─── Générateur principal ─────────────────────────────────────────────────────
@@ -429,61 +335,21 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
     labels = [bilan_label(r) for _, r in bilans_df.iterrows()]
 
     # ══════════════════════════════════════════════════════════════════
-    #  PAGE DE GARDE
+    #  PAGE DE GARDE — moderne
     # ══════════════════════════════════════════════════════════════════
-    story.append(Spacer(1, 2*cm))
-    story.append(Paragraph("Rapport d'évolution", styles["title"]))
-    story.append(Paragraph("Syndrome d'Hyperventilation (SHV)", styles["subtitle"]))
-    story.append(Spacer(1, 0.5*cm))
-    story.append(HRFlowable(width="100%", thickness=2, color=BLEU_FONCE))
-    story.append(Spacer(1, 0.4*cm))
-
-    # Infos patient
-    pat_data = [
-        ["Patient",     f"{patient_info.get('nom','')} {patient_info.get('prenom','')}"],
-        ["Date de naissance", str(patient_info.get("date_naissance", "—"))],
-        ["Sexe",        patient_info.get("sexe", "—")],
-        ["Profession",  patient_info.get("profession", "—") or "—"],
-        ["ID patient",  patient_info.get("patient_id", "—")],
-        ["Nombre de bilans", str(n_bilans)],
-        ["Rapport généré le", date.today().strftime("%d/%m/%Y")],
-    ]
-    pat_table = Table(pat_data, colWidths=[5*cm, w - 5*cm])
-    pat_table.setStyle(TableStyle([
-        ("FONTNAME",    (0, 0), (-1, -1), "Helvetica"),
-        ("FONTSIZE",    (0, 0), (-1, -1), 9),
-        ("FONTNAME",    (0, 0), (0, -1),  "Helvetica-Bold"),
-        ("TEXTCOLOR",   (0, 0), (0, -1),  BLEU_FONCE),
-        ("ROWBACKGROUNDS", (0, 0), (-1, -1), [BLANC, GRIS_CLAIR]),
-        ("GRID",        (0, 0), (-1, -1), 0.3, colors.HexColor("#cccccc")),
-        ("TOPPADDING",  (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-    ]))
-    story.append(pat_table)
-    story.append(Spacer(1, 0.6*cm))
-
-    # Tableau des bilans
-    story.append(Paragraph("Bilans inclus dans ce rapport", styles["subsection"]))
-    bil_header = [["#", "Date", "Type de bilan", "Praticien"]]
-    bil_rows   = []
-    for i, (_, row) in enumerate(bilans_df.iterrows()):
-        d  = row["date_bilan"]
-        ds = d.strftime("%d/%m/%Y") if pd.notna(d) else "—"
-        bil_rows.append([
-            str(i + 1), ds,
-            row.get("type_bilan", "—"),
-            row.get("praticien", "—") or "—",
-        ])
-    story.append(make_table(bil_header + bil_rows,
-                            col_widths=[1*cm, 3*cm, 6*cm, w - 10*cm]))
-
+    make_cover(story,
+               title="Rapport d'évolution",
+               subtitle="Syndrome d'Hyperventilation (SHV)",
+               patient_info=patient_info,
+               bilans_df=bilans_df,
+               labels=labels,
+               styles=styles)
     story.append(PageBreak())
 
     # ══════════════════════════════════════════════════════════════════
     #  TABLEAU DE SYNTHÈSE DES SCORES
     # ══════════════════════════════════════════════════════════════════
-    story.append(Paragraph("Synthèse des scores", styles["section"]))
+    story.append(section_band("Synthèse des scores"))
     story.append(Spacer(1, 0.2*cm))
 
     synth_header = [["Indicateur"] + [f"B{i+1}" for i in range(n_bilans)]]
@@ -557,13 +423,13 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
         ("FONTNAME",    (0, 0), (-1, -1), "Helvetica"),
         ("FONTSIZE",    (0, 0), (-1, -1), 8),
         ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [BLANC, GRIS_CLAIR]),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [BLANC, GRIS]),
         ("GRID",        (0, 0), (-1, -1), 0.3, colors.HexColor("#cccccc")),
         ("TOPPADDING",  (0, 0), (-1, -1), 4),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ("LEFTPADDING", (0, 0), (-1, -1), 6),
         ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("BACKGROUND",  (0, 0), (-1, 0), BLEU_FONCE),
+        ("BACKGROUND",  (0, 0), (-1, 0), BLEU),
         ("TEXTCOLOR",   (0, 0), (-1, 0), BLANC),
         ("FONTNAME",    (0, 0), (-1, 0), "Helvetica-Bold"),
     ]
@@ -623,7 +489,7 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
     # ══════════════════════════════════════════════════════════════════
     #  GRAPHIQUES D'ÉVOLUTION
     # ══════════════════════════════════════════════════════════════════
-    story.append(Paragraph("Graphiques d'évolution", styles["section"]))
+    story.append(section_band("Graphiques d'évolution"))
     story.append(Spacer(1, 0.3*cm))
 
     # HAD
@@ -793,8 +659,8 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
             ("FONTNAME",    (0, 0), (0, -1), "Helvetica-Bold"),
             ("FONTNAME",    (1, 0), (1, -1), "Helvetica"),
             ("FONTSIZE",    (0, 0), (-1, -1), 8),
-            ("TEXTCOLOR",   (0, 0), (0, -1), BLEU_FONCE),
-            ("ROWBACKGROUNDS", (0, 0), (-1, -1), [BLANC, GRIS_CLAIR]),
+            ("TEXTCOLOR",   (0, 0), (0, -1), BLEU),
+            ("ROWBACKGROUNDS", (0, 0), (-1, -1), [BLANC, GRIS]),
             ("GRID",        (0, 0), (-1, -1), 0.3, colors.HexColor("#cccccc")),
             ("TOPPADDING",  (0, 0), (-1, -1), 4),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
@@ -847,7 +713,7 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
                 ("GRID",          (0, 0), (-1, -1), 0.3, colors.HexColor("#cccccc")),
                 ("TOPPADDING",    (0, 0), (-1, -1), 3),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                ("BACKGROUND",    (0, 0), (-1, 0),  BLEU_FONCE),
+                ("BACKGROUND",    (0, 0), (-1, 0),  BLEU),
                 ("ROWHEIGHT",     (0, 0), (-1, 0),  0.7*cm),
             ]
 
@@ -857,11 +723,11 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
                 phase_row = [Paragraph(
                     f"<b>{ph_label}</b>",
                     ParagraphStyle("plbl", fontSize=7, fontName="Helvetica-Bold",
-                                   textColor=BLEU_FONCE),
+                                   textColor=BLEU),
                 )] + [""] * 4
                 grid_rows.append(phase_row)
                 grid_cmds += [
-                    ("BACKGROUND",  (0, row_idx), (-1, row_idx), BLEU_CLAIR),
+                    ("BACKGROUND",  (0, row_idx), (-1, row_idx), BLEU_LIGHT),
                     ("ROWHEIGHT",   (0, row_idx), (-1, row_idx), 0.5*cm),
                 ]
                 row_idx += 1
@@ -875,7 +741,7 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
                         v = safe_num(row.get(f"hvt_{ph_key}_{t}_{pk}"))
                         data_row.append(str(int(v)) if v is not None else "")
                     grid_rows.append(data_row)
-                    bg = BLANC if row_idx % 2 == 0 else GRIS_CLAIR
+                    bg = BLANC if row_idx % 2 == 0 else GRIS
                     grid_cmds += [
                         ("BACKGROUND", (0, row_idx), (-1, row_idx), bg),
                         ("ROWHEIGHT",  (0, row_idx), (-1, row_idx), 0.6*cm),
@@ -1089,5 +955,6 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
     # ══════════════════════════════════════════════════════════════════
     #  BUILD
     # ══════════════════════════════════════════════════════════════════
-    doc.build(story, onFirstPage=make_header_footer, onLaterPages=make_header_footer)
+    hf = make_header_footer("36.9 Bilans — Rapport SHV", f"{patient_info.get('nom','')} {patient_info.get('prenom','')}")
+    doc.build(story, onFirstPage=hf, onLaterPages=hf)
     return buffer.getvalue()
