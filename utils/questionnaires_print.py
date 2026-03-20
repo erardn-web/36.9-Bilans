@@ -15,14 +15,13 @@ from reportlab.platypus import (
 )
 
 # ─── Couleurs ─────────────────────────────────────────────────────────────────
-BLEU        = colors.HexColor("#1a3c5e")
-BLEU_CLAIR  = colors.HexColor("#e8f0f8")
-GRIS_CLAIR  = colors.HexColor("#f5f5f5")
-GRIS_BORD   = colors.HexColor("#cccccc")
-BLANC       = colors.white
-NOIR        = colors.HexColor("#222222")
-
-W = A4[0] - 3*cm   # largeur utile
+from utils.pdf_theme import (
+    TERRA, BLEU, BLEU_LIGHT, GRIS, GRIS_BORD, BLANC, NOIR, GRIS_TEXTE,
+    VERT, ORANGE, ROUGE, USEFUL_W, MARGIN, make_header_footer, get_logo,
+)
+BLEU_CLAIR = BLEU_LIGHT
+GRIS_CLAIR = GRIS
+W = USEFUL_W
 
 
 # ─── Styles ───────────────────────────────────────────────────────────────────
@@ -72,32 +71,6 @@ def make_styles():
 
 
 # ─── Header / footer ─────────────────────────────────────────────────────────
-def make_hf(patient_info):
-    nom_prenom = f"{patient_info.get('nom','')} {patient_info.get('prenom','')}" \
-        if patient_info else ""
-
-    def hf(canvas_obj, doc):
-        canvas_obj.saveState()
-        w, h = A4
-        canvas_obj.setFillColor(BLEU)
-        canvas_obj.rect(0, h - 1.1*cm, w, 1.1*cm, fill=1, stroke=0)
-        canvas_obj.setFillColor(BLANC)
-        canvas_obj.setFont("Helvetica-Bold", 9)
-        canvas_obj.drawString(1.5*cm, h - 0.75*cm, "36.9 Bilans — Questionnaires")
-        if nom_prenom.strip():
-            canvas_obj.setFont("Helvetica", 9)
-            canvas_obj.drawCentredString(w / 2, h - 0.75*cm, f"Patient : {nom_prenom}")
-        canvas_obj.setFont("Helvetica", 8)
-        canvas_obj.drawRightString(w - 1.5*cm, h - 0.75*cm, f"Page {doc.page}")
-        # Pied
-        canvas_obj.setStrokeColor(GRIS_BORD)
-        canvas_obj.setLineWidth(0.5)
-        canvas_obj.line(1.5*cm, 1.1*cm, w - 1.5*cm, 1.1*cm)
-        canvas_obj.setFillColor(colors.HexColor("#888"))
-        canvas_obj.setFont("Helvetica", 7)
-        canvas_obj.drawString(1.5*cm, 0.6*cm, "Document confidentiel — usage médical")
-        canvas_obj.restoreState()
-    return hf
 
 
 # ─── Titre de section ─────────────────────────────────────────────────────────
@@ -775,7 +748,7 @@ def generate_questionnaires_pdf(
     )
     styles = make_styles()
     story  = []
-    hf     = make_hf(patient_info)
+    hf = make_header_footer("36.9 Bilans — Questionnaires", f"{patient_info.get('nom','')} {patient_info.get('prenom','')}" if patient_info else "")
 
     # Page de garde
     story.append(Spacer(1, 2*cm))
