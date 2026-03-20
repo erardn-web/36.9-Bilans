@@ -1,10 +1,228 @@
 """
 Génération du rapport PDF d'évolution — Bilan Lombalgie
 """
-import sys, os as _os
-_here = _os.path.dirname(_os.path.abspath(__file__))
-_root = _os.path.dirname(_here)
-if _root not in sys.path: sys.path.insert(0, _root)
+
+import os as _os
+from reportlab.lib import colors as _colors
+from reportlab.lib.pagesizes import A4 as _A4
+from reportlab.lib.units import cm as _cm
+from reportlab.lib.enums import TA_CENTER as _TA_CENTER
+from reportlab.lib.styles import ParagraphStyle as _PS
+from reportlab.platypus import Table as _Table, TableStyle as _TableStyle, Paragraph as _Para, Image as _Image
+
+# ─── Palette 36.9 Bilans ──────────────────────────────────────────────────────
+TERRA       = _colors.HexColor("#C4603A")
+TERRA_LIGHT = _colors.HexColor("#FAEEE9")
+BLEU        = _colors.HexColor("#2B57A7")
+BLEU_LIGHT  = _colors.HexColor("#E8EEF9")
+GRIS        = _colors.HexColor("#F4F4F4")
+GRIS_BORD   = _colors.HexColor("#DEDEDE")
+GRIS_TEXTE  = _colors.HexColor("#555555")
+NOIR        = _colors.HexColor("#1A1A1A")
+BLANC       = _colors.white
+VERT        = _colors.HexColor("#388e3c")
+ORANGE      = _colors.HexColor("#f57c00")
+ROUGE       = _colors.HexColor("#d32f2f")
+JAUNE       = _colors.HexColor("#fbc02d")
+
+# Aliases ancienne palette
+BLEU_FONCE  = BLEU
+BLEU_CLAIR  = BLEU_LIGHT
+GRIS_CLAIR  = GRIS
+
+USEFUL_W = _A4[0] - 3*_cm
+MARGIN   = 1.5*_cm
+HEADER_H = 1.6*_cm
+W        = USEFUL_W
+
+def _find_logo():
+    candidates = [
+        _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "assets", "logo_369.png"),
+        _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "assets", "logo_369.png"),
+        "assets/logo_369.png",
+        "/mount/src/36.9-bilans/assets/logo_369.png",
+    ]
+    for c in candidates:
+        if _os.path.exists(c):
+            return c
+    return None
+
+def get_logo(width=3.2*_cm, height=1.1*_cm):
+    p = _find_logo()
+    if p:
+        return _Image(p, width=width, height=height, kind="proportional")
+    return None
+
+def make_header_footer(report_title, patient_name=""):
+    from datetime import date as _date
+    def _draw(canvas, doc):
+        canvas.saveState()
+        w, h = _A4
+        # Bandeau bleu
+        canvas.setFillColor(BLEU)
+        canvas.rect(0, h - HEADER_H, w, HEADER_H, fill=1, stroke=0)
+        # Accent terracotta droite
+        canvas.setFillColor(TERRA)
+        canvas.rect(w - 5*_cm, h - HEADER_H, 5*_cm, HEADER_H, fill=1, stroke=0)
+        # Logo
+        logo_p = _find_logo()
+        if logo_p:
+            try:
+                canvas.drawImage(logo_p, MARGIN, h - HEADER_H + 0.15*_cm,
+                    width=2.8*_cm, height=HEADER_H - 0.3*_cm,
+                    preserveAspectRatio=True, mask="auto")
+            except Exception:
+                pass
+        # Titre
+        canvas.setFillColor(BLANC)
+        canvas.setFont("Helvetica-Bold", 9)
+        canvas.drawCentredString(w/2, h - HEADER_H*0.65, report_title)
+        # Patient
+        if patient_name:
+            canvas.setFont("Helvetica", 8)
+            canvas.drawRightString(w - MARGIN, h - HEADER_H*0.65, patient_name)
+        # Pied de page
+        canvas.setStrokeColor(GRIS_BORD)
+        canvas.setLineWidth(0.5)
+        canvas.line(MARGIN, 0.9*_cm, w - MARGIN, 0.9*_cm)
+        canvas.setFillColor(GRIS_TEXTE)
+        canvas.setFont("Helvetica", 7)
+        canvas.drawString(MARGIN, 0.35*_cm, "Document confidentiel — Usage médical exclusif")
+        canvas.drawCentredString(w/2, 0.35*_cm, "36.9 Bilans")
+        canvas.drawRightString(w - MARGIN, 0.35*_cm,
+            f"Page {doc.page}  ·  {_date.today().strftime('%d/%m/%Y')}")
+        canvas.restoreState()
+    return _draw
+
+def make_styles():
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.enums import TA_CENTER
+    base = getSampleStyleSheet()
+    return {
+        "title": _PS("title", fontSize=26, fontName="Helvetica-Bold", textColor=BLEU,
+            spaceAfter=4, alignment=TA_CENTER),
+        "subtitle": _PS("subtitle", fontSize=12, fontName="Helvetica", textColor=GRIS_TEXTE,
+            spaceAfter=2, alignment=TA_CENTER),
+        "section": _PS("section369", fontSize=11, fontName="Helvetica-Bold", textColor=BLANC,
+            spaceBefore=12, spaceAfter=6, backColor=BLEU,
+            leftIndent=-6, rightIndent=-6, borderPadding=(5,8,5,8)),
+        "subsection": _PS("subsection369", fontSize=10, fontName="Helvetica-Bold",
+            textColor=TERRA, spaceBefore=10, spaceAfter=4),
+        "normal": _PS("normal369", fontSize=9, fontName="Helvetica",
+            textColor=NOIR, spaceAfter=2),
+        "small": _PS("small369", fontSize=7.5, fontName="Helvetica", textColor=GRIS_TEXTE),
+        "bold": _PS("bold369", fontSize=9, fontName="Helvetica-Bold", textColor=BLEU),
+        "note": _PS("note369", fontSize=8, fontName="Helvetica",
+            textColor=GRIS_TEXTE, leftIndent=8, spaceAfter=4),
+        "center": _PS("center369", fontSize=9, fontName="Helvetica", alignment=TA_CENTER),
+    }
+
+def section_band(title, accent=None):
+    if accent is None: accent = BLEU
+    row = [[_Para(
+        f"<font color='#C4603A'>▌</font>&nbsp;&nbsp;<b>{title}</b>",
+        _PS("sh369", fontSize=11, fontName="Helvetica-Bold", textColor=BLANC, leading=14)
+    )]]
+    tbl = _Table(row, colWidths=[USEFUL_W])
+    tbl.setStyle(_TableStyle([
+        ("BACKGROUND",    (0,0),(-1,-1), accent),
+        ("TOPPADDING",    (0,0),(-1,-1), 6),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 6),
+        ("LEFTPADDING",   (0,0),(-1,-1), 10),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 10),
+    ]))
+    return tbl
+
+def make_table(data, col_widths=None, header=True, accent=None):
+    if accent is None: accent = BLEU
+    t = _Table(data, colWidths=col_widths, repeatRows=1 if header else 0)
+    cmds = [
+        ("FONTNAME",      (0,0),(-1,-1), "Helvetica"),
+        ("FONTSIZE",      (0,0),(-1,-1), 8),
+        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 5),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 5),
+        ("LEFTPADDING",   (0,0),(-1,-1), 7),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 7),
+    ]
+    if header:
+        cmds += [
+            ("BACKGROUND",   (0,0),(-1,0), accent),
+            ("TEXTCOLOR",    (0,0),(-1,0), BLANC),
+            ("FONTNAME",     (0,0),(-1,0), "Helvetica-Bold"),
+            ("FONTSIZE",     (0,0),(-1,0), 8),
+            ("TOPPADDING",   (0,0),(-1,0), 7),
+            ("BOTTOMPADDING",(0,0),(-1,0), 7),
+        ]
+    t.setStyle(_TableStyle(cmds))
+    return t
+
+def make_cover(story, title, subtitle, patient_info, bilans_df, labels, styles):
+    import pandas as _pd
+    from datetime import date as _date
+    from reportlab.platypus import Spacer, PageBreak
+    # Bandeau titre bleu
+    band_data = [[_Para(f"<font color='white'><b>{title}</b></font>",
+        _PS("ct369", fontSize=22, fontName="Helvetica-Bold",
+            textColor=BLANC, alignment=_TA_CENTER))]]
+    band = _Table(band_data, colWidths=[USEFUL_W])
+    band.setStyle(_TableStyle([("BACKGROUND",(0,0),(-1,-1),BLEU),
+        ("TOPPADDING",(0,0),(-1,-1),20),("BOTTOMPADDING",(0,0),(-1,-1),20)]))
+    story.append(Spacer(1, 0.8*_cm))
+    story.append(band)
+    # Sous-bande terracotta
+    sub_data = [[_Para(f"<font color='white'>{subtitle}</font>",
+        _PS("cs369", fontSize=11, fontName="Helvetica",
+            textColor=BLANC, alignment=_TA_CENTER))]]
+    sub = _Table(sub_data, colWidths=[USEFUL_W])
+    sub.setStyle(_TableStyle([("BACKGROUND",(0,0),(-1,-1),TERRA),
+        ("TOPPADDING",(0,0),(-1,-1),8),("BOTTOMPADDING",(0,0),(-1,-1),8)]))
+    story.append(sub)
+    story.append(Spacer(1, 0.6*_cm))
+    # Logo centré
+    logo = get_logo(width=5*_cm, height=2*_cm)
+    if logo:
+        lt = _Table([[logo]], colWidths=[USEFUL_W])
+        lt.setStyle(_TableStyle([("ALIGN",(0,0),(-1,-1),"CENTER")]))
+        story.append(lt)
+        story.append(Spacer(1, 0.5*_cm))
+    # Infos patient
+    n = len(bilans_df)
+    pat = [
+        ["Patient",           f"{patient_info.get('nom','')} {patient_info.get('prenom','')}"],
+        ["Date de naissance", str(patient_info.get("date_naissance","—"))],
+        ["Sexe",              patient_info.get("sexe","—")],
+        ["Profession",        patient_info.get("profession","—") or "—"],
+        ["Nombre de bilans",  str(n)],
+        ["Généré le",         _date.today().strftime("%d/%m/%Y")],
+    ]
+    pt = _Table(pat, colWidths=[4.5*_cm, USEFUL_W-4.5*_cm])
+    pt.setStyle(_TableStyle([
+        ("FONTNAME",(0,0),(0,-1),"Helvetica-Bold"),
+        ("FONTNAME",(1,0),(1,-1),"Helvetica"),
+        ("FONTSIZE",(0,0),(-1,-1),9),
+        ("TEXTCOLOR",(0,0),(0,-1),BLEU),
+        ("ROWBACKGROUNDS",(0,0),(-1,-1),[BLANC,BLEU_LIGHT]),
+        ("LINEBELOW",(0,0),(-1,-1),0.3,GRIS_BORD),
+        ("TOPPADDING",(0,0),(-1,-1),6),
+        ("BOTTOMPADDING",(0,0),(-1,-1),6),
+        ("LEFTPADDING",(0,0),(-1,-1),10),
+    ]))
+    story.append(pt)
+    story.append(Spacer(1, 0.6*_cm))
+    # Tableau bilans
+    story.append(_Para("Bilans inclus dans ce rapport",
+        _PS("subs369b", fontSize=10, fontName="Helvetica-Bold",
+            textColor=TERRA, spaceBefore=8, spaceAfter=4)))
+    bil = [["#","Date","Type","Praticien"]]
+    for i,(_, row) in enumerate(bilans_df.iterrows()):
+        d = row["date_bilan"]
+        ds = d.strftime("%d/%m/%Y") if _pd.notna(d) else "—"
+        bil.append([str(i+1), ds, row.get("type_bilan","—") or "—",
+                    row.get("praticien","—") or "—"])
+    story.append(make_table(bil, col_widths=[1.2*_cm,3.2*_cm,5*_cm,USEFUL_W-9.4*_cm]))
 
 
 import io
@@ -23,14 +241,6 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from pdf_theme import (
-    TERRA, TERRA_LIGHT, BLEU, BLEU_LIGHT, GRIS, GRIS_BORD, GRIS_TEXTE,
-    NOIR, BLANC, BLEU, ORANGE, ROUGE, JAUNE,
-    USEFUL_W, MARGIN,
-    make_header_footer, make_styles, make_table, section_band, make_cover,
-    get_logo,
-)
-# Aliases
 GRIS = GRIS
 W = USEFUL_W
 
