@@ -1828,9 +1828,6 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
         story.append(Spacer(1, 0.3*cm))
         story.append(Paragraph("Score de Nijmegen", styles["subsection"]))
         try:
-            import matplotlib
-            matplotlib.use("Agg")
-            import matplotlib.pyplot as plt
             fig_n, ax_n = plt.subplots(figsize=(10, 3.5))
             x_n = range(len(labels))
             bar_cols_n = []
