@@ -644,17 +644,22 @@ def render_formulaire():
                 num = int(key.split("_")[1])
                 stored = lv_int(key, 0)
                 r_label = " *(R)*" if reversed_item else ""
-                default_idx = stored - 1 if 1 <= stored <= 4 else 0
+                TAMPA_OPTS_EXTENDED = [0] + TAMPA_SCALE_VALUES
+                TAMPA_FMT = {0: "— Non répondu —", 1: TAMPA_SCALE[0], 2: TAMPA_SCALE[1], 3: TAMPA_SCALE[2], 4: TAMPA_SCALE[3]}
+                default_idx = stored if 1 <= stored <= 4 else 0
                 chosen_val = st.radio(
                     f"{num}.{r_label} {text}",
-                    options=TAMPA_SCALE_VALUES,
-                    format_func=lambda x: TAMPA_SCALE[x-1],
+                    options=TAMPA_OPTS_EXTENDED,
+                    format_func=lambda x: TAMPA_FMT.get(x, "—"),
                     index=default_idx,
                     horizontal=True,
                     key=f"q_{key}",
                 )
-                tampa_answers[key] = chosen_val
-                collected[key] = chosen_val
+                if chosen_val == 0:
+                    collected[key] = ""
+                else:
+                    tampa_answers[key] = chosen_val
+                    collected[key] = chosen_val
 
             tampa_result = compute_tampa(tampa_answers)
             if tampa_result["score"] is not None:
@@ -679,7 +684,7 @@ def render_formulaire():
             for key, question, hint in OREBRO_ITEMS:
                 num = int(key.split("_")[1])
                 stored = lv_int(key, -1)
-                default_idx = stored if 0 <= stored <= 10 else 5
+                default_idx = stored if 0 <= stored <= 10 else 0
                 st.markdown(f"**{num}. {question}**")
                 st.markdown(f"<small style='color:#888'>{hint}</small>", unsafe_allow_html=True)
                 val = st.slider(
