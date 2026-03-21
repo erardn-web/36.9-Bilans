@@ -926,7 +926,7 @@ def render_formulaire():
         collected.update({
             "hvt_symptomes_reproduits": hvt_reproduits,
             "hvt_symptomes_list":       "|".join(symptomes_selectionnes),
-            "hvt_duree_retour":         hvt_duree if hvt_duree > 0 else "",
+            "hvt_duree_retour":         hvt_duree if (hvt_duree is not None and hvt_duree > 0) else "",
             "hvt_notes":                hvt_notes,
             **hvt_grid,
         })
