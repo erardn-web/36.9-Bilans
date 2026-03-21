@@ -118,25 +118,27 @@ with col2:
 
 with col3:
     st.markdown("""
-    <div class="module-card coming-soon">
-        <div class="module-icon">🧠</div>
-        <div class="module-name">Bilan Neurologique</div>
-        <div class="module-sub">Bientôt disponible</div>
+    <div class="module-card">
+        <div class="module-icon">🧘</div>
+        <div class="module-name">Bilan Équilibre</div>
+        <div class="module-sub">Gériatrie — Tinetti, Berg, SPPB…</div>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
-    st.button("🔒 Bientôt disponible", use_container_width=True, disabled=True, key="btn3")
+    if st.button("➡️ Accéder", use_container_width=True, key="btn3", type="primary"):
+        st.switch_page("pages/3_Equilibre_Bilan.py")
 
 with col4:
     st.markdown("""
-    <div class="module-card coming-soon">
-        <div class="module-icon">❤️</div>
-        <div class="module-name">Bilan Cardio</div>
-        <div class="module-sub">Bientôt disponible</div>
+    <div class="module-card">
+        <div class="module-icon">🌬️</div>
+        <div class="module-name">Bilan BPCO</div>
+        <div class="module-sub">6MWT, CAT, BODE, spirométrie…</div>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
-    st.button("🔒 Bientôt disponible", use_container_width=True, disabled=True, key="btn4")
+    if st.button("➡️ Accéder", use_container_width=True, key="btn4", type="primary"):
+        st.switch_page("pages/4_BPCO_Bilan.py")
 
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
