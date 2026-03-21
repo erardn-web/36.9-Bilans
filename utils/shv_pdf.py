@@ -2045,6 +2045,7 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
             # Graphique matplotlib 4 panneaux
             story.append(Paragraph("Graphiques HVT", styles["subsection"]))
             try:
+                import matplotlib.pyplot as _plt_hvt
                 all_time_labels = (
                     ["T0","R1'","R2'","R3'",
                      "HV1'","HV2'","HV3'",
@@ -2064,7 +2065,7 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
                     ("fc",     "FC (bpm)",        "#7b1fa2", []),
                 ]
 
-                fig, axes = plt.subplots(2, 2, figsize=(14, 7))
+                fig, axes = _plt_hvt.subplots(2, 2, figsize=(14, 7))
                 fig.suptitle("Test d'hyperventilation volontaire — Paramètres",
                              fontsize=12, fontweight="bold", color="#1a3c5e")
                 axes_flat = [axes[0][0], axes[0][1], axes[1][0], axes[1][1]]
@@ -2124,7 +2125,7 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
                 buf_hvt = io.BytesIO()
                 fig.savefig(buf_hvt, format="png", dpi=150,
                             bbox_inches="tight", facecolor="white")
-                plt.close(fig)
+                _plt_hvt.close(fig)
                 buf_hvt.seek(0)
                 story.append(Image(buf_hvt, width=17*cm, height=9*cm))
             except Exception as e:
