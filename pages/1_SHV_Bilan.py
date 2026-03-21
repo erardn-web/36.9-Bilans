@@ -119,7 +119,7 @@ def render_accueil():
             </div>
             """, unsafe_allow_html=True)
 
-            pcol1, pcol2, pcol3, pcol4, pcol5 = st.columns(5)
+            pcol1, pcol2, pcol3, pcol4, pcol5, pcol6, pcol7 = st.columns(7)
             with pcol1:
                 p_had  = st.checkbox("😟 HAD",       value=True, key="pa_had")
             with pcol2:
@@ -130,6 +130,10 @@ def render_accueil():
                 p_bolt = st.checkbox("⏱️ BOLT",       value=True, key="pa_bolt")
             with pcol5:
                 p_nij  = st.checkbox("📋 Nijmegen",  value=True, key="pa_nij")
+            with pcol6:
+                p_mrc  = st.checkbox("🚶 MRC",        value=True, key="pa_mrc")
+            with pcol7:
+                p_comb = st.checkbox("🏥 Comorb.",    value=True, key="pa_comb")
 
             selected = []
             if p_had:  selected.append("had")
@@ -137,6 +141,8 @@ def render_accueil():
             if p_hvt:  selected.append("hvt")
             if p_bolt: selected.append("bolt")
             if p_nij:  selected.append("nijmegen")
+            if p_mrc:  selected.append("mrc")
+            if p_comb: selected.append("comorb")
 
             ga, gb, _ = st.columns([1.5, 1, 4])
             with ga:
@@ -293,7 +299,7 @@ def render_bilan_selection():
             </div>
             """, unsafe_allow_html=True)
 
-            pcol1, pcol2, pcol3, pcol4, pcol5 = st.columns(5)
+            pcol1, pcol2, pcol3, pcol4, pcol5, pcol6, pcol7 = st.columns(7)
             with pcol1:
                 print_had  = st.checkbox("😟 HAD",      value=True, key="print_had")
             with pcol2:
@@ -304,6 +310,10 @@ def render_bilan_selection():
                 print_bolt = st.checkbox("⏱️ BOLT",     value=True, key="print_bolt")
             with pcol5:
                 print_nij  = st.checkbox("📋 Nijmegen", value=True, key="print_nij")
+            with pcol6:
+                print_mrc  = st.checkbox("🚶 MRC",      value=True, key="print_mrc")
+            with pcol7:
+                print_comb = st.checkbox("🏥 Comorb.",  value=True, key="print_comb")
 
             selected = []
             if print_had:  selected.append("had")
@@ -311,6 +321,8 @@ def render_bilan_selection():
             if print_hvt:  selected.append("hvt")
             if print_bolt: selected.append("bolt")
             if print_nij:  selected.append("nijmegen")
+            if print_mrc:  selected.append("mrc")
+            if print_comb: selected.append("comorb")
 
             ga, gb, gc = st.columns([1.5, 1, 4])
             with ga:
