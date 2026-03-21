@@ -1566,12 +1566,133 @@ def build_nijmegen(story, styles):
         ParagraphStyle("nij_leg", fontSize=7.5, fontName="Helvetica-Oblique",
                        textColor=GRIS_TEXTE)))
 
+
+def build_mrc(story, styles):
+    """Échelle MRC Dyspnée imprimable."""
+    story.append(section_band("Échelle MRC — Dyspnée"))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "Cochez le grade qui décrit le mieux votre essoufflement au quotidien.",
+        styles["intro"]))
+    story.append(Spacer(1, 0.2*cm))
+
+    grades = [
+        (0, "Pas de dyspnée sauf en cas d'exercice intense"),
+        (1, "Dyspnée lors d'une montée rapide ou d'une côte légère"),
+        (2, "Marche plus lentement que les personnes du même âge à plat, "
+            "ou s'arrête à son propre rythme"),
+        (3, "S'arrête après 100 m ou quelques minutes à plat"),
+        (4, "Trop essoufflé(e) pour quitter la maison, ou essoufflé(e) "
+            "en s'habillant/déshabillant"),
+    ]
+
+    rows = []
+    for grade, desc in grades:
+        rows.append([
+            Checkbox(size=10),
+            Paragraph(f"<b>Grade {grade}</b>", ParagraphStyle(
+                "mrc_g", fontSize=10, fontName="Helvetica-Bold",
+                textColor=BLEU, leading=14)),
+            Paragraph(desc, ParagraphStyle(
+                "mrc_d", fontSize=9, fontName="Helvetica",
+                textColor=NOIR, leading=13)),
+        ])
+
+    tbl = Table(rows, colWidths=[0.7*cm, 2.5*cm, USEFUL_W - 3.2*cm])
+    tbl.setStyle(TableStyle([
+        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+        ("ROWBACKGROUNDS",(0,0),(-1,-1), [BLANC, GRIS]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 8),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 8),
+        ("LEFTPADDING",   (0,0),(-1,-1), 6),
+    ]))
+    story.append(tbl)
+    story.append(Spacer(1, 0.5*cm))
+    story.append(Paragraph(
+        "Grade sélectionné : ______  "
+        "Date : _____________  "
+        "Initiales patient : ______",
+        ParagraphStyle("mrc_fill", fontSize=9, fontName="Helvetica", textColor=GRIS_TEXTE)))
+
+
+def build_comorb(story, styles):
+    """Checklist comorbidités imprimable."""
+    story.append(section_band("Comorbidités & Antécédents"))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "Cochez les affections dont vous souffrez ou avez souffert. "
+        "Ajoutez tout autre renseignement pertinent dans la zone 'Autres'.",
+        styles["intro"]))
+    story.append(Spacer(1, 0.3*cm))
+
+    categories = [
+        ("🫁 Respiratoires", [
+            "Asthme", "BPCO / Emphysème", "Bronchectasies",
+            "Rhinite / sinusite chronique", "Apnées du sommeil (SAOS)", "Fibrose pulmonaire",
+        ]),
+        ("❤️ Cardio-vasculaires", [
+            "Insuffisance cardiaque", "Hypertension artérielle",
+            "Arythmie / tachycardie", "Cardiopathie ischémique", "Embolie pulmonaire (antécédent)",
+        ]),
+        ("🧠 Neurologique / Psychiatrique", [
+            "Trouble anxieux généralisé", "Trouble panique", "Dépression",
+            "Stress post-traumatique", "Épilepsie",
+        ]),
+        ("🦴 Musculo-squelettique", [
+            "Scoliose / cyphose", "Douleurs chroniques", "Fibromyalgie",
+        ]),
+        ("⚗️ Métabolique / Endocrinien", [
+            "Diabète", "Dysthyroïdie", "Anémie", "Reflux gastro-œsophagien (RGO)",
+        ]),
+        ("💊 Traitements en cours", [
+            "Bronchodilatateurs", "Corticoïdes inhalés", "Anxiolytiques / benzodiazépines",
+            "Antidépresseurs", "Bêtabloquants", "Diurétiques",
+        ]),
+    ]
+
+    for cat_name, items in categories:
+        story.append(Paragraph(cat_name, ParagraphStyle(
+            "cat_h", fontSize=10, fontName="Helvetica-Bold",
+            textColor=TERRA, spaceBefore=10, spaceAfter=4)))
+        # 2 items per row
+        for j in range(0, len(items), 2):
+            pair = items[j:j+2]
+            row = []
+            for item in pair:
+                row += [Checkbox(size=8),
+                        Paragraph(item, ParagraphStyle(
+                            "ci", fontSize=9, fontName="Helvetica",
+                            textColor=NOIR, leading=12))]
+            # Pad if odd
+            while len(row) < 4:
+                row += ["", ""]
+            col_w = [0.5*cm, (USEFUL_W/2)-0.5*cm] * 2
+            r_tbl = Table([row], colWidths=col_w)
+            r_tbl.setStyle(TableStyle([
+                ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
+                ("TOPPADDING",   (0,0),(-1,-1), 3),
+                ("BOTTOMPADDING",(0,0),(-1,-1), 3),
+                ("LEFTPADDING",  (0,0),(-1,-1), 4),
+            ]))
+            story.append(r_tbl)
+
+    story.append(Spacer(1, 0.4*cm))
+    story.append(Paragraph("Autres / remarques :", ParagraphStyle(
+        "other_lbl", fontSize=9, fontName="Helvetica-Bold", textColor=NOIR)))
+    story.append(Spacer(1, 0.2*cm))
+    for _ in range(3):
+        story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS_BORD))
+        story.append(Spacer(1, 0.4*cm))
+
 QUESTIONNAIRES = {
     "had":      ("HAD — Anxiété & Dépression", build_had),
     "sf12":     ("SF-12 — Qualité de vie",     build_sf12),
     "hvt":      ("Test d'Hyperventilation",    build_hvt),
     "bolt":     ("Test BOLT",                  build_bolt),
     "nijmegen": ("Questionnaire de Nijmegen",  build_nijmegen),
+    "mrc":      ("Échelle MRC Dyspnée",        build_mrc),
+    "comorb":   ("Comorbidités & Antécédents", build_comorb),
 }
 # ─── generate_pdf ────────────────────────────────────────────────────────────
 
