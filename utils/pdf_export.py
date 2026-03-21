@@ -59,29 +59,38 @@ def make_header_footer(report_title, patient_name=""):
     def _draw(canvas, doc):
         canvas.saveState()
         w, h = _A4
-        # Bandeau bleu
-        canvas.setFillColor(BLEU)
-        canvas.rect(0, h - HEADER_H, w, HEADER_H, fill=1, stroke=0)
-        # Accent terracotta droite
+
+        # Fond blanc header (transparent — pas de fond coloré)
+        # Trait terracotta en haut de page
         canvas.setFillColor(TERRA)
-        canvas.rect(w - 5*_cm, h - HEADER_H, 5*_cm, HEADER_H, fill=1, stroke=0)
-        # Logo
+        canvas.rect(0, h - 0.35*_cm, w, 0.35*_cm, fill=1, stroke=0)
+
+        # Logo à gauche
         logo_p = _find_logo()
         if logo_p:
             try:
-                canvas.drawImage(logo_p, MARGIN, h - HEADER_H + 0.15*_cm,
-                    width=2.8*_cm, height=HEADER_H - 0.3*_cm,
+                canvas.drawImage(logo_p, MARGIN, h - 1.4*_cm,
+                    width=2.6*_cm, height=1.0*_cm,
                     preserveAspectRatio=True, mask="auto")
             except Exception:
                 pass
-        # Titre
-        canvas.setFillColor(BLANC)
-        canvas.setFont("Helvetica-Bold", 9)
-        canvas.drawCentredString(w/2, h - HEADER_H*0.65, report_title)
-        # Patient
+
+        # Titre rapport (centre, discret)
+        canvas.setFillColor(GRIS_TEXTE)
+        canvas.setFont("Helvetica", 8)
+        canvas.drawCentredString(w/2, h - 1.1*_cm, report_title)
+
+        # Patient (droite, en bleu)
         if patient_name:
-            canvas.setFont("Helvetica", 8)
-            canvas.drawRightString(w - MARGIN, h - HEADER_H*0.65, patient_name)
+            canvas.setFillColor(BLEU)
+            canvas.setFont("Helvetica-Bold", 8)
+            canvas.drawRightString(w - MARGIN, h - 1.1*_cm, patient_name)
+
+        # Ligne séparatrice fine
+        canvas.setStrokeColor(GRIS_BORD)
+        canvas.setLineWidth(0.5)
+        canvas.line(MARGIN, h - 1.5*_cm, w - MARGIN, h - 1.5*_cm)
+
         # Pied de page
         canvas.setStrokeColor(GRIS_BORD)
         canvas.setLineWidth(0.5)
@@ -702,44 +711,56 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
     story.append(PageBreak())
 
     # ══════════════════════════════════════════════════════════════════
-    #  GRAPHIQUES D'ÉVOLUTION
+    #  GRAPHIQUES D'ÉVOLUTION — seulement si données présentes
     # ══════════════════════════════════════════════════════════════════
-    story.append(section_band("Graphiques d'évolution"))
-    story.append(Spacer(1, 0.3*cm))
+    any_had  = has_data("had_score_anxiete") or has_data("had_score_depression")
+    any_bolt = has_data("bolt_score")
+    any_sf12 = any(has_data(k) for k in ["sf12_pf","sf12_rp","sf12_bp","sf12_gh",
+                                          "sf12_vt","sf12_sf","sf12_re","sf12_mh"])
+    any_hvt  = has_data("hvt_duree_retour") or has_data_str("hvt_symptomes_reproduits")
+    any_nij  = has_data("nij_score")
+
+    if any_had or any_bolt or any_sf12 or any_hvt or any_nij:
+        story.append(section_band("Graphiques d'évolution"))
+        story.append(Spacer(1, 0.3*cm))
 
     # HAD
-    story.append(Paragraph("Anxiété & Dépression — HAD", styles["subsection"]))
-    try:
-        story.append(make_chart_had(bilans_df, labels))
-    except Exception:
-        story.append(Paragraph("Graphique non disponible.", styles["small"]))
-    story.append(Spacer(1, 0.5*cm))
+    if any_had:
+        story.append(Paragraph("Anxiété & Dépression — HAD", styles["subsection"]))
+        try:
+            story.append(make_chart_had(bilans_df, labels))
+        except Exception:
+            pass
+        story.append(Spacer(1, 0.5*cm))
 
     # BOLT
-    story.append(Paragraph("BOLT — Body Oxygen Level Test", styles["subsection"]))
-    try:
-        story.append(make_chart_bolt(bilans_df, labels))
-    except Exception:
-        story.append(Paragraph("Graphique non disponible.", styles["small"]))
-    story.append(Spacer(1, 0.5*cm))
+    if any_bolt:
+        story.append(Paragraph("BOLT — Body Oxygen Level Test", styles["subsection"]))
+        try:
+            story.append(make_chart_bolt(bilans_df, labels))
+        except Exception:
+            pass
+        story.append(Spacer(1, 0.5*cm))
 
-    story.append(PageBreak())
+    if (any_had or any_bolt) and (any_sf12 or any_hvt or any_nij):
+        story.append(PageBreak())
 
     # SF-12 barres
-    story.append(Paragraph("SF-12 — Évolution par dimension", styles["subsection"]))
-    try:
-        story.append(make_chart_sf12_bars(bilans_df, labels))
-    except Exception:
-        story.append(Paragraph("Graphique non disponible.", styles["small"]))
-    story.append(Spacer(1, 0.5*cm))
+    if any_sf12:
+        story.append(Paragraph("SF-12 — Évolution par dimension", styles["subsection"]))
+        try:
+            story.append(make_chart_sf12_bars(bilans_df, labels))
+        except Exception:
+            pass
+        story.append(Spacer(1, 0.5*cm))
 
     # SF-12 radar (si >= 2 bilans)
-    if n_bilans >= 2:
+    if any_sf12 and n_bilans >= 2:
         story.append(Paragraph("SF-12 — Comparaison radar", styles["subsection"]))
         try:
             story.append(make_chart_sf12_radar(bilans_df, labels))
         except Exception:
-            story.append(Paragraph("Graphique non disponible.", styles["small"]))
+            pass
         story.append(Spacer(1, 0.5*cm))
 
     # HVT
@@ -807,36 +828,36 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
             story.append(Paragraph(str(row["notes_generales"]), styles["note"]))
 
         # ── HAD ─────────────────────────────────────────────────────
-        story.append(Paragraph("Échelle HAD", styles["subsection"]))
-        had_data = [
-            ["", "Score", "Interprétation"],
-            ["Anxiété",
-             val_str(row.get("had_score_anxiete")) + "/21",
-             ("Normal" if safe_num(row.get("had_score_anxiete")) is None
-              else "Normal (0–7)" if safe_num(row.get("had_score_anxiete")) <= 7
-              else "Douteux (8–10)" if safe_num(row.get("had_score_anxiete")) <= 10
-              else "Pathologique (11–21)")],
-            ["Dépression",
-             val_str(row.get("had_score_depression")) + "/21",
-             ("Normal" if safe_num(row.get("had_score_depression")) is None
-              else "Normal (0–7)" if safe_num(row.get("had_score_depression")) <= 7
-              else "Douteux (8–10)" if safe_num(row.get("had_score_depression")) <= 10
-              else "Pathologique (11–21)")],
-        ]
-        story.append(make_table(had_data, col_widths=[4*cm, 3*cm, w - 7*cm]))
+        if safe_num(row.get("had_score_anxiete")) is not None or safe_num(row.get("had_score_depression")) is not None:
+            story.append(Paragraph("Échelle HAD", styles["subsection"]))
+            had_data = [
+                ["", "Score", "Interprétation"],
+                ["Anxiété",
+                 val_str(row.get("had_score_anxiete")) + "/21",
+                 ("Normal" if safe_num(row.get("had_score_anxiete")) is None
+                  else "Normal (0–7)" if safe_num(row.get("had_score_anxiete")) <= 7
+                  else "Douteux (8–10)" if safe_num(row.get("had_score_anxiete")) <= 10
+                  else "Pathologique (11–21)")],
+                ["Dépression",
+                 val_str(row.get("had_score_depression")) + "/21",
+                 ("Normal" if safe_num(row.get("had_score_depression")) is None
+                  else "Normal (0–7)" if safe_num(row.get("had_score_depression")) <= 7
+                  else "Douteux (8–10)" if safe_num(row.get("had_score_depression")) <= 10
+                  else "Pathologique (11–21)")],
+            ]
+            story.append(make_table(had_data, col_widths=[4*cm, 3*cm, w - 7*cm]))
 
         # ── BOLT ────────────────────────────────────────────────────
-        story.append(Paragraph("Test BOLT", styles["subsection"]))
-        bolt_s    = safe_num(row.get("bolt_score"))
-        bolt_interp = row.get("bolt_interpretation", "—") or "—"
-        bolt_data   = [
-            ["Score BOLT", "Interprétation"],
-            [val_str(row.get("bolt_score"), " s"), bolt_interp],
-        ]
-        story.append(make_table(bolt_data, col_widths=[4*cm, w - 4*cm]))
+        if safe_num(row.get("bolt_score")) is not None:
+            story.append(Paragraph("Test BOLT", styles["subsection"]))
+            bolt_interp = row.get("bolt_interpretation", "—") or "—"
+            bolt_data   = [
+                ["Score BOLT", "Interprétation"],
+                [val_str(row.get("bolt_score"), " s"), bolt_interp],
+            ]
+            story.append(make_table(bolt_data, col_widths=[4*cm, w - 4*cm]))
 
         # ── SF-12 ───────────────────────────────────────────────────
-        story.append(Paragraph("SF-12 — Qualité de vie", styles["subsection"]))
         sf_dims = [
             ("Fonctionnement physique",       "sf12_pf"),
             ("Limitations physiques",          "sf12_rp"),
@@ -847,42 +868,48 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
             ("Limitations émotionnelles",      "sf12_re"),
             ("Santé psychique",                "sf12_mh"),
         ]
-        sf_header = [["Dimension", "Score /100"]]
-        sf_rows   = [[label, val_str(row.get(key))] for label, key in sf_dims]
-        # Scores composites
-        sf_rows.append(["── Scores composites ──", ""])
-        pcs_val = val_str(row.get("sf12_pcs"))
-        mcs_val = val_str(row.get("sf12_mcs"))
-        sf_rows.append([f"PCS-12 — Score composite physique", f"{pcs_val}  (réf. 50)"])
-        sf_rows.append([f"MCS-12 — Score composite mental",   f"{mcs_val}  (réf. 50)"])
-        t = make_table(sf_header + sf_rows, col_widths=[10*cm, w - 10*cm])
-        story.append(t)
+        sf_has_data = any(safe_num(row.get(key)) is not None for _, key in sf_dims)
+        if sf_has_data:
+            story.append(Paragraph("SF-12 — Qualité de vie", styles["subsection"]))
+            sf_header = [["Dimension", "Score /100"]]
+            sf_rows   = [[label, val_str(row.get(key))] for label, key in sf_dims]
+            pcs_val = val_str(row.get("sf12_pcs"))
+            mcs_val = val_str(row.get("sf12_mcs"))
+            if pcs_val != "—" or mcs_val != "—":
+                sf_rows.append(["── Scores composites ──", ""])
+                sf_rows.append([f"PCS-12 — Score composite physique", f"{pcs_val}  (réf. 50)"])
+                sf_rows.append([f"MCS-12 — Score composite mental",   f"{mcs_val}  (réf. 50)"])
+            t = make_table(sf_header + sf_rows, col_widths=[10*cm, w - 10*cm])
+            story.append(t)
 
         # ── HVT ─────────────────────────────────────────────────────
-        story.append(Paragraph("Test d'hyperventilation volontaire", styles["subsection"]))
-        hvt_rows = [
-            ["Symptômes reproduits",    str(row.get("hvt_symptomes_reproduits", "—") or "—")],
-            ["Retour à la normale",     val_str(row.get("hvt_duree_retour"), " min")],
-            ["Symptômes observés",
-             str(row.get("hvt_symptomes_list", "—") or "—").replace("|", " · ")],
-        ]
-        if row.get("hvt_notes"):
-            hvt_rows.append(["Notes", str(row["hvt_notes"])])
+        hvt_has = (safe_num(row.get("hvt_duree_retour")) is not None or
+                   str(row.get("hvt_symptomes_reproduits","") or "").strip() not in ("","—","Non réalisé"))
+        if hvt_has:
+            story.append(Paragraph("Test d'hyperventilation volontaire", styles["subsection"]))
+            hvt_rows = [
+                ["Symptômes reproduits",    str(row.get("hvt_symptomes_reproduits", "—") or "—")],
+                ["Retour à la normale",     val_str(row.get("hvt_duree_retour"), " min")],
+                ["Symptômes observés",
+                 str(row.get("hvt_symptomes_list", "—") or "—").replace("|", " · ")],
+            ]
+            if row.get("hvt_notes"):
+                hvt_rows.append(["Notes", str(row["hvt_notes"])])
 
-        hvt_table = Table(hvt_rows, colWidths=[5*cm, w - 5*cm])
-        hvt_table.setStyle(TableStyle([
-            ("FONTNAME",    (0, 0), (0, -1), "Helvetica-Bold"),
-            ("FONTNAME",    (1, 0), (1, -1), "Helvetica"),
-            ("FONTSIZE",    (0, 0), (-1, -1), 8),
-            ("TEXTCOLOR",   (0, 0), (0, -1), BLEU),
-            ("ROWBACKGROUNDS", (0, 0), (-1, -1), [BLANC, GRIS]),
-            ("GRID",        (0, 0), (-1, -1), 0.3, colors.HexColor("#cccccc")),
-            ("TOPPADDING",  (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("LEFTPADDING", (0, 0), (-1, -1), 6),
-            ("VALIGN",      (0, 0), (-1, -1), "TOP"),
-        ]))
-        story.append(hvt_table)
+            hvt_table = Table(hvt_rows, colWidths=[5*cm, w - 5*cm])
+            hvt_table.setStyle(TableStyle([
+                ("FONTNAME",    (0, 0), (0, -1), "Helvetica-Bold"),
+                ("FONTNAME",    (1, 0), (1, -1), "Helvetica"),
+                ("FONTSIZE",    (0, 0), (-1, -1), 8),
+                ("TEXTCOLOR",   (0, 0), (0, -1), BLEU),
+                ("ROWBACKGROUNDS", (0, 0), (-1, -1), [BLANC, GRIS]),
+                ("GRID",        (0, 0), (-1, -1), 0.3, colors.HexColor("#cccccc")),
+                ("TOPPADDING",  (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("VALIGN",      (0, 0), (-1, -1), "TOP"),
+            ]))
+            story.append(hvt_table)
 
         # ── Grille de mesures HVT ────────────────────────────────────────────
         HVT_PHASES_PDF = [
