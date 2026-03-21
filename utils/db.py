@@ -332,3 +332,35 @@ def save_bilan_lombalgie(bilan_data: dict) -> str:
     row = [str(bilan_data.get(h, "")) for h in actual_headers]
     ws.append_row(row)
     return new_id
+
+
+# ─── Suppression de bilans ────────────────────────────────────────────────────
+
+def delete_bilan(bilan_id: str) -> bool:
+    """Supprime un bilan SHV par son ID. Retourne True si supprimé."""
+    try:
+        ss = ensure_sheets()
+        ws = ss.worksheet("Bilans_SHV")
+        all_values = ws.get_all_values()
+        for i, row in enumerate(all_values[1:], start=2):
+            if row and row[0] == bilan_id:
+                ws.delete_rows(i)
+                return True
+        return False
+    except Exception:
+        return False
+
+
+def delete_bilan_lombalgie(bilan_id: str) -> bool:
+    """Supprime un bilan Lombalgie par son ID. Retourne True si supprimé."""
+    try:
+        ss = ensure_lombalgie_sheet()
+        ws = ss.worksheet("Bilans_Lombalgie")
+        all_values = ws.get_all_values()
+        for i, row in enumerate(all_values[1:], start=2):
+            if row and row[0] == bilan_id:
+                ws.delete_rows(i)
+                return True
+        return False
+    except Exception:
+        return False
