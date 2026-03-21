@@ -179,12 +179,11 @@ def render_accueil():
             nom  = st.text_input("Nom *"); prenom = st.text_input("Prénom *")
             ddn  = st.date_input("Date de naissance *", min_value=date(1900,1,1), max_value=date.today())
             sexe = st.selectbox("Sexe", ["Féminin","Masculin","Autre"])
-            prof = st.text_input("Profession")
             sub  = st.form_submit_button("Créer", type="primary")
         if sub:
             if not nom or not prenom: st.error("Nom et prénom obligatoires.")
             else:
-                pid = create_patient(nom, prenom, ddn, sexe, prof)
+                pid = create_patient(nom, prenom, ddn, sexe, "")
                 df2 = get_all_patients()
                 row = df2[df2["patient_id"]==pid].iloc[0]
                 st.session_state.lomb_patient_id   = pid
