@@ -364,3 +364,114 @@ def delete_bilan_lombalgie(bilan_id: str) -> bool:
         return False
     except Exception:
         return False
+
+
+
+# ─── Bilans Équilibre ─────────────────────────────────────────────────────────
+
+def ensure_equilibre_sheet():
+    from utils.equilibre_data import get_equilibre_headers
+    ss = get_spreadsheet()
+    headers = get_equilibre_headers()
+    try:
+        ws = ss.worksheet("Bilans_Equilibre")
+        _sync_headers(ws, headers)
+    except gspread.WorksheetNotFound:
+        ws = ss.add_worksheet("Bilans_Equilibre", rows=5000, cols=len(headers))
+        ws.append_row(headers)
+    return ss
+
+
+def get_patient_bilans_equilibre(patient_id: str) -> pd.DataFrame:
+    from utils.equilibre_data import get_equilibre_headers
+    ss = ensure_equilibre_sheet()
+    ws = ss.worksheet("Bilans_Equilibre")
+    df = _ws_to_df(ws, get_equilibre_headers())
+    if df.empty:
+        return df
+    return df[df["patient_id"] == patient_id].reset_index(drop=True)
+
+
+def save_bilan_equilibre(bilan_data: dict) -> str:
+    ss = ensure_equilibre_sheet()
+    ws = ss.worksheet("Bilans_Equilibre")
+    actual_headers = ws.row_values(1)
+    bilan_id = bilan_data.get("bilan_id")
+    if bilan_id:
+        all_values = ws.get_all_values()
+        for i, row in enumerate(all_values[1:], start=2):
+            if row and row[0] == bilan_id:
+                ws.update(f"A{i}", [[str(bilan_data.get(h, "")) for h in actual_headers]])
+                return bilan_id
+    new_id = str(uuid.uuid4())[:8].upper()
+    bilan_data["bilan_id"] = new_id
+    ws.append_row([str(bilan_data.get(h, "")) for h in actual_headers])
+    return new_id
+
+
+def delete_bilan_equilibre(bilan_id: str) -> bool:
+    try:
+        ss = ensure_equilibre_sheet()
+        ws = ss.worksheet("Bilans_Equilibre")
+        for i, row in enumerate(ws.get_all_values()[1:], start=2):
+            if row and row[0] == bilan_id:
+                ws.delete_rows(i)
+                return True
+        return False
+    except Exception:
+        return False
+
+
+# ─── Bilans BPCO ──────────────────────────────────────────────────────────────
+
+def ensure_bpco_sheet():
+    from utils.bpco_data import get_bpco_headers
+    ss = get_spreadsheet()
+    headers = get_bpco_headers()
+    try:
+        ws = ss.worksheet("Bilans_BPCO")
+        _sync_headers(ws, headers)
+    except gspread.WorksheetNotFound:
+        ws = ss.add_worksheet("Bilans_BPCO", rows=5000, cols=len(headers))
+        ws.append_row(headers)
+    return ss
+
+
+def get_patient_bilans_bpco(patient_id: str) -> pd.DataFrame:
+    from utils.bpco_data import get_bpco_headers
+    ss = ensure_bpco_sheet()
+    ws = ss.worksheet("Bilans_BPCO")
+    df = _ws_to_df(ws, get_bpco_headers())
+    if df.empty:
+        return df
+    return df[df["patient_id"] == patient_id].reset_index(drop=True)
+
+
+def save_bilan_bpco(bilan_data: dict) -> str:
+    ss = ensure_bpco_sheet()
+    ws = ss.worksheet("Bilans_BPCO")
+    actual_headers = ws.row_values(1)
+    bilan_id = bilan_data.get("bilan_id")
+    if bilan_id:
+        all_values = ws.get_all_values()
+        for i, row in enumerate(all_values[1:], start=2):
+            if row and row[0] == bilan_id:
+                ws.update(f"A{i}", [[str(bilan_data.get(h, "")) for h in actual_headers]])
+                return bilan_id
+    new_id = str(uuid.uuid4())[:8].upper()
+    bilan_data["bilan_id"] = new_id
+    ws.append_row([str(bilan_data.get(h, "")) for h in actual_headers])
+    return new_id
+
+
+def delete_bilan_bpco(bilan_id: str) -> bool:
+    try:
+        ss = ensure_bpco_sheet()
+        ws = ss.worksheet("Bilans_BPCO")
+        for i, row in enumerate(ws.get_all_values()[1:], start=2):
+            if row and row[0] == bilan_id:
+                ws.delete_rows(i)
+                return True
+        return False
+    except Exception:
+        return False
