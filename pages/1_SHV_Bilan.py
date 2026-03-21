@@ -12,22 +12,22 @@ import sys, os
 # ─── Path ─────────────────────────────────────────────────────────────────────
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from utils.google_sheets import (
+from utils.db import (
     get_all_patients, create_patient,
     get_patient_bilans, save_bilan,
 )
-from utils.had import HAD_QUESTIONS, compute_had_scores
-from utils.sf12 import (
+from utils.shv_data import HAD_QUESTIONS, compute_had_scores
+from utils.shv_data import (
     SF12_QUESTIONS, SF12_KEYS, SF12_DIMENSIONS,
     compute_sf12_scores, interpret_pcs_mcs,
 )
-from utils.shv_tests import (
+from utils.shv_data import (
     BOLT_DESCRIPTION, interpret_bolt,
     HVT_DESCRIPTION, HVT_SYMPTOMES,
 )
-from utils.pdf_export import generate_pdf
-from utils.questionnaires_print import generate_questionnaires_pdf, QUESTIONNAIRES
-from utils.clinical_data import (
+from utils.shv_pdf import generate_pdf
+from utils.shv_pdf import generate_questionnaires_pdf, QUESTIONNAIRES
+from utils.shv_data import (
     NIJMEGEN_ITEMS, NIJMEGEN_OPTIONS, NIJMEGEN_KEYS, compute_nijmegen,
     GAZO_FIELDS, interpret_gazo,
     ETCO2_PATTERNS,
