@@ -52,6 +52,37 @@ MARGIN   = 1.5*_cm
 HEADER_H = 1.6*_cm
 W        = USEFUL_W
 
+# ─── Case à cocher dessinée (pas unicode) ────────────────────────────────────
+from reportlab.platypus import Flowable as _Flowable
+
+class Checkbox(_Flowable):
+    """Case à cocher vide dessinée proprement."""
+    def __init__(self, size=8):
+        _Flowable.__init__(self)
+        self.size = size
+        self.width = size + 4
+        self.height = size
+    def draw(self):
+        self.canv.setStrokeColor(_colors.HexColor("#333333"))
+        self.canv.setLineWidth(0.7)
+        self.canv.rect(1, 0, self.size, self.size, fill=0, stroke=1)
+
+def option_row(text, style, col_w=None):
+    """Ligne avec case à cocher + texte."""
+    if col_w is None: col_w = USEFUL_W
+    cb   = Checkbox(size=8)
+    para = Paragraph(f"  {text}", style)
+    tbl  = _Table([[cb, para]], colWidths=[0.5*_cm, col_w - 0.5*_cm])
+    tbl.setStyle(_TableStyle([
+        ("VALIGN",         (0,0),(-1,-1), "MIDDLE"),
+        ("LEFTPADDING",    (0,0),(-1,-1), 2),
+        ("RIGHTPADDING",   (0,0),(-1,-1), 2),
+        ("TOPPADDING",     (0,0),(-1,-1), 3),
+        ("BOTTOMPADDING",  (0,0),(-1,-1), 3),
+    ]))
+    return tbl
+
+
 def _find_logo():
     candidates = [
         _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "assets", "logo_369.png"),
@@ -553,6 +584,37 @@ MARGIN   = 1.5*_cm
 HEADER_H = 1.6*_cm
 W        = USEFUL_W
 
+# ─── Case à cocher dessinée (pas unicode) ────────────────────────────────────
+from reportlab.platypus import Flowable as _Flowable
+
+class Checkbox(_Flowable):
+    """Case à cocher vide dessinée proprement."""
+    def __init__(self, size=8):
+        _Flowable.__init__(self)
+        self.size = size
+        self.width = size + 4
+        self.height = size
+    def draw(self):
+        self.canv.setStrokeColor(_colors.HexColor("#333333"))
+        self.canv.setLineWidth(0.7)
+        self.canv.rect(1, 0, self.size, self.size, fill=0, stroke=1)
+
+def option_row(text, style, col_w=None):
+    """Ligne avec case à cocher + texte."""
+    if col_w is None: col_w = USEFUL_W
+    cb   = Checkbox(size=8)
+    para = Paragraph(f"  {text}", style)
+    tbl  = _Table([[cb, para]], colWidths=[0.5*_cm, col_w - 0.5*_cm])
+    tbl.setStyle(_TableStyle([
+        ("VALIGN",         (0,0),(-1,-1), "MIDDLE"),
+        ("LEFTPADDING",    (0,0),(-1,-1), 2),
+        ("RIGHTPADDING",   (0,0),(-1,-1), 2),
+        ("TOPPADDING",     (0,0),(-1,-1), 3),
+        ("BOTTOMPADDING",  (0,0),(-1,-1), 3),
+    ]))
+    return tbl
+
+
 def _find_logo():
     candidates = [
         _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "assets", "logo_369.png"),
@@ -808,7 +870,7 @@ def section_header(title, subtitle=""):
 
 
 # ─── Case à cocher ────────────────────────────────────────────────────────────
-CHECKBOX = "☐"   # caractère unicode case vide
+CHECKBOX = "[  ]"  # fallback text   # caractère unicode case vide
 
 
 def checkbox_row(label, extra=""):
@@ -831,7 +893,7 @@ def radio_table(question_num, question_text, options, styles):
     # Options en tableau horizontal
     n = len(options)
     col_w = W / n
-    header = [[Paragraph(f"{CHECKBOX}  {lbl}", ParagraphStyle(
+    header = [[option_row(lbl, ParagraphStyle(
         "opt", fontSize=9, fontName="Helvetica",
         textColor=NOIR, alignment=TA_CENTER,
     )) for _, lbl in options]]
@@ -855,7 +917,7 @@ def radio_table_vertical(question_num, question_text, options, styles):
     items = []
     q_text = f"{question_num}. {question_text}"
     items.append(Paragraph(q_text, styles["question"]))
-    rows = [[Paragraph(f"{CHECKBOX}  {lbl}", styles["option"])] for _, lbl in options]
+    rows = [[option_row(lbl, styles["option"])] for _, lbl in options]
     tbl = Table(rows, colWidths=[W])
     tbl.setStyle(TableStyle([
         ("TOPPADDING",    (0, 0), (-1, -1), 4),
