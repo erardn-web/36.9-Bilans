@@ -205,7 +205,6 @@ def render_accueil():
                                       min_value=date(1900, 1, 1),
                                       max_value=date.today())
             sexe      = st.selectbox("Sexe", ["Féminin", "Masculin", "Autre"])
-            profession= st.text_input("Profession")
             submitted = st.form_submit_button("Créer le patient", type="primary")
 
         if submitted:
@@ -213,7 +212,7 @@ def render_accueil():
                 st.error("Le nom et le prénom sont obligatoires.")
             else:
                 with st.spinner("Enregistrement…"):
-                    pid = create_patient(nom, prenom, ddn, sexe, profession)
+                    pid = create_patient(nom, prenom, ddn, sexe, "")
                 patients_df2 = get_all_patients()
                 row = patients_df2[patients_df2["patient_id"] == pid].iloc[0]
                 st.session_state.patient_id   = pid
