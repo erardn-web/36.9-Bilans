@@ -2131,7 +2131,7 @@ def generate_pdf(bilans_df, patient_info: dict) -> bytes:
                 buf_hvt.seek(0)
                 story.append(Image(buf_hvt, width=17*cm, height=9*cm))
             except Exception as e:
-                story.append(Paragraph(f"Graphique non disponible.", styles["small"]))
+                story.append(Paragraph(f"Graphique non disponible. ({type(e).__name__}: {str(e)[:80]})", styles["small"]))
         nij_score = val_str(row.get("nij_score"))
         if nij_score != "—":
             story.append(Paragraph("Questionnaire de Nijmegen", styles["subsection"]))
