@@ -14,7 +14,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from utils.db import (
     get_all_patients, create_patient,
     get_patient_bilans_lombalgie, save_bilan_lombalgie, delete_bilan_lombalgie,
-    set_patient_archived,
 )
 from utils.lombalgie_data import (
     GROUPES_CLINIQUES, GROUPES_OPTIONS, GROUPES_CODES,
@@ -150,8 +149,7 @@ def render_accueil():
     col_a,col_b2 = st.columns(2)
     with col_a:
         st.markdown("#### 🔍 Rechercher un patient")
-        show_archived = st.toggle("Afficher les patients archivés", value=False, key="lomb_show_archived")
-        patients_df = get_all_patients(include_archived=show_archived)
+        patients_df = get_all_patients()
         if patients_df.empty:
             st.info("Aucun patient enregistré.")
         else:
@@ -165,43 +163,16 @@ def render_accueil():
                 st.warning("Aucun résultat.")
             else:
                 for _, row in filtered.iterrows():
-                    pid = row["patient_id"]
-                    is_archived = str(row.get("archive","")).strip() == "Oui"
-                    c1, c2, c3 = st.columns([3, 1, 0.8])
+                    c1, c2 = st.columns([3, 1])
                     with c1:
-                        archived_badge = " 🗃️" if is_archived else ""
-                        st.markdown(
-                            f"**{row['nom']} {row['prenom']}**{archived_badge} | "
-                            f"{row.get('date_naissance','—')} — `{pid}`",
-                            unsafe_allow_html=True)
+                        st.markdown(f"**{row['nom']} {row['prenom']}** | {row.get('date_naissance','—')} — `{row['patient_id']}`",
+                                    unsafe_allow_html=True)
                     with c2:
-                        if not is_archived:
-                            if st.button("Sélectionner", key=f"lsel_{pid}"):
-                                st.session_state.lomb_patient_id   = pid
-                                st.session_state.lomb_patient_info = row.to_dict()
-                                st.session_state.lomb_mode         = "bilan"
-                                st.rerun()
-                    with c3:
-                        label = "📂" if is_archived else "🗃️"
-                        help_txt = "Désarchiver" if is_archived else "Archiver ce patient"
-                        if st.button(label, key=f"larch_{pid}", help=help_txt):
-                            st.session_state[f"lomb_confirm_arch_{pid}"] = True
-
-                    if st.session_state.get(f"lomb_confirm_arch_{pid}", False):
-                        action = "désarchiver" if is_archived else "archiver"
-                        st.warning(f"⚠️ Confirmer : {action} **{row['nom']} {row['prenom']}** ?")
-                        ca, cb, _ = st.columns([1, 1, 3])
-                        with ca:
-                            if st.button("✅ Confirmer", key=f"larch_ok_{pid}", type="primary"):
-                                with st.spinner("Mise à jour…"):
-                                    set_patient_archived(pid, not is_archived)
-                                st.session_state.pop(f"lomb_confirm_arch_{pid}", None)
-                                st.success("Patient désarchivé." if is_archived else "Patient archivé.")
-                                st.rerun()
-                        with cb:
-                            if st.button("✖ Annuler", key=f"larch_cancel_{pid}"):
-                                st.session_state.pop(f"lomb_confirm_arch_{pid}", None)
-                                st.rerun()
+                        if st.button("Sélectionner", key=f"lsel_{row['patient_id']}"):
+                            st.session_state.lomb_patient_id   = row["patient_id"]
+                            st.session_state.lomb_patient_info = row.to_dict()
+                            st.session_state.lomb_mode         = "bilan"
+                            st.rerun()
     with col_b2:
         st.markdown("#### ➕ Nouveau patient")
         with st.form("lomb_new_pat", clear_on_submit=True):
