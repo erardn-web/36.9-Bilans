@@ -640,6 +640,7 @@ def render_formulaire():
             "Résultat BOLT (secondes)",
             min_value=0, max_value=120,
             value=int(load_val("bolt_score") or 0),
+            help="Laisser à 0 si non réalisé",
             step=1,
             key="bolt_input",
         )
@@ -811,6 +812,7 @@ def render_formulaire():
                 "Temps de retour à la normale (minutes)",
                 min_value=0, max_value=60,
                 value=int(load_val("hvt_duree_retour") or 0),
+                help="Laisser à 0 si non mesuré",
                 step=1, key="hvt_duree",
             )
 
@@ -896,7 +898,7 @@ def render_formulaire():
             'PaO₂ 75–100 mmHg · HCO₃⁻ 22–26 mmol/L · SatO₂ ≥ 95%</div>',
             unsafe_allow_html=True,
         )
-        g_type_opts = ["Artériel", "Veineux", "Capillaire", "Non réalisé"]
+        g_type_opts = ["— Non renseigné —", "Artériel", "Veineux", "Capillaire", "Non réalisé"]
         g_type_val  = str(load_val("gazo_type") or "Non réalisé")
         g_type_idx  = g_type_opts.index(g_type_val) if g_type_val in g_type_opts else 3
         gazo_type   = st.selectbox("Type de prélèvement", g_type_opts, index=g_type_idx, key="gazo_type")
@@ -939,7 +941,7 @@ def render_formulaire():
         with ec1:
             etco2_repos = st.number_input(
                 "ETCO₂ au repos (mmHg)", min_value=0.0, max_value=80.0,
-                value=safe_float(load_val("etco2_repos")), step=0.5, key="etco2_repos",
+                value=safe_float(load_val("etco2_repos")), step=0.5, key="etco2_repos", help="0 = non mesuré",
             )
             if etco2_repos > 0:
                 color = "#388e3c" if 35 <= etco2_repos <= 45 else "#f57c00" if etco2_repos >= 30 else "#d32f2f"
@@ -948,11 +950,12 @@ def render_formulaire():
         with ec2:
             etco2_effort = st.number_input(
                 "ETCO₂ post-effort (mmHg)", min_value=0.0, max_value=80.0,
-                value=safe_float(load_val("etco2_post_effort")), step=0.5, key="etco2_effort",
+                value=safe_float(load_val("etco2_post_effort")), step=0.5, key="etco2_effort", help="0 = non mesuré",
             )
 
         pat_opts  = ETCO2_PATTERNS
-        pat_val   = str(load_val("etco2_pattern") or "Normal")
+        pat_opts  = ["— Non renseigné —"] + list(pat_opts)
+        pat_val   = str(load_val("etco2_pattern") or "")
         pat_idx   = pat_opts.index(pat_val) if pat_val in pat_opts else 0
         etco2_pat = st.selectbox("Pattern capnographique", pat_opts, index=pat_idx, key="etco2_pat")
         etco2_notes = st.text_area("Notes", value=str(load_val("etco2_notes") or ""),
@@ -973,6 +976,7 @@ def render_formulaire():
             pat_freq = st.number_input(
                 "Fréquence respiratoire (cycles/min)", min_value=0, max_value=60,
                 value=int(load_val("pattern_frequence") or 0), step=1, key="pat_freq",
+                help="Laisser à 0 si non mesuré",
             )
             if pat_freq > 0:
                 color = "#388e3c" if 12 <= pat_freq <= 18 else "#f57c00" if pat_freq <= 20 else "#d32f2f"
@@ -980,9 +984,11 @@ def render_formulaire():
                             unsafe_allow_html=True)
 
             def radio_load(label, opts, key):
-                val = str(load_val(key) or opts[0])
-                idx = opts.index(val) if val in opts else 0
-                return st.radio(label, opts, index=idx, key=key)
+                opts_with_empty = ["— Non renseigné —"] + list(opts)
+                val = str(load_val(key) or "")
+                idx = opts_with_empty.index(val) if val in opts_with_empty else 0
+                chosen = st.radio(label, opts_with_empty, index=idx, key=key)
+                return "" if chosen == "— Non renseigné —" else chosen
 
             pat_amp  = radio_load("Amplitude", PATTERN_AMPLITUDES, "pat_amp")
         with pc2:
