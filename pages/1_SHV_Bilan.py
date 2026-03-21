@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from utils.db import (
     get_all_patients, create_patient,
     get_patient_bilans, save_bilan, delete_bilan,
+    set_patient_archived,
 )
 from utils.shv_data import HAD_QUESTIONS, compute_had_scores
 from utils.shv_data import (
@@ -170,7 +171,10 @@ def render_accueil():
 
     with col_a:
         st.markdown("#### 🔍 Rechercher un patient existant")
-        patients_df = get_all_patients()
+
+        # Toggle pour afficher les archivés
+        show_archived = st.toggle("Afficher les patients archivés", value=False, key="shv_show_archived")
+        patients_df = get_all_patients(include_archived=show_archived)
 
         if patients_df.empty:
             st.info("Aucun patient enregistré pour le moment.")
@@ -189,21 +193,48 @@ def render_accueil():
                 st.warning("Aucun résultat.")
             else:
                 for _, row in filtered.iterrows():
+                    pid = row["patient_id"]
+                    is_archived = str(row.get("archive","")).strip() == "Oui"
                     with st.container():
-                        c1, c2 = st.columns([3, 1])
+                        c1, c2, c3 = st.columns([3, 1, 0.8])
                         with c1:
+                            archived_badge = " 🗃️" if is_archived else ""
                             st.markdown(
-                                f"**{row['nom']} {row['prenom']}** &nbsp;|&nbsp; "
+                                f"**{row['nom']} {row['prenom']}**{archived_badge} &nbsp;|&nbsp; "
                                 f"{row.get('date_naissance','—')} &nbsp;|&nbsp; "
-                                f"ID : `{row['patient_id']}`",
+                                f"ID : `{pid}`",
                                 unsafe_allow_html=True,
                             )
                         with c2:
-                            if st.button("Sélectionner", key=f"sel_{row['patient_id']}"):
-                                st.session_state.patient_id   = row["patient_id"]
-                                st.session_state.patient_info = row.to_dict()
-                                st.session_state.mode         = "bilan"
-                                st.rerun()
+                            if not is_archived:
+                                if st.button("Sélectionner", key=f"sel_{pid}"):
+                                    st.session_state.patient_id   = pid
+                                    st.session_state.patient_info = row.to_dict()
+                                    st.session_state.mode         = "bilan"
+                                    st.rerun()
+                        with c3:
+                            label = "📂 Désarchiver" if is_archived else "🗃️"
+                            help_txt = "Désarchiver ce patient" if is_archived else "Archiver ce patient"
+                            if st.button(label, key=f"arch_{pid}", help=help_txt):
+                                st.session_state[f"confirm_arch_{pid}"] = True
+
+                        # Confirmation archivage
+                        if st.session_state.get(f"confirm_arch_{pid}", False):
+                            action = "désarchiver" if is_archived else "archiver"
+                            st.warning(f"⚠️ Confirmer : {action} **{row['nom']} {row['prenom']}** ?")
+                            ca, cb, _ = st.columns([1, 1, 3])
+                            with ca:
+                                if st.button("✅ Confirmer", key=f"arch_ok_{pid}", type="primary"):
+                                    with st.spinner("Mise à jour…"):
+                                        set_patient_archived(pid, not is_archived)
+                                    st.session_state.pop(f"confirm_arch_{pid}", None)
+                                    msg = "Patient désarchivé." if is_archived else "Patient archivé."
+                                    st.success(msg)
+                                    st.rerun()
+                            with cb:
+                                if st.button("✖ Annuler", key=f"arch_cancel_{pid}"):
+                                    st.session_state.pop(f"confirm_arch_{pid}", None)
+                                    st.rerun()
 
     with col_b:
         st.markdown("#### ➕ Créer un nouveau patient")
