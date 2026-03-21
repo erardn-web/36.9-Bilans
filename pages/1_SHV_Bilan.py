@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from utils.db import (
     get_all_patients, create_patient,
-    get_patient_bilans, save_bilan,
+    get_patient_bilans, save_bilan, delete_bilan,
 )
 from utils.shv_data import HAD_QUESTIONS, compute_had_scores
 from utils.shv_data import (
@@ -238,6 +238,14 @@ def render_bilan_selection():
     # Chargement des bilans en premier
     bilans_df = get_patient_bilans(st.session_state.patient_id)
 
+    # Bilans filtrés selon la sélection
+    def get_selected_bilans(df):
+        sel = st.session_state.get("selected_bilan_ids", None)
+        if sel is None or df.empty:
+            return df
+        filtered = df[df["bilan_id"].isin(sel)]
+        return filtered if not filtered.empty else df
+
     col_back, col_evol, col_pdf, col_print, _ = st.columns([1, 1, 1.2, 1.5, 1])
     with col_back:
         if st.button("⬅️ Changer de patient"):
@@ -245,6 +253,7 @@ def render_bilan_selection():
             st.session_state.patient_info = None
             st.session_state.bilan_id     = None
             st.session_state.bilan_data   = {}
+            st.session_state.pop("selected_bilan_ids", None)
             st.session_state.mode         = "accueil"
             st.rerun()
     with col_evol:
@@ -254,10 +263,12 @@ def render_bilan_selection():
                 st.rerun()
     with col_pdf:
         if not bilans_df.empty:
+            sel_df = get_selected_bilans(bilans_df)
             with st.spinner("Génération du PDF…"):
-                pdf_bytes = generate_pdf(bilans_df, info)
+                pdf_bytes = generate_pdf(sel_df, info)
+            n_sel = len(sel_df)
             st.download_button(
-                label="📄 Exporter PDF",
+                label=f"📄 Exporter PDF ({n_sel} bilan{'s' if n_sel>1 else ''})",
                 data=pdf_bytes,
                 file_name=f"evolution_SHV_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
                 mime="application/pdf",
@@ -324,22 +335,82 @@ def render_bilan_selection():
         if bilans_df.empty:
             st.info("Aucun bilan pour ce patient.")
         else:
+            # Sélection des bilans pour évolution/PDF
+            st.markdown("<small style='color:#888'>Cochez les bilans à inclure dans l'évolution et le PDF</small>",
+                        unsafe_allow_html=True)
+
+            selected_ids = st.session_state.get("selected_bilan_ids", None)
+            if selected_ids is None:
+                # Tout coché par défaut
+                selected_ids = list(bilans_df["bilan_id"])
+                st.session_state["selected_bilan_ids"] = selected_ids
+
+            # Nettoyage : retirer les IDs qui n'existent plus
+            valid_ids = list(bilans_df["bilan_id"])
+            selected_ids = [i for i in selected_ids if i in valid_ids]
+            st.session_state["selected_bilan_ids"] = selected_ids
+
+            new_selected = []
             for _, row in bilans_df.iterrows():
-                c1, c2 = st.columns([3, 1])
-                with c1:
-                    btype = row.get("type_bilan", "—")
-                    bdate = row.get("date_bilan", "—")
-                    bid   = row.get("bilan_id", "—")
-                    st.markdown(
-                        f"**{bdate}** — {btype} &nbsp;|&nbsp; `{bid}`",
-                        unsafe_allow_html=True,
-                    )
-                with c2:
-                    if st.button("Ouvrir", key=f"open_{row['bilan_id']}"):
-                        st.session_state.bilan_id   = row["bilan_id"]
+                bid   = row.get("bilan_id", "—")
+                bdate = row.get("date_bilan", "—")
+                btype = row.get("type_bilan", "—")
+
+                c_check, c_info, c_open, c_del = st.columns([0.5, 3.5, 0.8, 0.8])
+                with c_check:
+                    checked = st.checkbox("", value=bid in selected_ids,
+                                         key=f"sel_{bid}", label_visibility="collapsed")
+                    if checked:
+                        new_selected.append(bid)
+                with c_info:
+                    st.markdown(f"**{bdate}** — {btype}  \n<small>`{bid}`</small>",
+                                unsafe_allow_html=True)
+                with c_open:
+                    if st.button("✏️ Ouvrir", key=f"open_{bid}"):
+                        st.session_state.bilan_id   = bid
                         st.session_state.bilan_data = row.to_dict()
                         st.session_state.mode       = "formulaire"
                         st.rerun()
+                with c_del:
+                    if st.button("🗑️", key=f"del_req_{bid}", help="Supprimer ce bilan"):
+                        st.session_state[f"confirm_del_{bid}"] = True
+
+                # Confirmation suppression
+                if st.session_state.get(f"confirm_del_{bid}", False):
+                    st.warning(
+                        f"⚠️ Supprimer définitivement le bilan **{bdate} — {btype}** ? "
+                        "Cette action est irréversible."
+                    )
+                    ca, cb, _ = st.columns([1, 1, 3])
+                    with ca:
+                        if st.button("✅ Confirmer", key=f"del_ok_{bid}", type="primary"):
+                            with st.spinner("Suppression…"):
+                                ok = delete_bilan(bid)
+                            if ok:
+                                st.success("Bilan supprimé.")
+                            else:
+                                st.error("Erreur lors de la suppression.")
+                            st.session_state.pop(f"confirm_del_{bid}", None)
+                            # Mettre à jour la sélection
+                            st.session_state["selected_bilan_ids"] = [
+                                i for i in selected_ids if i != bid]
+                            st.rerun()
+                    with cb:
+                        if st.button("✖ Annuler", key=f"del_cancel_{bid}"):
+                            st.session_state.pop(f"confirm_del_{bid}", None)
+                            st.rerun()
+
+            st.session_state["selected_bilan_ids"] = new_selected
+
+            # Info nombre sélectionné
+            n_sel = len(new_selected)
+            n_tot = len(bilans_df)
+            if n_sel < n_tot:
+                st.markdown(
+                    f"<small style='color:#f57c00'>⚡ {n_sel}/{n_tot} bilans sélectionnés "
+                    f"pour l'évolution</small>",
+                    unsafe_allow_html=True,
+                )
 
     with col_right:
         st.markdown("#### ➕ Nouveau bilan SHV")
@@ -1152,14 +1223,25 @@ def safe_num(val):
 
 
 def render_evolution():
-    info     = st.session_state.patient_info
-    bilans_df = get_patient_bilans(st.session_state.patient_id)
+    info      = st.session_state.patient_info
+    all_df    = get_patient_bilans(st.session_state.patient_id)
+
+    # Filtrer selon la sélection
+    sel       = st.session_state.get("selected_bilan_ids", None)
+    bilans_df = all_df[all_df["bilan_id"].isin(sel)] if sel else all_df
+    if bilans_df.empty:
+        bilans_df = all_df
 
     st.markdown(
         f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} — Évolution</div>',
         unsafe_allow_html=True,
     )
     st.markdown("")
+
+    n_sel = len(bilans_df)
+    n_tot = len(all_df)
+    if n_sel < n_tot:
+        st.info(f"ℹ️ Affichage de {n_sel}/{n_tot} bilans sélectionnés.")
 
     col_back, col_export, _ = st.columns([1, 1.5, 4])
     with col_back:
@@ -1171,7 +1253,7 @@ def render_evolution():
             with st.spinner("Génération du PDF…"):
                 pdf_bytes = generate_pdf(bilans_df, info)
             st.download_button(
-                label="📄 Exporter en PDF",
+                label=f"📄 Exporter en PDF ({n_sel} bilan{'s' if n_sel>1 else ''})",
                 data=pdf_bytes,
                 file_name=f"evolution_SHV_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
                 mime="application/pdf",
