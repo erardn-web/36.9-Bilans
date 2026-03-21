@@ -282,6 +282,7 @@ def render_bilan_selection():
                         st.session_state.lomb_bilan_id   = bid
                         st.session_state.lomb_bilan_data = row.to_dict()
                         st.session_state.lomb_mode       = "formulaire"
+                        st.session_state["lomb_unsaved"] = False
                         st.rerun()
                 with c_del:
                     if st.button("🗑️", key=f"ldel_req_{bid}", help="Supprimer ce bilan"):
@@ -332,11 +333,13 @@ def render_bilan_selection():
             st.session_state.lomb_bilan_data = {"patient_id": st.session_state.lomb_patient_id,
                 "date_bilan": str(bilan_date), "type_bilan": bilan_type, "praticien": praticien}
             st.session_state.lomb_mode = "formulaire"
+            st.session_state["lomb_unsaved"] = True
             st.rerun()
 
 def render_formulaire():
     info = st.session_state.lomb_patient_info
     bd   = st.session_state.lomb_bilan_data
+    st.session_state["lomb_unsaved"] = True
     st.markdown(
         f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} '
         f'— {bd.get("type_bilan","—")} du {bd.get("date_bilan","—")}</div>',
@@ -345,8 +348,29 @@ def render_formulaire():
     col_back, col_save, _ = st.columns([1,1,4])
     with col_back:
         if st.button("⬅️ Retour"):
-            st.session_state.lomb_mode = "bilan"
-            st.rerun()
+            if st.session_state.get("lomb_unsaved", False):
+                st.session_state["lomb_confirm_back"] = True
+            else:
+                st.session_state.lomb_mode = "bilan"
+                st.rerun()
+
+    # Alerte si retour sans sauvegarde
+    if st.session_state.get("lomb_confirm_back", False):
+        st.warning(
+            "⚠️ **Modifications non sauvegardées.** "
+            "Êtes-vous sûr(e) de vouloir quitter sans sauvegarder ?"
+        )
+        ca, cb, _ = st.columns([1.2, 1.2, 4])
+        with ca:
+            if st.button("✅ Quitter sans sauvegarder", type="primary", key="lomb_back_ok"):
+                st.session_state["lomb_confirm_back"] = False
+                st.session_state["lomb_unsaved"] = False
+                st.session_state.lomb_mode = "bilan"
+                st.rerun()
+        with cb:
+            if st.button("✖ Continuer l'édition", key="lomb_back_cancel"):
+                st.session_state["lomb_confirm_back"] = False
+                st.rerun()
     with col_save:
         save_top = st.button("💾 Sauvegarder", type="primary")
     st.markdown("---")
@@ -838,6 +862,7 @@ def render_formulaire():
         st.session_state.lomb_bilan_id   = new_id
         final_data["bilan_id"]           = new_id
         st.session_state.lomb_bilan_data = final_data
+        st.session_state["lomb_unsaved"] = False
         st.success(f"✅ Bilan sauvegardé ! (ID : {new_id})")
         st.balloons()
 
