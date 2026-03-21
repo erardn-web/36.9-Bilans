@@ -1503,15 +1503,6 @@ QUESTIONNAIRES = {
     "hvt":  ("Test d'Hyperventilation",    build_hvt),
     "bolt": ("Test BOLT",                  build_bolt),
 }
-QUESTIONNAIRES = {
-    "had":  ("HAD — Anxiété & Dépression", build_had),
-    "sf12": ("SF-12 — Qualité de vie",     build_sf12),
-    "hvt":  ("Test d'Hyperventilation",    build_hvt),
-    "bolt": ("Test BOLT",                  build_bolt),
-}
-
-
-
 # ─── generate_pdf ────────────────────────────────────────────────────────────
 
 def generate_pdf(bilans_df, patient_info: dict) -> bytes:
