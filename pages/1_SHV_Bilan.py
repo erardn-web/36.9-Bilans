@@ -726,7 +726,7 @@ def render_formulaire():
             key="bolt_input",
         )
 
-        if bolt_val > 0:
+        if bolt_val is not None and bolt_val > 0:
             interp = interpret_bolt(bolt_val)
             st.markdown(
                 f'<div class="score-box" style="background:{interp["color"]};">'
@@ -734,7 +734,7 @@ def render_formulaire():
                 f'<small style="font-size:.8rem">{interp["desc"]}</small></div>',
                 unsafe_allow_html=True,
             )
-            collected["bolt_score"]          = bolt_val
+            collected["bolt_score"]          = bolt_val if bolt_val is not None else ""
             collected["bolt_interpretation"] = interp["cat"]
         else:
             collected["bolt_score"]          = ""
@@ -1024,7 +1024,7 @@ def render_formulaire():
                 "ETCO₂ au repos (mmHg)", min_value=0.0, max_value=80.0,
                 value=safe_float(load_val("etco2_repos")), step=0.5, key="etco2_repos", help="0 = non mesuré",
             )
-            if etco2_repos > 0:
+            if etco2_repos is not None and etco2_repos > 0:
                 color = "#388e3c" if 35 <= etco2_repos <= 45 else "#f57c00" if etco2_repos >= 30 else "#d32f2f"
                 label = "Normal" if 35 <= etco2_repos <= 45 else "Hypocapnie" if etco2_repos < 35 else "Hypercapnie"
                 st.markdown(f'<small style="color:{color}">▶ {label}</small>', unsafe_allow_html=True)
@@ -1059,7 +1059,7 @@ def render_formulaire():
                 value=(int(load_val("pattern_frequence")) if load_val("pattern_frequence") else None), step=1, key="pat_freq",
                 help="Laisser à 0 si non mesuré",
             )
-            if pat_freq > 0:
+            if pat_freq is not None and pat_freq > 0:
                 color = "#388e3c" if 12 <= pat_freq <= 18 else "#f57c00" if pat_freq <= 20 else "#d32f2f"
                 st.markdown(f'<small style="color:{color}">Normale : 12–18 · Tachypnée : &gt; 20</small>',
                             unsafe_allow_html=True)
@@ -1082,7 +1082,7 @@ def render_formulaire():
                                  value=str(load_val("pattern_notes") or ""),
                                  height=100, key="pat_notes")
         collected.update({
-            "pattern_frequence": pat_freq or "", "pattern_amplitude": pat_amp,
+            "pattern_frequence": pat_freq if pat_freq is not None else "", "pattern_amplitude": pat_amp,
             "pattern_mode": pat_mode, "pattern_rythme": pat_ryt,
             "pattern_paradoxal": "Oui" if pat_para else "Non",
             "pattern_notes": pat_notes,
