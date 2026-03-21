@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from utils.db import (
     get_all_patients, create_patient,
-    get_patient_bilans_lombalgie, save_bilan_lombalgie,
+    get_patient_bilans_lombalgie, save_bilan_lombalgie, delete_bilan_lombalgie,
 )
 from utils.lombalgie_data import (
     GROUPES_CLINIQUES, GROUPES_OPTIONS, GROUPES_CODES,
@@ -169,15 +169,24 @@ def render_accueil():
 def render_bilan_selection():
     info      = st.session_state.lomb_patient_info
     bilans_df = get_patient_bilans_lombalgie(st.session_state.lomb_patient_id)
+
     st.markdown(f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} — {info.get("date_naissance","—")} — ID : {info["patient_id"]}</div>',
                 unsafe_allow_html=True)
     st.markdown("")
-    col_back,col_print,col_evol,col_pdf,_ = st.columns([1,1.5,1.2,1.2,1])
+
+    def get_selected_bilans(df):
+        sel = st.session_state.get("lomb_selected_bilan_ids", None)
+        if sel is None or df.empty: return df
+        filtered = df[df["bilan_id"].isin(sel)]
+        return filtered if not filtered.empty else df
+
+    col_back, col_print, col_evol, col_pdf, _ = st.columns([1, 1.5, 1.2, 1.2, 1])
     with col_back:
         if st.button("⬅️ Changer de patient"):
             for k in ["lomb_patient_id","lomb_patient_info","lomb_bilan_id"]:
                 st.session_state[k] = None
             st.session_state.lomb_bilan_data = {}
+            st.session_state.pop("lomb_selected_bilan_ids", None)
             st.session_state.lomb_mode = "accueil"
             st.rerun()
     with col_print:
@@ -190,35 +199,100 @@ def render_bilan_selection():
                 st.rerun()
     with col_pdf:
         if not bilans_df.empty:
+            sel_df = get_selected_bilans(bilans_df)
             with st.spinner("PDF…"):
-                pdf_bytes = generate_pdf_lombalgie(bilans_df, info)
+                pdf_bytes = generate_pdf_lombalgie(sel_df, info)
+            n_sel = len(sel_df)
             st.download_button(
-                label="📄 Exporter PDF",
+                label=f"📄 Exporter PDF ({n_sel} bilan{'s' if n_sel > 1 else ''})",
                 data=pdf_bytes,
                 file_name=f"evolution_lombalgie_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
                 mime="application/pdf",
             )
+
     if st.session_state.get("show_print_lomb_patient", False):
         _render_print_panel(patient_info=info, key_prefix="pat")
+
     st.markdown("---")
-    col_left,col_right = st.columns(2)
+    col_left, col_right = st.columns(2)
+
     with col_left:
         st.markdown("#### 📋 Bilans existants")
         if bilans_df.empty:
             st.info("Aucun bilan pour ce patient.")
         else:
+            st.markdown("<small style='color:#888'>Cochez les bilans à inclure dans l'évolution et le PDF</small>",
+                        unsafe_allow_html=True)
+
+            selected_ids = st.session_state.get("lomb_selected_bilan_ids", None)
+            if selected_ids is None:
+                selected_ids = list(bilans_df["bilan_id"])
+                st.session_state["lomb_selected_bilan_ids"] = selected_ids
+
+            valid_ids = list(bilans_df["bilan_id"])
+            selected_ids = [i for i in selected_ids if i in valid_ids]
+            st.session_state["lomb_selected_bilan_ids"] = selected_ids
+
+            new_selected = []
             for _, row in bilans_df.iterrows():
-                c1,c2 = st.columns([3,1])
-                with c1:
-                    g = row.get("groupe_clinique","—") or "—"
-                    st.markdown(f"**{row.get('date_bilan','—')}** — {row.get('type_bilan','—')} | Groupe : **{g}** | `{row.get('bilan_id','—')}`",
+                bid   = row.get("bilan_id", "—")
+                bdate = row.get("date_bilan", "—")
+                btype = row.get("type_bilan", "—")
+                g     = row.get("groupe_clinique", "") or ""
+
+                c_check, c_info, c_open, c_del = st.columns([0.5, 3.5, 0.8, 0.8])
+                with c_check:
+                    checked = st.checkbox("", value=bid in selected_ids,
+                                         key=f"lsel_{bid}", label_visibility="collapsed")
+                    if checked:
+                        new_selected.append(bid)
+                with c_info:
+                    groupe_str = f" | **{g}**" if g and g != "—" else ""
+                    st.markdown(f"**{bdate}** — {btype}{groupe_str}  \n<small>`{bid}`</small>",
                                 unsafe_allow_html=True)
-                with c2:
-                    if st.button("Ouvrir", key=f"lopen_{row['bilan_id']}"):
-                        st.session_state.lomb_bilan_id   = row["bilan_id"]
+                with c_open:
+                    if st.button("✏️ Ouvrir", key=f"lopen_{bid}"):
+                        st.session_state.lomb_bilan_id   = bid
                         st.session_state.lomb_bilan_data = row.to_dict()
                         st.session_state.lomb_mode       = "formulaire"
                         st.rerun()
+                with c_del:
+                    if st.button("🗑️", key=f"ldel_req_{bid}", help="Supprimer ce bilan"):
+                        st.session_state[f"lomb_confirm_del_{bid}"] = True
+
+                if st.session_state.get(f"lomb_confirm_del_{bid}", False):
+                    st.warning(
+                        f"⚠️ Supprimer définitivement le bilan **{bdate} — {btype}** ? "
+                        "Cette action est irréversible."
+                    )
+                    ca, cb, _ = st.columns([1, 1, 3])
+                    with ca:
+                        if st.button("✅ Confirmer", key=f"ldel_ok_{bid}", type="primary"):
+                            with st.spinner("Suppression…"):
+                                ok = delete_bilan_lombalgie(bid)
+                            if ok:
+                                st.success("Bilan supprimé.")
+                            else:
+                                st.error("Erreur lors de la suppression.")
+                            st.session_state.pop(f"lomb_confirm_del_{bid}", None)
+                            st.session_state["lomb_selected_bilan_ids"] = [
+                                i for i in selected_ids if i != bid]
+                            st.rerun()
+                    with cb:
+                        if st.button("✖ Annuler", key=f"ldel_cancel_{bid}"):
+                            st.session_state.pop(f"lomb_confirm_del_{bid}", None)
+                            st.rerun()
+
+            st.session_state["lomb_selected_bilan_ids"] = new_selected
+
+            n_sel = len(new_selected)
+            n_tot = len(bilans_df)
+            if n_sel < n_tot:
+                st.markdown(
+                    f"<small style='color:#f57c00'>⚡ {n_sel}/{n_tot} bilans sélectionnés pour l'évolution</small>",
+                    unsafe_allow_html=True,
+                )
+
     with col_right:
         st.markdown("#### ➕ Nouveau bilan")
         with st.form("lomb_new_bilan"):
@@ -232,7 +306,6 @@ def render_bilan_selection():
                 "date_bilan": str(bilan_date), "type_bilan": bilan_type, "praticien": praticien}
             st.session_state.lomb_mode = "formulaire"
             st.rerun()
-
 
 def render_formulaire():
     info = st.session_state.lomb_patient_info
@@ -739,7 +812,15 @@ def safe_n(val):
 
 def render_evolution():
     info      = st.session_state.lomb_patient_info
-    bilans_df = get_patient_bilans_lombalgie(st.session_state.lomb_patient_id)
+    bilans_df_all = get_patient_bilans_lombalgie(st.session_state.lomb_patient_id)
+
+    # Appliquer la sélection
+    sel = st.session_state.get("lomb_selected_bilan_ids", None)
+    if sel and not bilans_df_all.empty:
+        filtered = bilans_df_all[bilans_df_all["bilan_id"].isin(sel)]
+        bilans_df = filtered if not filtered.empty else bilans_df_all
+    else:
+        bilans_df = bilans_df_all
 
     st.markdown(
         f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} — Évolution Lombalgie</div>',
