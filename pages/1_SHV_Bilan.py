@@ -946,27 +946,43 @@ def render_formulaire():
         for i, item in enumerate(NIJMEGEN_ITEMS):
             key = f"nij_{i+1}"
             val = load_val(key)
-            scores_list = [o[0] for o in NIJMEGEN_OPTIONS]
-            default_idx = scores_list.index(int(val)) if val is not None and int(val) in scores_list else 0
-            nij_answers[key] = st.radio(
+            # Options avec "— Non renseigné —" en premier (valeur None)
+            opts_extended = [None] + [o[0] for o in NIJMEGEN_OPTIONS]
+            def _nij_fmt(x, opts=NIJMEGEN_OPTIONS):
+                if x is None: return "— Non renseigné —"
+                return next(l for s, l in opts if s == x)
+            stored_score = int(float(val)) if val is not None and str(val).strip() not in ("", "None") else None
+            default_idx = opts_extended.index(stored_score) if stored_score in opts_extended else 0
+            chosen = st.radio(
                 f"{i+1}. {item}",
-                options=scores_list,
-                format_func=lambda x, opts=NIJMEGEN_OPTIONS: next(l for s, l in opts if s == x),
+                options=opts_extended,
+                format_func=_nij_fmt,
                 index=default_idx, horizontal=True,
                 key=f"nij_r_{i+1}",
             )
+            if chosen is not None:
+                nij_answers[key] = chosen
 
         nij_result = compute_nijmegen(nij_answers)
         st.markdown("---")
-        st.markdown(
-            f'<div class="score-box" style="background:{nij_result["color"]};">'
-            f'Score Nijmegen : {nij_result["score"]} / 64<br>'
-            f'<small style="font-size:.8rem">{nij_result["interpretation"]}</small></div>',
-            unsafe_allow_html=True,
-        )
+        if nij_result["score"] is not None:
+            st.markdown(
+                f'<div class="score-box" style="background:{nij_result["color"]};">'
+                f'Score Nijmegen : {nij_result["score"]} / 64<br>'
+                f'<small style="font-size:.8rem">{nij_result["interpretation"]}</small></div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown('<div class="info-box">Remplissez les items pour calculer le score.</div>',
+                        unsafe_allow_html=True)
         for k, v in nij_answers.items():
             collected[k] = v
-        collected["nij_score"]          = nij_result["score"]
+        # Stocker "" pour les items non renseignés
+        all_nij_keys = [f"nij_{i+1}" for i in range(len(NIJMEGEN_ITEMS))]
+        for k in all_nij_keys:
+            if k not in nij_answers:
+                collected[k] = ""
+        collected["nij_score"]          = nij_result["score"] if nij_result["score"] is not None else ""
         collected["nij_interpretation"] = nij_result["interpretation"]
 
     # ═════════════════════════════════════════════════════════════════════════
