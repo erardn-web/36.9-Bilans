@@ -458,6 +458,16 @@ def load_val(key, default=None):
         return v
 
 
+def load_val_or_none(key):
+    """Returns stored value or None for blank number_input."""
+    v = load_val(key)
+    if v is None: return None
+    try:
+        result = float(v)
+        return int(result) if result == int(result) else result
+    except: return None
+
+
 def tab_label(base_label, keys):
     """Ajoute ✅ si au moins une clé est renseignée dans le bilan en cours."""
     bd = st.session_state.bilan_data
@@ -710,7 +720,7 @@ def render_formulaire():
         bolt_val = st.number_input(
             "Résultat BOLT (secondes)",
             min_value=0, max_value=120,
-            value=int(load_val("bolt_score") or 0),
+            value=(int(load_val("bolt_score")) if load_val("bolt_score") else None),
             help="Laisser à 0 si non réalisé",
             step=1,
             key="bolt_input",
@@ -882,7 +892,7 @@ def render_formulaire():
             hvt_duree = st.number_input(
                 "Temps de retour à la normale (minutes)",
                 min_value=0, max_value=60,
-                value=int(load_val("hvt_duree_retour") or 0),
+                value=(int(load_val("hvt_duree_retour")) if load_val("hvt_duree_retour") else None),
                 help="Laisser à 0 si non mesuré",
                 step=1, key="hvt_duree",
             )
@@ -1046,7 +1056,7 @@ def render_formulaire():
         with pc1:
             pat_freq = st.number_input(
                 "Fréquence respiratoire (cycles/min)", min_value=0, max_value=60,
-                value=int(load_val("pattern_frequence") or 0), step=1, key="pat_freq",
+                value=(int(load_val("pattern_frequence")) if load_val("pattern_frequence") else None), step=1, key="pat_freq",
                 help="Laisser à 0 si non mesuré",
             )
             if pat_freq > 0:
@@ -1096,12 +1106,14 @@ def render_formulaire():
         def muscle_row(label, key_val, key_pred, key_pct):
             sc1, sc2, sc3 = st.columns(3)
             with sc1:
+                _v_stored = load_val(key_val)
                 v = st.number_input(f"{label} — Mesuré (cmH₂O)",
-                                    value=safe_float(load_val(key_val)),
+                                    value=(safe_float(_v_stored) if _v_stored else None),
                                     step=1.0, key=key_val)
             with sc2:
+                _p_stored = load_val(key_pred)
                 p = st.number_input(f"{label} — Prédit (cmH₂O)",
-                                    value=safe_float(load_val(key_pred)),
+                                    value=(safe_float(_p_stored) if _p_stored else None),
                                     step=1.0, key=key_pred)
             with sc3:
                 if v and p:
