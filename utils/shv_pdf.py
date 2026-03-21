@@ -1497,11 +1497,81 @@ def build_bolt(story, styles):
 #  GÉNÉRATEUR PRINCIPAL
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
+# ─── Nijmegen data ────────────────────────────────────────────────────────────
+_NIJMEGEN_ITEMS = [
+    "Douleur thoracique",
+    "Sensation de tension",
+    "Vision troublée",
+    "Étourdissements",
+    "Confusion ou perte de contact",
+    "Accélération ou irrégularité du rythme cardiaque",
+    "Anxiété",
+    "Mains, pieds ou visage engourdis",
+    "Difficultés à respirer ou à avaler",
+    "Raideur des mains ou des pieds",
+    "Serrement autour de la bouche",
+    "Picotements dans les doigts",
+    "Abdomen tendu ou ballonné",
+    "Vertiges",
+    "Impression d'étouffement",
+    "Tension dans la région thoracique",
+]
+_NIJMEGEN_OPTIONS = ["Jamais", "Rarement", "Parfois", "Souvent", "Très souvent"]
+
+
+def build_nijmegen(story, styles):
+    """Questionnaire de Nijmegen imprimable."""
+    story.append(section_band("Questionnaire de Nijmegen"))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "Pour chacun des symptômes suivants, indiquez la fréquence à laquelle vous les ressentez.",
+        styles["intro"]))
+    story.append(Spacer(1, 0.2*cm))
+
+    # En-tête tableau
+    header = [["Symptôme"] + _NIJMEGEN_OPTIONS]
+    rows = []
+    for i, item in enumerate(_NIJMEGEN_ITEMS):
+        row = [Paragraph(f"{i+1}. {item}", ParagraphStyle(
+            "nij_item", fontSize=8, fontName="Helvetica", textColor=NOIR,
+            spaceAfter=1, leading=10))]
+        for _ in _NIJMEGEN_OPTIONS:
+            row.append(Checkbox(size=8))
+        rows.append(row)
+
+    col_item = USEFUL_W - 5 * 1.8*cm
+    col_opt  = 1.8*cm
+    col_widths = [col_item] + [col_opt]*5
+
+    tbl = Table(header + rows, colWidths=col_widths, repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("FONTNAME",      (0,0),(-1,0),  "Helvetica-Bold"),
+        ("FONTSIZE",      (0,0),(-1,0),  8),
+        ("BACKGROUND",    (0,0),(-1,0),  BLEU),
+        ("TEXTCOLOR",     (0,0),(-1,0),  BLANC),
+        ("ALIGN",         (1,0),(-1,-1), "CENTER"),
+        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 5),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 5),
+        ("LEFTPADDING",   (0,0),(-1,-1), 5),
+    ]))
+    story.append(tbl)
+    story.append(Spacer(1, 0.5*cm))
+    story.append(Paragraph(
+        "Score : comptez 0 = Jamais · 1 = Rarement · 2 = Parfois · 3 = Souvent · 4 = Très souvent  "
+        "→  Seuil SHV positif : ≥ 23 points",
+        ParagraphStyle("nij_leg", fontSize=7.5, fontName="Helvetica-Oblique",
+                       textColor=GRIS_TEXTE)))
+
 QUESTIONNAIRES = {
-    "had":  ("HAD — Anxiété & Dépression", build_had),
-    "sf12": ("SF-12 — Qualité de vie",     build_sf12),
-    "hvt":  ("Test d'Hyperventilation",    build_hvt),
-    "bolt": ("Test BOLT",                  build_bolt),
+    "had":      ("HAD — Anxiété & Dépression", build_had),
+    "sf12":     ("SF-12 — Qualité de vie",     build_sf12),
+    "hvt":      ("Test d'Hyperventilation",    build_hvt),
+    "bolt":     ("Test BOLT",                  build_bolt),
+    "nijmegen": ("Questionnaire de Nijmegen",  build_nijmegen),
 }
 # ─── generate_pdf ────────────────────────────────────────────────────────────
 
