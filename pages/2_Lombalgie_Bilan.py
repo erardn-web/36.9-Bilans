@@ -79,6 +79,25 @@ def lv_list(key):
     v = lv(key, "")
     return [x for x in str(v).split("|") if x] if v else []
 
+def lv_int_or_none(key):
+    """Returns stored int value or None (for number_input blank state)."""
+    v = lv(key, None)
+    if v is None or str(v).strip() in ("", "None", "0"): return None
+    try:
+        result = int(float(v))
+        return result if result != 0 else None
+    except: return None
+
+def lv_float_or_none(key):
+    """Returns stored float value or None."""
+    v = lv(key, None)
+    if v is None or str(v).strip() in ("", "None"): return None
+    try:
+        result = float(v)
+        return result if result != 0.0 else None
+    except: return None
+
+
 
 def _render_print_panel(patient_info, key_prefix):
     st.markdown("""<div style="background:#f0f8e8;border:2px solid #2e5a1c;border-radius:10px;
@@ -386,11 +405,28 @@ def render_formulaire():
                 index=td_idx, key="ls_type")
             type_douleur = "" if type_douleur_sel == "— Non renseigné —" else type_douleur_sel
         with sc2:
-            eva_repos = st.slider("EVA repos (0–10)", 0, 10, lv_int("s_eva_repos",0), key="ls_eva_r")
-            eva_mvt   = st.slider("EVA mouvement (0–10)", 0, 10, lv_int("s_eva_mouvement",0), key="ls_eva_m")
-            eva_nuit  = st.slider("EVA nuit (0–10)", 0, 10, lv_int("s_eva_nuit",0), key="ls_eva_n")
+            _EVA_OPTS = ["—", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+            def _eva_default(key):
+                v = lv(key, None)
+                if v is None or str(v).strip() in ("", "None"): return "—"
+                try: return int(float(v))
+                except: return "—"
+            eva_repos = st.select_slider("EVA repos (0–10)", options=_EVA_OPTS,
+                value=_eva_default("s_eva_repos"), key="ls_eva_r",
+                format_func=lambda x: "Non renseigné" if x == "—" else str(x))
+            eva_mvt   = st.select_slider("EVA mouvement (0–10)", options=_EVA_OPTS,
+                value=_eva_default("s_eva_mouvement"), key="ls_eva_m",
+                format_func=lambda x: "Non renseigné" if x == "—" else str(x))
+            eva_nuit  = st.select_slider("EVA nuit (0–10)", options=_EVA_OPTS,
+                value=_eva_default("s_eva_nuit"), key="ls_eva_n",
+                format_func=lambda x: "Non renseigné" if x == "—" else str(x))
+            # Convert "—" back to empty string for storage
+            eva_repos = "" if eva_repos == "—" else eva_repos
+            eva_mvt   = "" if eva_mvt   == "—" else eva_mvt
+            eva_nuit  = "" if eva_nuit  == "—" else eva_nuit
             def ec(s): return "#388e3c" if s<=3 else "#f57c00" if s<=6 else "#d32f2f"
             for lbl,val in [("Repos",eva_repos),("Mouvement",eva_mvt),("Nuit",eva_nuit)]:
+                if val == "": continue
                 st.markdown(f'<small style="color:{ec(val)}">● EVA {lbl} : <b>{val}/10</b></small>', unsafe_allow_html=True)
         sc3,sc4 = st.columns(2)
         with sc3:
@@ -499,9 +535,9 @@ def render_formulaire():
         mo1, mo2, mo3, mo4 = st.columns(4)
         with mo1:
             schober = st.number_input("Schober modifié (cm)", 0.0, 30.0,
-                lv_float("o_schober"), 0.5, key="lo_schober")
+                lv_float_or_none("o_schober"), 0.5, key="lo_schober", help="0 = non mesuré")
             flex_cm = st.number_input("Flexion doigt-sol (cm)", 0.0, 50.0,
-                lv_float("o_flexion_cm"), 0.5, key="lo_flex")
+                lv_float_or_none("o_flexion_cm"), 0.5, key="lo_flex", help="0 = non mesuré")
         with mo2:
             ext_mob  = mob_select("Extension", "o_extension_mob")
         with mo3:
