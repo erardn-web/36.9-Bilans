@@ -105,11 +105,19 @@ def _render_print_panel(patient_info, key_prefix):
         <span style="font-size:1.1rem;font-weight:700;color:#2e5a1c;">
         🖨️ Sélectionner les questionnaires à imprimer</span></div>""",
         unsafe_allow_html=True)
-    p1,p2,p3 = st.columns(3)
-    with p1: pr_odi   = st.checkbox("📊 Oswestry (ODI)",  value=True, key=f"{key_prefix}_odi")
-    with p2: pr_tampa = st.checkbox("😨 Tampa Scale",      value=True, key=f"{key_prefix}_tampa")
-    with p3: pr_oreb  = st.checkbox("🧠 Örebro",           value=True, key=f"{key_prefix}_orebro")
-    selected = (["odi"] if pr_odi else []) + (["tampa"] if pr_tampa else []) + (["orebro"] if pr_oreb else [])
+    p1,p2,p3,p4,p5 = st.columns(5)
+    with p1: pr_odi   = st.checkbox("📊 Oswestry (ODI)",   value=True, key=f"{key_prefix}_odi")
+    with p2: pr_tampa = st.checkbox("😨 Tampa Scale",       value=True, key=f"{key_prefix}_tampa")
+    with p3: pr_oreb  = st.checkbox("🧠 Örebro",            value=True, key=f"{key_prefix}_orebro")
+    with p4: pr_drap  = st.checkbox("🚩 Drapeaux",          value=True, key=f"{key_prefix}_drap")
+    with p5: pr_luom  = st.checkbox("🏃 Luomajoki",         value=True, key=f"{key_prefix}_luom")
+    selected = (
+        (["odi"]       if pr_odi   else []) +
+        (["tampa"]     if pr_tampa else []) +
+        (["orebro"]    if pr_oreb  else []) +
+        (["drapeaux"]  if pr_drap  else []) +
+        (["luomajoki"] if pr_luom  else [])
+    )
     ga,gb,_ = st.columns([1.5,1,4])
     with ga:
         if selected:
