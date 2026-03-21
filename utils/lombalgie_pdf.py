@@ -66,22 +66,6 @@ class Checkbox(_Flowable):
         self.canv.setLineWidth(0.7)
         self.canv.rect(1, 0, self.size, self.size, fill=0, stroke=1)
 
-def option_row(text, style, col_w=None):
-    """Ligne avec case à cocher + texte."""
-    if col_w is None: col_w = USEFUL_W
-    cb   = Checkbox(size=8)
-    para = Paragraph(f"  {text}", style)
-    tbl  = _Table([[cb, para]], colWidths=[0.5*_cm, col_w - 0.5*_cm])
-    tbl.setStyle(_TableStyle([
-        ("VALIGN",         (0,0),(-1,-1), "MIDDLE"),
-        ("LEFTPADDING",    (0,0),(-1,-1), 2),
-        ("RIGHTPADDING",   (0,0),(-1,-1), 2),
-        ("TOPPADDING",     (0,0),(-1,-1), 3),
-        ("BOTTOMPADDING",  (0,0),(-1,-1), 3),
-    ]))
-    return tbl
-
-
 def make_styles():
     from reportlab.lib.styles import getSampleStyleSheet
     from reportlab.lib.enums import TA_CENTER
@@ -112,6 +96,24 @@ def make_styles():
             textColor=NOIR, spaceAfter=2, leftIndent=20),
     }
 
+
+
+
+
+def option_row(text, style, col_w=None):
+    """Ligne avec case à cocher + texte."""
+    if col_w is None: col_w = USEFUL_W
+    cb   = Checkbox(size=8)
+    para = Paragraph(f"  {text}", style)
+    tbl  = _Table([[cb, para]], colWidths=[0.5*_cm, col_w - 0.5*_cm])
+    tbl.setStyle(_TableStyle([
+        ("VALIGN",         (0,0),(-1,-1), "MIDDLE"),
+        ("LEFTPADDING",    (0,0),(-1,-1), 2),
+        ("RIGHTPADDING",   (0,0),(-1,-1), 2),
+        ("TOPPADDING",     (0,0),(-1,-1), 3),
+        ("BOTTOMPADDING",  (0,0),(-1,-1), 3),
+    ]))
+    return tbl
 
 
 def _find_logo():
@@ -538,29 +540,6 @@ def make_header_footer(report_title, patient_name=""):
         canvas.restoreState()
     return _draw
 
-def make_styles():
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.lib.enums import TA_CENTER
-    base = getSampleStyleSheet()
-    return {
-        "title": _PS("title", fontSize=26, fontName="Helvetica-Bold", textColor=BLEU,
-            spaceAfter=4, alignment=TA_CENTER),
-        "subtitle": _PS("subtitle", fontSize=12, fontName="Helvetica", textColor=GRIS_TEXTE,
-            spaceAfter=2, alignment=TA_CENTER),
-        "section": _PS("section369", fontSize=11, fontName="Helvetica-Bold", textColor=BLANC,
-            spaceBefore=12, spaceAfter=6, backColor=BLEU,
-            leftIndent=-6, rightIndent=-6, borderPadding=(5,8,5,8)),
-        "subsection": _PS("subsection369", fontSize=10, fontName="Helvetica-Bold",
-            textColor=TERRA, spaceBefore=10, spaceAfter=4),
-        "normal": _PS("normal369", fontSize=9, fontName="Helvetica",
-            textColor=NOIR, spaceAfter=2),
-        "small": _PS("small369", fontSize=7.5, fontName="Helvetica", textColor=GRIS_TEXTE),
-        "bold": _PS("bold369", fontSize=9, fontName="Helvetica-Bold", textColor=BLEU),
-        "note": _PS("note369", fontSize=8, fontName="Helvetica",
-            textColor=GRIS_TEXTE, leftIndent=8, spaceAfter=4),
-        "center": _PS("center369", fontSize=9, fontName="Helvetica", alignment=TA_CENTER),
-    }
-
 def section_band(title, accent=None):
     if accent is None: accent = BLEU
     row = [[_Para(
@@ -676,19 +655,6 @@ BLEU_FONCE = BLEU
 BLEU_CLAIR = BLEU_LIGHT
 W = USEFUL_W
 CHECKBOX = "☐"
-
-def make_styles():
-    base = getSampleStyleSheet()
-    return {
-        "question": ParagraphStyle("q", fontSize=10, fontName="Helvetica-Bold",
-                                   textColor=NOIR, spaceBefore=8, spaceAfter=3),
-        "option":   ParagraphStyle("o", fontSize=9, fontName="Helvetica",
-                                   textColor=NOIR, spaceAfter=2, leftIndent=20),
-        "intro":    ParagraphStyle("i", fontSize=9, fontName="Helvetica-Oblique",
-                                   textColor=colors.HexColor("#444"), spaceAfter=6),
-        "small":    ParagraphStyle("sm", fontSize=8, fontName="Helvetica",
-                                   textColor=colors.HexColor("#666")),
-    }
 
 def section_header(title, subtitle=""):
     tbl = Table([[Paragraph(title, ParagraphStyle("th", fontSize=13,
