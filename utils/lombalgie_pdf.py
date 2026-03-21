@@ -443,7 +443,7 @@ def chart_mobilite(bilans_df, labels):
 #  GÉNÉRATEUR PRINCIPAL
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# ─── Questionnaires helpers ──────────────────────────────────────────────────
+# ─── Questionnaires — données et scoring ────────────────────────────────────
 
 # ─── Palette 36.9 Bilans ──────────────────────────────────────────────────────
 TERRA       = _colors.HexColor("#C4603A")
@@ -469,37 +469,6 @@ USEFUL_W = _A4[0] - 3*_cm
 MARGIN   = 1.5*_cm
 HEADER_H = 1.6*_cm
 W        = USEFUL_W
-
-# ─── Case à cocher dessinée (pas unicode) ────────────────────────────────────
-from reportlab.platypus import Flowable as _Flowable
-
-class Checkbox(_Flowable):
-    """Case à cocher vide dessinée proprement."""
-    def __init__(self, size=8):
-        _Flowable.__init__(self)
-        self.size = size
-        self.width = size + 4
-        self.height = size
-    def draw(self):
-        self.canv.setStrokeColor(_colors.HexColor("#333333"))
-        self.canv.setLineWidth(0.7)
-        self.canv.rect(1, 0, self.size, self.size, fill=0, stroke=1)
-
-def option_row(text, style, col_w=None):
-    """Ligne avec case à cocher + texte."""
-    if col_w is None: col_w = USEFUL_W
-    cb   = Checkbox(size=8)
-    para = Paragraph(f"  {text}", style)
-    tbl  = _Table([[cb, para]], colWidths=[0.5*_cm, col_w - 0.5*_cm])
-    tbl.setStyle(_TableStyle([
-        ("VALIGN",         (0,0),(-1,-1), "MIDDLE"),
-        ("LEFTPADDING",    (0,0),(-1,-1), 2),
-        ("RIGHTPADDING",   (0,0),(-1,-1), 2),
-        ("TOPPADDING",     (0,0),(-1,-1), 3),
-        ("BOTTOMPADDING",  (0,0),(-1,-1), 3),
-    ]))
-    return tbl
-
 
 def _find_logo():
     candidates = [
@@ -568,6 +537,29 @@ def make_header_footer(report_title, patient_name=""):
             f"Page {doc.page}  ·  {_date.today().strftime('%d/%m/%Y')}")
         canvas.restoreState()
     return _draw
+
+def make_styles():
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.enums import TA_CENTER
+    base = getSampleStyleSheet()
+    return {
+        "title": _PS("title", fontSize=26, fontName="Helvetica-Bold", textColor=BLEU,
+            spaceAfter=4, alignment=TA_CENTER),
+        "subtitle": _PS("subtitle", fontSize=12, fontName="Helvetica", textColor=GRIS_TEXTE,
+            spaceAfter=2, alignment=TA_CENTER),
+        "section": _PS("section369", fontSize=11, fontName="Helvetica-Bold", textColor=BLANC,
+            spaceBefore=12, spaceAfter=6, backColor=BLEU,
+            leftIndent=-6, rightIndent=-6, borderPadding=(5,8,5,8)),
+        "subsection": _PS("subsection369", fontSize=10, fontName="Helvetica-Bold",
+            textColor=TERRA, spaceBefore=10, spaceAfter=4),
+        "normal": _PS("normal369", fontSize=9, fontName="Helvetica",
+            textColor=NOIR, spaceAfter=2),
+        "small": _PS("small369", fontSize=7.5, fontName="Helvetica", textColor=GRIS_TEXTE),
+        "bold": _PS("bold369", fontSize=9, fontName="Helvetica-Bold", textColor=BLEU),
+        "note": _PS("note369", fontSize=8, fontName="Helvetica",
+            textColor=GRIS_TEXTE, leftIndent=8, spaceAfter=4),
+        "center": _PS("center369", fontSize=9, fontName="Helvetica", alignment=TA_CENTER),
+    }
 
 def section_band(title, accent=None):
     if accent is None: accent = BLEU
@@ -683,7 +675,20 @@ BLEU_CLAIR = BLEU_LIGHT
 BLEU_FONCE = BLEU
 BLEU_CLAIR = BLEU_LIGHT
 W = USEFUL_W
-CHECKBOX = "[  ]"  # fallback text
+CHECKBOX = "☐"
+
+def make_styles():
+    base = getSampleStyleSheet()
+    return {
+        "question": ParagraphStyle("q", fontSize=10, fontName="Helvetica-Bold",
+                                   textColor=NOIR, spaceBefore=8, spaceAfter=3),
+        "option":   ParagraphStyle("o", fontSize=9, fontName="Helvetica",
+                                   textColor=NOIR, spaceAfter=2, leftIndent=20),
+        "intro":    ParagraphStyle("i", fontSize=9, fontName="Helvetica-Oblique",
+                                   textColor=colors.HexColor("#444"), spaceAfter=6),
+        "small":    ParagraphStyle("sm", fontSize=8, fontName="Helvetica",
+                                   textColor=colors.HexColor("#666")),
+    }
 
 def section_header(title, subtitle=""):
     tbl = Table([[Paragraph(title, ParagraphStyle("th", fontSize=13,
@@ -704,7 +709,7 @@ def section_header(title, subtitle=""):
 def radio_v(num, question, options, styles):
     q_text = f"{num}. {question}" if question else str(num)
     items = [Paragraph(q_text, styles["question"])]
-    rows = [[option_row(lbl, styles["option"])] for lbl in options]
+    rows = [[Paragraph(f"{CHECKBOX}  {lbl}", styles["option"])] for lbl in options]
     tbl = Table(rows, colWidths=[W])
     tbl.setStyle(TableStyle([
         ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
@@ -713,8 +718,7 @@ def radio_v(num, question, options, styles):
         ("GRID",(0,0),(-1,-1),0.3,GRIS_BORD),
     ]))
     items.append(tbl)
-    from reportlab.platypus import KeepTogether as _KT
-    return _KT(items)
+    return KeepTogether(items)
 
 def score_footer(label, max_score, guide):
     rows = [[f"Score : _______ / {max_score}", ""]]
@@ -931,6 +935,11 @@ QUESTIONNAIRES_LOMB = {
     "tampa":  ("Tampa Scale (kinésiophobie)",  build_tampa),
     "orebro": ("Örebro",                      build_orebro),
 }
+
+
+# ─── Scoring questionnaires ─────────────────────────────────────────────────
+
+
 
 # ─── generate_pdf_lombalgie ─────────────────────────────────────────────────
 
@@ -1364,3 +1373,253 @@ ODI_SECTIONS = [
 ]
 
 ODI_KEYS = [s[0] for s in ODI_SECTIONS]
+
+
+# ─── Scoring questionnaires (in-app) ────────────────────────────────────────
+
+ODI_SECTIONS = [
+    ("odi_s1", "1. Intensité de la douleur", [
+        "Pas de douleur actuellement",
+        "La douleur est très légère actuellement",
+        "La douleur est modérée actuellement",
+        "La douleur est assez sévère actuellement",
+        "La douleur est très sévère actuellement",
+        "La douleur est la pire imaginable actuellement",
+    ]),
+    ("odi_s2", "2. Soins personnels (se laver, s'habiller…)", [
+        "Je me prends en charge normalement sans douleur supplémentaire",
+        "Je me prends en charge normalement mais c'est très douloureux",
+        "Se prendre en charge est douloureux — je suis lent(e) et prudent(e)",
+        "J'ai besoin d'aide mais j'arrive à gérer la plupart de mes soins",
+        "J'ai besoin d'aide chaque jour pour la plupart de mes soins",
+        "Je ne m'habille pas, me lave avec difficulté et reste au lit",
+    ]),
+    ("odi_s3", "3. Soulever des charges", [
+        "Je peux soulever des charges lourdes sans douleur",
+        "Je peux soulever des charges lourdes mais avec douleur supplémentaire",
+        "La douleur m'empêche de soulever des charges lourdes du sol",
+        "La douleur m'empêche de soulever des charges lourdes (je peux soulever du léger si bien placé)",
+        "Je peux soulever des charges très légères uniquement",
+        "Je ne peux rien soulever ni porter",
+    ]),
+    ("odi_s4", "4. Marche", [
+        "La douleur ne m'empêche pas de marcher quelle que soit la distance",
+        "La douleur m'empêche de marcher plus d'un kilomètre",
+        "La douleur m'empêche de marcher plus de 500 mètres",
+        "La douleur m'empêche de marcher plus de 100 mètres",
+        "Je ne marche qu'avec une canne ou des béquilles",
+        "Je suis au lit la plupart du temps et dois me traîner pour aller aux toilettes",
+    ]),
+    ("odi_s5", "5. Position assise", [
+        "Je peux rester assis(e) aussi longtemps que je veux sans douleur",
+        "Je peux rester assis(e) aussi longtemps que je veux avec légère douleur",
+        "La douleur m'empêche de rester assis(e) plus d'une heure",
+        "La douleur m'empêche de rester assis(e) plus de 30 minutes",
+        "La douleur m'empêche de rester assis(e) plus de 10 minutes",
+        "La douleur m'empêche totalement de m'asseoir",
+    ]),
+    ("odi_s6", "6. Position debout", [
+        "Je peux rester debout aussi longtemps que je veux sans douleur",
+        "Je peux rester debout aussi longtemps que je veux mais avec douleur",
+        "La douleur m'empêche de rester debout plus d'une heure",
+        "La douleur m'empêche de rester debout plus de 30 minutes",
+        "La douleur m'empêche de rester debout plus de 10 minutes",
+        "La douleur m'empêche totalement de rester debout",
+    ]),
+    ("odi_s7", "7. Sommeil", [
+        "Mon sommeil n'est jamais perturbé par la douleur",
+        "Mon sommeil est parfois perturbé par la douleur",
+        "Je dors moins de 6 heures à cause de la douleur",
+        "Je dors moins de 4 heures à cause de la douleur",
+        "Je dors moins de 2 heures à cause de la douleur",
+        "La douleur m'empêche totalement de dormir",
+    ]),
+    ("odi_s8", "8. Vie sexuelle (si applicable)", [
+        "Ma vie sexuelle est normale sans douleur supplémentaire",
+        "Ma vie sexuelle est normale mais provoque une douleur supplémentaire",
+        "Ma vie sexuelle est presque normale mais est très douloureuse",
+        "Ma vie sexuelle est sévèrement limitée par la douleur",
+        "Ma vie sexuelle est presque absente en raison de la douleur",
+        "La douleur empêche toute vie sexuelle",
+    ]),
+    ("odi_s9", "9. Vie sociale", [
+        "Ma vie sociale est normale sans douleur supplémentaire",
+        "Ma vie sociale est normale mais augmente le degré de douleur",
+        "La douleur n'affecte pas les activités légères mais limite les activités énergiques",
+        "La douleur a limité ma vie sociale — je sors moins souvent",
+        "La douleur a limité ma vie sociale à ma maison",
+        "Je n'ai pas de vie sociale à cause de la douleur",
+    ]),
+    ("odi_s10", "10. Voyages / transports", [
+        "Je peux voyager n'importe où sans douleur supplémentaire",
+        "Je peux voyager n'importe où mais avec douleur",
+        "La douleur est sévère mais je gère les trajets de plus de 2 heures",
+        "La douleur me restreint à des trajets de moins d'une heure",
+        "La douleur me restreint à des trajets courts de moins de 30 minutes",
+        "La douleur m'empêche de voyager sauf pour des soins médicaux",
+    ]),
+]
+
+ODI_KEYS = [s[0] for s in ODI_SECTIONS]
+
+
+def compute_odi(answers: dict) -> dict:
+    """answers = {"odi_s1": 2, "odi_s2": 0, ...} (0–5 par section)"""
+    scores = []
+    for key, _, _ in ODI_SECTIONS:
+        v = answers.get(key)
+        if v is not None:
+            scores.append(int(v))
+    if not scores:
+        return {"score": None, "interpretation": "", "color": "#888"}
+    total = sum(scores)
+    max_possible = len(scores) * 5
+    pct = round(total / max_possible * 100)
+    if pct <= 20:
+        interp, color = "Incapacité minimale (0–20%)", "#388e3c"
+    elif pct <= 40:
+        interp, color = "Incapacité modérée (21–40%)", "#8bc34a"
+    elif pct <= 60:
+        interp, color = "Incapacité sévère (41–60%)", "#f57c00"
+    elif pct <= 80:
+        interp, color = "Incapacité très sévère (61–80%)", "#e64a19"
+    else:
+        interp, color = "Grabataire / exagération (>80%)", "#d32f2f"
+    return {"score": pct, "interpretation": interp, "color": color, "raw": total}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  TAMPA SCALE FOR KINESIOPHOBIA (TSK-17) — 17 items, score 1–4
+# ═══════════════════════════════════════════════════════════════════════════════
+
+TAMPA_SCALE = ["1 — Pas du tout d'accord", "2 — Plutôt pas d'accord",
+               "3 — Plutôt d'accord", "4 — Tout à fait d'accord"]
+TAMPA_SCALE_VALUES = [1, 2, 3, 4]
+
+# Items inversés (R) : scores inversés pour le calcul (1→4, 2→3, 3→2, 4→1)
+TAMPA_REVERSED = {8, 12, 16}  # indices 1-based
+
+TAMPA_ITEMS = [
+    ("tampa_1",  False, "J'ai peur de me blesser si je fais de l'exercice."),
+    ("tampa_2",  False, "Si j'essayais de surmonter ma douleur, celle-ci augmenterait."),
+    ("tampa_3",  False, "Mon corps me dit que quelque chose ne va pas vraiment."),
+    ("tampa_4",  False, "Ma blessure a mis mon corps en danger toute ma vie."),
+    ("tampa_5",  False, "Les gens ne prennent pas ma condition médicale assez au sérieux."),
+    ("tampa_6",  False, "Ma blessure a mis mon corps en danger de façon permanente."),
+    ("tampa_7",  False, "La douleur signifie toujours que j'ai subi une blessure corporelle."),
+    ("tampa_8",  True,  "Simplement parce que quelque chose aggrave ma douleur ne signifie pas qu'elle est dangereuse."),
+    ("tampa_9",  False, "J'ai peur de me blesser accidentellement."),
+    ("tampa_10", False, "Le plus sûr est de faire attention à ne pas faire de mouvements inutiles."),
+    ("tampa_11", False, "Je n'aurais pas autant de douleur si quelque chose de potentiellement grave ne se passait pas."),
+    ("tampa_12", True,  "Bien que ma condition soit douloureuse, je me sentirais mieux si j'étais plus actif(ve)."),
+    ("tampa_13", False, "La douleur me signale que je dois arrêter ce que je fais pour ne pas me blesser."),
+    ("tampa_14", False, "Ce n'est pas vraiment sûr pour quelqu'un avec ma condition d'être physiquement actif(ve)."),
+    ("tampa_15", False, "Je risque trop facilement de me blesser."),
+    ("tampa_16", True,  "Même si quelque chose me fait très mal, je ne pense pas que ce soit dangereux."),
+    ("tampa_17", False, "Personne ne devrait faire de l'exercice physique quand il souffre de douleur."),
+]
+
+TAMPA_KEYS = [t[0] for t in TAMPA_ITEMS]
+
+
+def compute_tampa(answers: dict) -> dict:
+    """answers = {"tampa_1": 3, "tampa_2": 1, ...} (1–4)"""
+    total = 0
+    count = 0
+    for i, (key, reversed_item, _) in enumerate(TAMPA_ITEMS):
+        v = answers.get(key)
+        if v is not None:
+            score = int(v)
+            if reversed_item:
+                score = 5 - score  # inversion : 1→4, 2→3, 3→2, 4→1
+            total += score
+            count += 1
+    if count == 0:
+        return {"score": None, "interpretation": "", "color": "#888"}
+    if count < 17:
+        # Extrapolation si items manquants
+        total = round(total / count * 17)
+    if total <= 37:
+        interp, color = "Kinésiophobie faible (≤ 37)", "#388e3c"
+    elif total <= 44:
+        interp, color = "Kinésiophobie modérée (38–44)", "#f57c00"
+    else:
+        interp, color = "Kinésiophobie élevée (> 44)", "#d32f2f"
+    return {"score": total, "interpretation": interp, "color": color}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  ÖREBRO — items sur échelle 0–10
+# ═══════════════════════════════════════════════════════════════════════════════
+
+OREBRO_ITEMS = [
+    ("orebro_1",
+     "Quelle est l'intensité de votre douleur en ce moment ?",
+     "0 = pas de douleur  ·  10 = douleur insupportable"),
+    ("orebro_2",
+     "Dans quelle mesure votre douleur est-elle présente en permanence pendant vos heures d'éveil ?",
+     "0 = jamais  ·  10 = toujours"),
+    ("orebro_3",
+     "Dans quelle mesure la douleur perturbe-t-elle votre sommeil ?",
+     "0 = pas du tout  ·  10 = complètement"),
+    ("orebro_4",
+     "Dans quelle mesure avez-vous peur que l'activité physique aggrave votre douleur ?",
+     "0 = pas du tout  ·  10 = extrêmement"),
+    ("orebro_5",
+     "Dans quelle mesure pensez-vous que votre douleur disparaîtra ?",
+     "0 = pas du tout  ·  10 = complètement"),
+    ("orebro_6",
+     "Quelle confiance avez-vous dans le fait de retourner au travail dans les 3 prochains mois ?",
+     "0 = aucune confiance  ·  10 = très confiant(e)"),
+    ("orebro_7",
+     "Dans quelle mesure pensez-vous que vous pouvez effectuer un travail malgré la douleur ?",
+     "0 = pas du tout  ·  10 = totalement"),
+    ("orebro_8",
+     "Activités légères à la maison (cuisiner, ranger) — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
+     "0 = pas d'effet  ·  10 = incapable de faire"),
+    ("orebro_9",
+     "Activités lourdes à la maison (nettoyer, jardiner) — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
+     "0 = pas d'effet  ·  10 = incapable de faire"),
+    ("orebro_10",
+     "Activités sociales (conversations, visites) — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
+     "0 = pas d'effet  ·  10 = incapable de faire"),
+    ("orebro_11",
+     "Déplacements (transports en commun, conduire) — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
+     "0 = pas d'effet  ·  10 = incapable de faire"),
+    ("orebro_12",
+     "Loisirs légers — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
+     "0 = pas d'effet  ·  10 = incapable de faire"),
+    ("orebro_13",
+     "Travail ou études — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
+     "0 = pas d'effet  ·  10 = incapable de faire"),
+]
+
+# Items à inverser pour le scoring (5, 6, 7 : plus = mieux → on inverse)
+OREBRO_INBLEUED = {"orebro_5", "orebro_6", "orebro_7"}
+
+OREBRO_KEYS = [o[0] for o in OREBRO_ITEMS]
+
+
+def compute_orebro(answers: dict) -> dict:
+    """answers = {"orebro_1": 6, "orebro_2": 4, ...} (0–10)"""
+    total = 0
+    count = 0
+    for key, _, _ in OREBRO_ITEMS:
+        v = answers.get(key)
+        if v is not None:
+            score = int(v)
+            if key in OREBRO_INBLEUED:
+                score = 10 - score
+            total += score
+            count += 1
+    if count == 0:
+        return {"score": None, "interpretation": "", "color": "#888"}
+    # Normalisation sur 100
+    pct = round(total / (count * 10) * 100)
+    if pct <= 50:
+        interp, color = "Risque faible de chronicisation (≤ 50)", "#388e3c"
+    elif pct <= 74:
+        interp, color = "Risque moyen de chronicisation (51–74)", "#f57c00"
+    else:
+        interp, color = "Risque élevé de chronicisation (≥ 75)", "#d32f2f"
+    return {"score": pct, "interpretation": interp, "color": color, "raw": total}
