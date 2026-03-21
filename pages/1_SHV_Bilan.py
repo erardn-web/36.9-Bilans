@@ -512,9 +512,11 @@ def render_formulaire():
     col_back, col_save, _ = st.columns([1, 1, 4])
     with col_back:
         if st.button("⬅️ Retour"):
-            if st.session_state.get("shv_unsaved", False):
+            # Toujours demander confirmation sauf si venait de sauvegarder
+            if not st.session_state.get("shv_just_saved", False):
                 st.session_state["shv_confirm_back"] = True
             else:
+                st.session_state.pop("shv_just_saved", None)
                 st.session_state.mode = "bilan"
                 st.rerun()
     with col_save:
@@ -1275,6 +1277,7 @@ def render_formulaire():
         st.session_state.bilan_data = final_data
 
         st.session_state["shv_unsaved"] = False
+        st.session_state["shv_just_saved"] = True
         st.success(f"✅ Bilan sauvegardé avec succès ! (ID : {new_id})")
         st.balloons()
 
