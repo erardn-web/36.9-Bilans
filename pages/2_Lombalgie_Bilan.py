@@ -11,7 +11,7 @@ import sys, os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from utils.google_sheets import (
+from utils.db import (
     get_all_patients, create_patient,
     get_patient_bilans_lombalgie, save_bilan_lombalgie,
 )
@@ -24,13 +24,13 @@ from utils.lombalgie_data import (
     TYPES_DOULEUR, RYTHME_DOULEUR,
     TESTS_CLINIQUES, RESULTATS_TEST,
 )
-from utils.questionnaires_lombalgie import (
+from utils.lombalgie_pdf import (
     generate_questionnaires_lombalgie_pdf,
     ODI_SECTIONS, ODI_KEYS, compute_odi,
     TAMPA_ITEMS, TAMPA_KEYS, TAMPA_SCALE, TAMPA_SCALE_VALUES, compute_tampa,
     OREBRO_ITEMS, OREBRO_KEYS, compute_orebro,
 )
-from utils.pdf_lombalgie import generate_pdf_lombalgie
+from utils.lombalgie_pdf import generate_pdf_lombalgie
 
 st.set_page_config(page_title="Bilan Lombalgie", page_icon="🦴",
                    layout="wide", initial_sidebar_state="collapsed")
