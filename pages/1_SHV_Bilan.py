@@ -387,6 +387,7 @@ def render_bilan_selection():
                         st.session_state.bilan_id   = bid
                         st.session_state.bilan_data = row.to_dict()
                         st.session_state.mode       = "formulaire"
+                        st.session_state["shv_unsaved"] = False
                         st.rerun()
                 with c_del:
                     if st.button("🗑️", key=f"del_req_{bid}", help="Supprimer ce bilan"):
@@ -449,6 +450,7 @@ def render_bilan_selection():
                 "praticien":  praticien,
             }
             st.session_state.mode = "formulaire"
+            st.session_state["shv_unsaved"] = True
             st.rerun()
 
 
@@ -510,10 +512,31 @@ def render_formulaire():
     col_back, col_save, _ = st.columns([1, 1, 4])
     with col_back:
         if st.button("⬅️ Retour"):
-            st.session_state.mode = "bilan"
-            st.rerun()
+            if st.session_state.get("shv_unsaved", False):
+                st.session_state["shv_confirm_back"] = True
+            else:
+                st.session_state.mode = "bilan"
+                st.rerun()
     with col_save:
         save_top = st.button("💾 Sauvegarder", type="primary")
+
+    # Alerte si retour sans sauvegarde
+    if st.session_state.get("shv_confirm_back", False):
+        st.warning(
+            "⚠️ **Modifications non sauvegardées.** "
+            "Êtes-vous sûr(e) de vouloir quitter sans sauvegarder ?"
+        )
+        ca, cb, _ = st.columns([1.2, 1.2, 4])
+        with ca:
+            if st.button("✅ Quitter sans sauvegarder", type="primary", key="shv_confirm_back_ok"):
+                st.session_state["shv_confirm_back"] = False
+                st.session_state["shv_unsaved"] = False
+                st.session_state.mode = "bilan"
+                st.rerun()
+        with cb:
+            if st.button("✖ Continuer l'édition", key="shv_confirm_back_cancel"):
+                st.session_state["shv_confirm_back"] = False
+                st.rerun()
 
     st.markdown("---")
 
@@ -1251,6 +1274,7 @@ def render_formulaire():
         final_data["bilan_id"]      = new_id
         st.session_state.bilan_data = final_data
 
+        st.session_state["shv_unsaved"] = False
         st.success(f"✅ Bilan sauvegardé avec succès ! (ID : {new_id})")
         st.balloons()
 
