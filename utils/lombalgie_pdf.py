@@ -299,9 +299,11 @@ W = USEFUL_W
 
 
 def safe_n(val):
+    """Convertit en float. Retourne None si vide/absent, accepte 0 comme valeur valide."""
+    if val is None or str(val).strip() in ("", "—", "None"):
+        return None
     try:
-        v = float(val)
-        return v if v != 0 else None
+        return float(val)
     except (TypeError, ValueError):
         return None
 
@@ -684,7 +686,8 @@ def radio_v(num, question, options, styles):
         ("GRID",(0,0),(-1,-1),0.3,GRIS_BORD),
     ]))
     items.append(tbl)
-    return KeepTogether(items)
+    from reportlab.platypus import KeepTogether as _KT
+    return _KT(items)
 
 def score_footer(label, max_score, guide):
     rows = [[f"Score : _______ / {max_score}", ""]]
@@ -896,10 +899,194 @@ def build_orebro(story, styles):
     story += score_footer("Örebro", 100,
         "≤ 50 : risque faible  ·  51–74 : risque moyen  ·  ≥ 75 : risque élevé de chronicisation")
 
+
+def build_drapeaux(story, styles):
+    """Fiche drapeaux rouges et jaunes imprimable."""
+    story.append(section_band("Drapeaux rouges & jaunes — Lombalgie"))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "À compléter par le physiothérapeute lors de l'anamnèse. "
+        "Cochez les facteurs présents.",
+        styles["intro"]))
+    story.append(Spacer(1, 0.3*cm))
+
+    drapeaux_rouges = [
+        "Âge < 20 ans ou > 55 ans avec douleur nouvelle",
+        "Traumatisme violent récent",
+        "Douleur non mécanique (constante, nocturne, indépendante de la position)",
+        "Douleur thoracique associée",
+        "Antécédent de cancer",
+        "Usage prolongé de corticoïdes",
+        "Consommation de drogues IV / immunodépression",
+        "Perte de poids inexpliquée",
+        "Syndrome de la queue de cheval (troubles sphinctériens, anesthésie en selle)",
+        "Déficit neurologique progressif",
+        "Déformation structurale sévère",
+        "Fièvre / état général altéré",
+    ]
+
+    drapeaux_jaunes = [
+        "Croyances négatives sur la douleur (catastrophisme)",
+        "Peur du mouvement / kinésiophobie",
+        "Comportement d'évitement marqué",
+        "Dépression / anxiété associée",
+        "Faible soutien social ou familial",
+        "Insatisfaction au travail / conflit professionnel",
+        "Litige juridique ou compensation en cours",
+        "Attentes thérapeutiques irréalistes",
+        "Historique de douleur chronique",
+        "Hypervigilance corporelle",
+    ]
+
+    # Section Drapeaux Rouges
+    story.append(Paragraph(
+        "🔴 Drapeaux rouges — Pathologie grave sous-jacente (référer si présent)",
+        ParagraphStyle("dr_title", fontSize=11, fontName="Helvetica-Bold",
+                       textColor=ROUGE, spaceBefore=4, spaceAfter=6)))
+
+    rows_r = []
+    for item in drapeaux_rouges:
+        rows_r.append([
+            Checkbox(size=9),
+            Paragraph(item, ParagraphStyle(
+                "dr_item", fontSize=9, fontName="Helvetica",
+                textColor=NOIR, leading=13)),
+        ])
+    tbl_r = Table(rows_r, colWidths=[0.6*cm, USEFUL_W - 0.6*cm])
+    tbl_r.setStyle(TableStyle([
+        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+        ("ROWBACKGROUNDS",(0,0),(-1,-1), [BLANC, _colors.HexColor("#FFF5F5")]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 5),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 5),
+        ("LEFTPADDING",   (0,0),(-1,-1), 6),
+    ]))
+    story.append(tbl_r)
+    story.append(Spacer(1, 0.5*cm))
+
+    # Section Drapeaux Jaunes
+    story.append(Paragraph(
+        "🟡 Drapeaux jaunes — Facteurs psychosociaux (chronicisation)",
+        ParagraphStyle("dj_title", fontSize=11, fontName="Helvetica-Bold",
+                       textColor=ORANGE, spaceBefore=4, spaceAfter=6)))
+
+    rows_j = []
+    for item in drapeaux_jaunes:
+        rows_j.append([
+            Checkbox(size=9),
+            Paragraph(item, ParagraphStyle(
+                "dj_item", fontSize=9, fontName="Helvetica",
+                textColor=NOIR, leading=13)),
+        ])
+    tbl_j = Table(rows_j, colWidths=[0.6*cm, USEFUL_W - 0.6*cm])
+    tbl_j.setStyle(TableStyle([
+        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+        ("ROWBACKGROUNDS",(0,0),(-1,-1), [BLANC, _colors.HexColor("#FFFDF0")]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 5),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 5),
+        ("LEFTPADDING",   (0,0),(-1,-1), 6),
+    ]))
+    story.append(tbl_j)
+    story.append(Spacer(1, 0.4*cm))
+
+    # Zone notes
+    story.append(Paragraph("Notes cliniques :", ParagraphStyle(
+        "dr_notes", fontSize=9, fontName="Helvetica-Bold", textColor=NOIR)))
+    story.append(Spacer(1, 0.2*cm))
+    for _ in range(3):
+        story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS_BORD))
+        story.append(Spacer(1, 0.4*cm))
+
+
+def build_luomajoki(story, styles):
+    """Grille tests de Luomajoki imprimable."""
+    story.append(section_band("Tests de contrôle moteur — Luomajoki"))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "Batterie de 6 tests évaluant le contrôle moteur lombaire. "
+        "Cochez le résultat pour chaque test. Seuil clinique : ≥ 3 échecs.",
+        styles["intro"]))
+    story.append(Spacer(1, 0.3*cm))
+
+    tests = [
+        ("1. Waiters Bow (hip hinge)",
+         "Le patient se penche en avant en fléchissant les hanches sans flexion lombaire. "
+         "Échec si flexion ou extension lombaire compensatoire."),
+        ("2. Pelvic Tilt (debout)",
+         "Le patient effectue une antéversion et rétroversion pelviennes. "
+         "Échec si mouvement lombaire au lieu du mouvement pelvien pur."),
+        ("3. Knee Lift (debout)",
+         "Le patient lève le genou jusqu'à 90° en unipodal. "
+         "Échec si inclinaison lombaire ou rotation du bassin."),
+        ("4. One-Leg Stance (station unipodale)",
+         "Le patient maintient l'équilibre sur un pied pendant 10 secondes. "
+         "Échec si oscillation lombaire ou chute du bassin > 2 cm."),
+        ("5. Sitting Knee Extension (ASLR assis)",
+         "Le patient étend le genou en position assise. "
+         "Échec si flexion lombaire compensatoire."),
+        ("6. Prone Knee Bend (décubitus ventral)",
+         "Le patient fléchit le genou à 90° en décubitus ventral. "
+         "Échec si antéversion pelvienne ou extension lombaire compensatoire."),
+    ]
+
+    header = [["Test", "Description", "Réussi", "Échoué", "Non testé"]]
+    rows = []
+    for name, desc in tests:
+        rows.append([
+            Paragraph(f"<b>{name}</b>", ParagraphStyle(
+                "lt_n", fontSize=8, fontName="Helvetica-Bold",
+                textColor=BLEU, leading=11)),
+            Paragraph(desc, ParagraphStyle(
+                "lt_d", fontSize=7.5, fontName="Helvetica",
+                textColor=GRIS_TEXTE, leading=10)),
+            Checkbox(size=9),
+            Checkbox(size=9),
+            Checkbox(size=9),
+        ])
+
+    col_w = [4*cm, USEFUL_W - 4*cm - 3*1.8*cm] + [1.8*cm]*3
+    tbl = Table(header + rows, colWidths=col_w, repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("FONTNAME",      (0,0),(-1,0),  "Helvetica-Bold"),
+        ("FONTSIZE",      (0,0),(-1,0),  8),
+        ("BACKGROUND",    (0,0),(-1,0),  BLEU),
+        ("TEXTCOLOR",     (0,0),(-1,0),  BLANC),
+        ("ALIGN",         (2,0),(-1,-1), "CENTER"),
+        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 7),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 7),
+        ("LEFTPADDING",   (0,0),(-1,-1), 5),
+    ]))
+    story.append(tbl)
+    story.append(Spacer(1, 0.5*cm))
+
+    # Zone score
+    score_tbl = Table([[
+        Paragraph("Score total :", ParagraphStyle(
+            "sc_lbl", fontSize=10, fontName="Helvetica-Bold", textColor=NOIR)),
+        Paragraph("_____ / 6 échecs", ParagraphStyle(
+            "sc_val", fontSize=10, fontName="Helvetica", textColor=NOIR)),
+        Paragraph("≥ 3 échecs = dysfonction significative du contrôle moteur", ParagraphStyle(
+            "sc_note", fontSize=8, fontName="Helvetica-Oblique", textColor=GRIS_TEXTE)),
+    ]], colWidths=[3*cm, 4*cm, USEFUL_W-7*cm])
+    score_tbl.setStyle(TableStyle([
+        ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
+        ("BACKGROUND",   (0,0),(-1,-1), BLEU_LIGHT),
+        ("TOPPADDING",   (0,0),(-1,-1), 8),
+        ("BOTTOMPADDING",(0,0),(-1,-1), 8),
+        ("LEFTPADDING",  (0,0),(-1,-1), 10),
+    ]))
+    story.append(score_tbl)
+
 QUESTIONNAIRES_LOMB = {
-    "odi":    ("Oswestry Disability Index",   build_odi),
-    "tampa":  ("Tampa Scale (kinésiophobie)",  build_tampa),
-    "orebro": ("Örebro",                      build_orebro),
+    "odi":        ("Oswestry Disability Index",   build_odi),
+    "tampa":      ("Tampa Scale (kinésiophobie)",  build_tampa),
+    "orebro":     ("Örebro",                      build_orebro),
+    "drapeaux":   ("Drapeaux rouges & jaunes",    build_drapeaux),
+    "luomajoki":  ("Tests de Luomajoki",          build_luomajoki),
 }
 
 
@@ -946,9 +1133,13 @@ def generate_pdf_lombalgie(bilans_df, patient_info: dict) -> bytes:
 
     # ── Helpers ───────────────────────────────────────────────────────────────
     def safe_n(val):
+        """Convertit en float. Retourne None si vide/absent, accepte 0 comme valeur valide."""
+        if val is None or str(val).strip() in ("", "—", "None"):
+            return None
         try:
-            v = float(val); return v if v != 0 else None
-        except: return None
+            return float(val)
+        except (TypeError, ValueError):
+            return None
 
     def val_s(val, suffix=""):
         v = safe_n(val)
@@ -956,6 +1147,7 @@ def generate_pdf_lombalgie(bilans_df, patient_info: dict) -> bytes:
         return f"{int(v)}{suffix}" if v == int(v) else f"{v}{suffix}"
 
     def has_data(key):
+        """True si au moins un bilan a une valeur numérique non vide (0 inclus)."""
         return any(safe_n(r.get(key)) is not None for _, r in bilans_df.iterrows())
 
     def has_data_str(key):
