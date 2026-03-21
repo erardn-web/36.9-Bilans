@@ -119,7 +119,7 @@ def render_accueil():
             </div>
             """, unsafe_allow_html=True)
 
-            pcol1, pcol2, pcol3, pcol4 = st.columns(4)
+            pcol1, pcol2, pcol3, pcol4, pcol5 = st.columns(5)
             with pcol1:
                 p_had  = st.checkbox("😟 HAD",       value=True, key="pa_had")
             with pcol2:
@@ -128,12 +128,15 @@ def render_accueil():
                 p_hvt  = st.checkbox("🌬️ Test HV",   value=True, key="pa_hvt")
             with pcol4:
                 p_bolt = st.checkbox("⏱️ BOLT",       value=True, key="pa_bolt")
+            with pcol5:
+                p_nij  = st.checkbox("📋 Nijmegen",  value=True, key="pa_nij")
 
             selected = []
             if p_had:  selected.append("had")
             if p_sf12: selected.append("sf12")
             if p_hvt:  selected.append("hvt")
             if p_bolt: selected.append("bolt")
+            if p_nij:  selected.append("nijmegen")
 
             ga, gb, _ = st.columns([1.5, 1, 4])
             with ga:
@@ -290,21 +293,24 @@ def render_bilan_selection():
             </div>
             """, unsafe_allow_html=True)
 
-            pcol1, pcol2, pcol3, pcol4 = st.columns(4)
+            pcol1, pcol2, pcol3, pcol4, pcol5 = st.columns(5)
             with pcol1:
-                print_had  = st.checkbox("😟 HAD", value=True, key="print_had")
+                print_had  = st.checkbox("😟 HAD",      value=True, key="print_had")
             with pcol2:
-                print_sf12 = st.checkbox("📊 SF-12", value=True, key="print_sf12")
+                print_sf12 = st.checkbox("📊 SF-12",    value=True, key="print_sf12")
             with pcol3:
-                print_hvt  = st.checkbox("🌬️ Test HV", value=True, key="print_hvt")
+                print_hvt  = st.checkbox("🌬️ Test HV",  value=True, key="print_hvt")
             with pcol4:
-                print_bolt = st.checkbox("⏱️ BOLT", value=True, key="print_bolt")
+                print_bolt = st.checkbox("⏱️ BOLT",     value=True, key="print_bolt")
+            with pcol5:
+                print_nij  = st.checkbox("📋 Nijmegen", value=True, key="print_nij")
 
             selected = []
             if print_had:  selected.append("had")
             if print_sf12: selected.append("sf12")
             if print_hvt:  selected.append("hvt")
             if print_bolt: selected.append("bolt")
+            if print_nij:  selected.append("nijmegen")
 
             ga, gb, gc = st.columns([1.5, 1, 4])
             with ga:
