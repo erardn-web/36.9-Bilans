@@ -811,22 +811,28 @@ def safe_n(val):
 
 
 def render_evolution():
-    info      = st.session_state.lomb_patient_info
+    info          = st.session_state.lomb_patient_info
     bilans_df_all = get_patient_bilans_lombalgie(st.session_state.lomb_patient_id)
 
-    # Appliquer la sélection
-    sel = st.session_state.get("lomb_selected_bilan_ids", None)
+    # Appliquer la sélection (clé cohérente avec render_bilan_selection)
+    sel = st.session_state.get("lomb_selected_ids", None)
     if sel and not bilans_df_all.empty:
-        filtered = bilans_df_all[bilans_df_all["bilan_id"].isin(sel)]
+        filtered  = bilans_df_all[bilans_df_all["bilan_id"].isin(sel)]
         bilans_df = filtered if not filtered.empty else bilans_df_all
     else:
         bilans_df = bilans_df_all
+
+    n_sel = len(bilans_df)
+    n_tot = len(bilans_df_all)
 
     st.markdown(
         f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} — Évolution Lombalgie</div>',
         unsafe_allow_html=True,
     )
     st.markdown("")
+
+    if n_sel < n_tot:
+        st.info(f"ℹ️ Affichage de {n_sel}/{n_tot} bilans sélectionnés.")
 
     col_back, col_pdf, _ = st.columns([1, 1.5, 4])
     with col_back:
@@ -838,7 +844,7 @@ def render_evolution():
             with st.spinner("Génération du PDF…"):
                 pdf_bytes = generate_pdf_lombalgie(bilans_df, info)
             st.download_button(
-                label="📄 Exporter en PDF",
+                label=f"📄 Exporter en PDF ({n_sel} bilan{'s' if n_sel>1 else ''})",
                 data=pdf_bytes,
                 file_name=f"evolution_lombalgie_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
                 mime="application/pdf",
