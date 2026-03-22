@@ -137,7 +137,7 @@ def render_accueil():
             with pcol7:
                 p_comb = st.checkbox("🏥 Comorb.",    value=True, key="pa_comb")
             with pcol8:
-                p_musc = st.checkbox(tab_label("💪 Testing", ["musc_hip_flex_d","musc_hip_flex_g","musc_knee_ext_d","musc_knee_ext_g"]), value=True, key="pa_musc")
+                p_musc = st.checkbox("💪 Testing", value=True, key="pa_musc")
 
             selected = []
             if p_had:  selected.append("had")
@@ -320,7 +320,7 @@ def render_bilan_selection():
             with pcol7:
                 print_comb = st.checkbox("🏥 Comorb.",  value=True, key="print_comb")
             with pcol8:
-                print_musc = st.checkbox(tab_label("💪 Testing", ["musc_hip_flex_d","musc_hip_flex_g","musc_knee_ext_d","musc_knee_ext_g"]),value=True, key="print_musc")
+                print_musc = st.checkbox("💪 Testing",value=True, key="print_musc")
 
             selected = []
             if print_had:  selected.append("had")
@@ -495,15 +495,6 @@ def load_val_or_none(key):
     except: return None
 
 
-def tab_label(base_label, keys):
-    """Ajoute ✅ si au moins une clé est renseignée (valeur non vide, non None)."""
-    bd = st.session_state.bilan_data
-    filled = any(
-        str(bd.get(k, "")).strip() not in ("", "0", "0.0", "None", "nan")
-        and bd.get(k) is not None
-        for k in keys
-    )
-    return f"{base_label} ✅" if filled else base_label
 
 
 
@@ -580,18 +571,18 @@ def render_formulaire():
     tab_gen, tab_had, tab_sf12, tab_bolt, tab_hvt, \
     tab_nij, tab_gazo, tab_etco2, tab_pattern, tab_snif, tab_mrc, tab_comorb, tab_muscle = st.tabs([
         "📝 Général",
-        tab_label("😟 HAD",             ["had_score_anxiete","had_score_depression"]),
-        tab_label("📊 SF-12",            ["sf12_pcs","sf12_mcs"]),
-        tab_label("⏱️ BOLT",             ["bolt_score"]),
-        tab_label("🌬️ Test HV",          ["hvt_symptomes_reproduits","hvt_repos_0_petco2"]),
-        tab_label("📋 Nijmegen",         ["nij_score"]),
-        tab_label("🧪 Gazométrie",       ["gazo_ph","gazo_paco2","gazo_sato2"]),
-        tab_label("📈 Capnographie",     ["etco2_repos","etco2_pattern"]),
-        tab_label("🔬 Pattern respi.",   ["pattern_frequence","pattern_mode"]),
-        tab_label("💪 SNIF/PImax/PEmax", ["snif_val","pimax_val","pemax_val"]),
-        tab_label("🚶 MRC Dyspnée",      ["mrc_score"]),
-        tab_label("🏥 Comorbidités",     ["comorb_list","comorb_traitements"]),
-        tab_label("💪 Testing", ["musc_hip_flex_d","musc_hip_flex_g","musc_knee_ext_d","musc_knee_ext_g"]),
+        "😟 HAD",
+        "📊 SF-12",
+        "⏱️ BOLT",
+        "🌬️ Test HV",
+        "📋 Nijmegen",
+        "🧪 Gazométrie",
+        "📈 Capnographie",
+        "🔬 Pattern respi.",
+        "💪 SNIF/PImax/PEmax",
+        "🚶 MRC Dyspnée",
+        "🏥 Comorbidités",
+        "💪 Testing",
     ])
 
     # Pré-remplir depuis les données existantes pour ne pas perdre les valeurs non visitées
