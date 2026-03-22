@@ -4,19 +4,16 @@ import pandas as pd
 
 from utils.db import (
     get_all_patients, create_patient,
-    get_patient_bilans_equilibre, save_bilan_equilibre, delete_bilan_equilibre,
+    get_patient_bilans_bpco, save_bilan_bpco, delete_bilan_bpco,
 )
 from utils.muscle_widget import render_muscle_tab
-from utils.equilibre_data import (
-    TINETTI_EQUILIBRE, TINETTI_MARCHE, TINETTI_EQ_KEYS, TINETTI_MA_KEYS,
-    compute_tinetti, TINETTI_EQ_MAX, TINETTI_MA_MAX,
-    BERG_ITEMS, BERG_KEYS, compute_berg,
-    SPPB_BALANCE_OPTS, SPPB_WALK_OPTS, SPPB_CHAIR_OPTS, compute_sppb,
+from utils.bpco_data import (
+    MMRC_GRADES, CAT_ITEMS, CAT_KEYS, compute_cat,
+    compute_bode, interpret_6mwt,
 )
 
-st.set_page_config(page_title="Bilan Équilibre", page_icon="🧘", layout="wide")
+st.set_page_config(page_title="Bilan BPCO", page_icon="🫁", layout="wide")
 
-# ─── CSS ──────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 .page-title{font-size:1.8rem;font-weight:700;color:#2B57A7;margin-bottom:.2rem;}
@@ -31,570 +28,476 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Session state ─────────────────────────────────────────────────────────────
 for k, v in {
-    "eq_mode": "accueil", "eq_patient_id": None, "eq_patient_info": None,
-    "eq_bilan_id": None, "eq_bilan_data": {}, "eq_unsaved": False,
+    "bp_mode": "accueil", "bp_patient_id": None, "bp_patient_info": None,
+    "bp_bilan_id": None, "bp_bilan_data": {}, "bp_unsaved": False,
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
 def lv(key, default=None):
-    v = st.session_state.eq_bilan_data.get(key)
+    v = st.session_state.bp_bilan_data.get(key)
     return default if (v is None or str(v).strip() in ("","None")) else v
-
-def lv_int(key, default=0):
-    try: return int(float(lv(key, default)))
-    except: return default
-
-def lv_float(key, default=0.0):
-    try: return float(lv(key, default))
-    except: return default
-
+def lv_int(key, d=0):
+    try: return int(float(lv(key, d)))
+    except: return d
 def lv_float_or_none(key):
     v = lv(key, None)
     if v is None or str(v).strip() in ("","None"): return None
-    try:
-        r = float(v); return r if r != 0.0 else None
+    try: r=float(v); return r if r!=0.0 else None
     except: return None
-
 def lv_int_or_none(key):
     v = lv(key, None)
     if v is None or str(v).strip() in ("","None"): return None
-    try:
-        r = int(float(v)); return r if r != 0 else None
+    try: r=int(float(v)); return r if r!=0 else None
     except: return None
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  ACCUEIL
-# ═══════════════════════════════════════════════════════════════════════════════
+# ─── Accueil ──────────────────────────────────────────────────────────────────
 def render_accueil():
-    st.markdown('<div class="page-title">🧘 Bilan Équilibre — Gériatrie</div>',
-                unsafe_allow_html=True)
+    st.markdown('<div class="page-title">🫁 Bilan BPCO</div>', unsafe_allow_html=True)
 
     # Bouton questionnaires vierges
     col_print, _ = st.columns([2, 5])
     with col_print:
-        if st.button("🖨️ Imprimer questionnaires", key="eq_print_accueil"):
-            st.session_state["eq_show_print_accueil"] = True
+        if st.button("🖨️ Imprimer questionnaires", key="bp_print_accueil"):
+            st.session_state["bp_show_print_accueil"] = True
 
-    if st.session_state.get("eq_show_print_accueil", False):
+    if st.session_state.get("bp_show_print_accueil", False):
         with st.container():
             st.markdown("""<div style="background:#E8EEF9;border:2px solid #2B57A7;
                 border-radius:10px;padding:1.2rem 1.5rem;margin-bottom:1rem;">
                 <span style="font-size:1.1rem;font-weight:700;color:#2B57A7;">
                 🖨️ Questionnaires à imprimer (vierges)</span></div>""",
                 unsafe_allow_html=True)
-            ep1, ep2 = st.columns(2)
-            with ep1: pr_musc = st.checkbox("💪 Testing musculaire", value=True, key="eq_acc_musc")
-            with ep2: pr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="eq_acc_lp")
-            sel_eq = (["muscle"] if pr_musc else []) + (["leg_press"] if pr_lp else [])
+            bp1, bp2 = st.columns(2)
+            with bp1: bpr_musc = st.checkbox("💪 Testing musculaire", value=True, key="bp_acc_musc")
+            with bp2: bpr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="bp_acc_lp")
+            sel_bp = (["muscle"] if bpr_musc else []) + (["leg_press"] if bpr_lp else [])
             ga, gb, _ = st.columns([1.5, 1, 4])
             with ga:
-                if sel_eq:
-                    from utils.equilibre_pdf import generate_questionnaires_pdf as _gqe
+                if sel_bp:
+                    from utils.bpco_pdf import generate_questionnaires_pdf as _gqb
                     with st.spinner("Génération…"):
-                        q_pdf = _gqe(sel_eq, None)
+                        q_pdf = _gqb(sel_bp, None)
                     st.download_button("📥 Télécharger", data=q_pdf,
-                        file_name=f"questionnaires_equilibre_vierges_{date.today()}.pdf",
-                        mime="application/pdf", type="primary", key="eq_acc_dl")
+                        file_name=f"questionnaires_bpco_vierges_{date.today()}.pdf",
+                        mime="application/pdf", type="primary", key="bp_acc_dl")
                 else:
                     st.warning("Sélectionnez au moins un questionnaire.")
             with gb:
-                if st.button("✖ Fermer", key="eq_acc_close"):
-                    st.session_state["eq_show_print_accueil"] = False; st.rerun()
+                if st.button("✖ Fermer", key="bp_acc_close"):
+                    st.session_state["bp_show_print_accueil"] = False; st.rerun()
     st.markdown("---")
 
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("#### 🔍 Rechercher un patient")
-        patients_df = get_all_patients()
-        if patients_df.empty:
-            st.info("Aucun patient enregistré.")
+        df = get_all_patients()
+        if df.empty: st.info("Aucun patient.")
         else:
-            search = st.text_input("Nom ou prénom…", key="eq_search")
-            filtered = patients_df
-            if search:
-                mask = (patients_df["nom"].str.contains(search.upper(), na=False) |
-                        patients_df["prenom"].str.contains(search.capitalize(), na=False))
-                filtered = patients_df[mask]
-            if filtered.empty:
-                st.warning("Aucun résultat.")
+            s = st.text_input("Nom ou prénom…", key="bp_search")
+            filt = df
+            if s:
+                filt = df[df["nom"].str.contains(s.upper(),na=False)|
+                          df["prenom"].str.contains(s.capitalize(),na=False)]
+            if filt.empty: st.warning("Aucun résultat.")
             else:
-                for _, row in filtered.iterrows():
-                    c1, c2 = st.columns([3, 1])
+                for _, row in filt.iterrows():
+                    c1,c2 = st.columns([3,1])
                     with c1:
-                        st.markdown(
-                            f"**{row['nom']} {row['prenom']}** | "
-                            f"{row.get('date_naissance','—')} — `{row['patient_id']}`")
+                        st.markdown(f"**{row['nom']} {row['prenom']}** | "
+                                    f"{row.get('date_naissance','—')} — `{row['patient_id']}`")
                     with c2:
-                        if st.button("Sélectionner", key=f"eqsel_{row['patient_id']}"):
-                            st.session_state.eq_patient_id   = row["patient_id"]
-                            st.session_state.eq_patient_info = row.to_dict()
-                            st.session_state.eq_mode         = "bilan"
+                        if st.button("Sélectionner", key=f"bpsel_{row['patient_id']}"):
+                            st.session_state.bp_patient_id   = row["patient_id"]
+                            st.session_state.bp_patient_info = row.to_dict()
+                            st.session_state.bp_mode         = "bilan"
                             st.rerun()
     with col_b:
         st.markdown("#### ➕ Nouveau patient")
-        with st.form("eq_new_pat", clear_on_submit=True):
-            nom    = st.text_input("Nom *")
-            prenom = st.text_input("Prénom *")
-            ddn    = st.date_input("Date de naissance *",
-                                   min_value=date(1900,1,1), max_value=date.today())
-            sexe   = st.selectbox("Sexe", ["Féminin","Masculin","Autre"])
-            sub    = st.form_submit_button("➕ Créer", type="primary")
+        with st.form("bp_new_pat", clear_on_submit=True):
+            nom=st.text_input("Nom *"); prenom=st.text_input("Prénom *")
+            ddn=st.date_input("Date naissance *",min_value=date(1900,1,1),max_value=date.today())
+            sexe=st.selectbox("Sexe",["Féminin","Masculin","Autre"])
+            sub=st.form_submit_button("➕ Créer",type="primary")
         if sub:
-            if not nom or not prenom:
-                st.error("Nom et prénom obligatoires.")
+            if not nom or not prenom: st.error("Nom et prénom obligatoires.")
             else:
-                pid = create_patient(nom, prenom, ddn, sexe, "")
-                df2 = get_all_patients()
-                row = df2[df2["patient_id"]==pid].iloc[0]
-                st.session_state.eq_patient_id   = pid
-                st.session_state.eq_patient_info = row.to_dict()
-                st.session_state.eq_mode         = "bilan"
-                st.rerun()
+                pid=create_patient(nom,prenom,ddn,sexe,"")
+                df2=get_all_patients()
+                row=df2[df2["patient_id"]==pid].iloc[0]
+                st.session_state.bp_patient_id=pid
+                st.session_state.bp_patient_info=row.to_dict()
+                st.session_state.bp_mode="bilan"; st.rerun()
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  SÉLECTION BILAN
-# ═══════════════════════════════════════════════════════════════════════════════
+# ─── Sélection bilan ──────────────────────────────────────────────────────────
 def render_bilan_selection():
-    info      = st.session_state.eq_patient_info
-    bilans_df = get_patient_bilans_equilibre(st.session_state.eq_patient_id)
-
-    st.markdown(
-        f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} '
-        f'— {info.get("date_naissance","—")} — ID : {info["patient_id"]}</div>',
-        unsafe_allow_html=True)
-
-    sel_ids = st.session_state.get("eq_selected_ids", None)
-    if sel_ids is None or not bilans_df.empty:
-        sel_ids = list(bilans_df["bilan_id"]) if not bilans_df.empty else []
-        st.session_state["eq_selected_ids"] = sel_ids
+    info=st.session_state.bp_patient_info
+    bilans_df=get_patient_bilans_bpco(st.session_state.bp_patient_id)
+    st.markdown(f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} '
+                f'— {info.get("date_naissance","—")} — ID : {info["patient_id"]}</div>',
+                unsafe_allow_html=True)
+    sel_ids=st.session_state.get("bp_selected_ids",list(bilans_df["bilan_id"]) if not bilans_df.empty else [])
+    st.session_state["bp_selected_ids"]=sel_ids
 
     def get_sel(df):
-        sel = st.session_state.get("eq_selected_ids", [])
-        f = df[df["bilan_id"].isin(sel)] if sel else df
+        f=df[df["bilan_id"].isin(sel_ids)] if sel_ids else df
         return f if not f.empty else df
 
-    col_back, col_evol, col_pdf, col_print, _ = st.columns([1, 1, 1.2, 1.5, 2])
+    col_back,col_evol,col_pdf,col_print,_=st.columns([1,1,1.2,1.5,2])
     with col_back:
         if st.button("⬅️ Changer de patient"):
-            for k in ["eq_patient_id","eq_patient_info","eq_bilan_id"]:
-                st.session_state[k] = None
-            st.session_state.eq_bilan_data = {}
-            st.session_state.pop("eq_selected_ids", None)
-            st.session_state.eq_mode = "accueil"
-            st.rerun()
+            for k in ["bp_patient_id","bp_patient_info","bp_bilan_id"]: st.session_state[k]=None
+            st.session_state.bp_bilan_data={}; st.session_state.pop("bp_selected_ids",None)
+            st.session_state.bp_mode="accueil"; st.rerun()
     with col_evol:
         if not bilans_df.empty:
-            if st.button("📈 Voir l'évolution", type="primary"):
-                st.session_state.eq_mode = "evolution"
-                st.rerun()
+            if st.button("📈 Voir l'évolution",type="primary"):
+                st.session_state.bp_mode="evolution"; st.rerun()
     with col_pdf:
         if not bilans_df.empty:
-            from utils.equilibre_pdf import generate_pdf_equilibre
-            sel_df = get_sel(bilans_df)
+            from utils.bpco_pdf import generate_pdf_bpco
+            sel_df=get_sel(bilans_df)
             with st.spinner("PDF…"):
-                pdf = generate_pdf_equilibre(sel_df, info)
-            st.download_button(
-                f"📄 Exporter PDF ({len(sel_df)})",
-                data=pdf,
-                file_name=f"equilibre_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
+                pdf=generate_pdf_bpco(sel_df,info)
+            st.download_button(f"📄 Exporter PDF ({len(sel_df)})",data=pdf,
+                file_name=f"bpco_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
                 mime="application/pdf")
-
     with col_print:
-        if st.button("🖨️ Imprimer questionnaires", key="eq_print_btn"):
-            st.session_state["eq_show_print"] = True
+        if st.button("🖨️ Imprimer questionnaires", key="bp_print_btn"):
+            st.session_state["bp_show_print"] = True
 
-    # ── Panneau impression ────────────────────────────────────────────────────
-    if st.session_state.get("eq_show_print", False):
+    if st.session_state.get("bp_show_print", False):
         with st.container():
             st.markdown("""<div style="background:#E8EEF9;border:2px solid #2B57A7;
                 border-radius:10px;padding:1.2rem 1.5rem;margin-bottom:1rem;">
                 <span style="font-size:1.1rem;font-weight:700;color:#2B57A7;">
-                🖨️ Sélectionner les questionnaires à imprimer</span></div>""",
+                🖨️ Questionnaires à imprimer</span></div>""",
                 unsafe_allow_html=True)
-            ep1, ep2 = st.columns(2)
-            with ep1: pr_musc = st.checkbox("💪 Testing musculaire", value=True, key="eq_pr_musc")
-            with ep2: pr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="eq_pr_lp")
-            sel_eq = (["muscle"] if pr_musc else []) + (["leg_press"] if pr_lp else [])
+            bp1, bp2 = st.columns(2)
+            with bp1: bpr_musc = st.checkbox("💪 Testing musculaire", value=True, key="bp_pr_musc")
+            with bp2: bpr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="bp_pr_lp")
+            sel_bp = (["muscle"] if bpr_musc else []) + (["leg_press"] if bpr_lp else [])
             ga, gb, _ = st.columns([1.5, 1, 4])
             with ga:
-                if sel_eq:
-                    from utils.equilibre_pdf import generate_questionnaires_pdf as _gqe
+                if sel_bp:
+                    from utils.bpco_pdf import generate_questionnaires_pdf as _gqb
                     with st.spinner("Génération…"):
-                        q_pdf = _gqe(sel_eq, info)
+                        q_pdf = _gqb(sel_bp, info)
                     st.download_button("📥 Télécharger", data=q_pdf,
-                        file_name=f"questionnaires_eq_{info['nom']}_{date.today()}.pdf",
-                        mime="application/pdf", type="primary", key="eq_dl_q")
+                        file_name=f"questionnaires_bpco_{info['nom']}_{date.today()}.pdf",
+                        mime="application/pdf", type="primary", key="bp_dl_q")
                 else:
                     st.warning("Sélectionnez au moins un questionnaire.")
             with gb:
-                if st.button("✖ Fermer", key="eq_close_print"):
-                    st.session_state["eq_show_print"] = False; st.rerun()
+                if st.button("✖ Fermer", key="bp_close_print"):
+                    st.session_state["bp_show_print"] = False; st.rerun()
 
     st.markdown("---")
-    col_left, col_right = st.columns(2)
+    col_left,col_right=st.columns(2)
     with col_left:
         st.markdown("#### 📋 Bilans existants")
-        if bilans_df.empty:
-            st.info("Aucun bilan pour ce patient.")
+        if bilans_df.empty: st.info("Aucun bilan.")
         else:
-            st.markdown("<small style='color:#888'>Cochez les bilans à inclure dans l'évolution</small>",
-                        unsafe_allow_html=True)
-            new_sel = []
-            for _, row in bilans_df.iterrows():
-                bid = row["bilan_id"]
-                c_ck, c_info, c_open, c_del = st.columns([0.5, 3.5, 0.8, 0.8])
+            new_sel=[]
+            for _,row in bilans_df.iterrows():
+                bid=row["bilan_id"]
+                c_ck,c_info,c_open,c_del=st.columns([0.5,3.5,0.8,0.8])
                 with c_ck:
-                    if st.checkbox("", value=bid in sel_ids, key=f"eqck_{bid}",
-                                   label_visibility="collapsed"):
-                        new_sel.append(bid)
+                    if st.checkbox("",value=bid in sel_ids,key=f"bpck_{bid}",
+                                   label_visibility="collapsed"): new_sel.append(bid)
                 with c_info:
-                    st.markdown(
-                        f"**{row.get('date_bilan','—')}** — {row.get('type_bilan','—')}"
-                        f"  \n<small>`{bid}`</small>", unsafe_allow_html=True)
+                    st.markdown(f"**{row.get('date_bilan','—')}** — {row.get('type_bilan','—')}"
+                                f"  \n<small>`{bid}`</small>",unsafe_allow_html=True)
                 with c_open:
-                    if st.button("✏️", key=f"eqopen_{bid}", help="Ouvrir ce bilan"):
-                        st.session_state.eq_bilan_id   = bid
-                        st.session_state.eq_bilan_data = row.to_dict()
-                        st.session_state.eq_mode       = "formulaire"
-                        st.session_state.eq_unsaved    = False
-                        st.rerun()
+                    if st.button("✏️",key=f"bpopen_{bid}",help="Ouvrir ce bilan"):
+                        st.session_state.bp_bilan_id=bid
+                        st.session_state.bp_bilan_data=row.to_dict()
+                        st.session_state.bp_mode="formulaire"
+                        st.session_state.bp_unsaved=False; st.rerun()
                 with c_del:
-                    if st.button("🗑️", key=f"eqdel_{bid}", help="Supprimer"):
-                        st.session_state[f"eq_confirm_del_{bid}"] = True
-                if st.session_state.get(f"eq_confirm_del_{bid}", False):
-                    st.warning(f"⚠️ Supprimer définitivement ce bilan ?")
-                    ca, cb, _ = st.columns([1,1,3])
+                    if st.button("🗑️",key=f"bpdel_{bid}",help="Supprimer"):
+                        st.session_state[f"bp_confirm_del_{bid}"]=True
+                if st.session_state.get(f"bp_confirm_del_{bid}",False):
+                    st.warning("⚠️ Supprimer définitivement ce bilan ?")
+                    ca,cb,_=st.columns([1,1,3])
                     with ca:
-                        if st.button("✅ Confirmer", key=f"eqdelok_{bid}", type="primary"):
-                            delete_bilan_equilibre(bid)
-                            st.session_state.pop(f"eq_confirm_del_{bid}", None)
-                            st.session_state["eq_selected_ids"] = [i for i in sel_ids if i != bid]
+                        if st.button("✅ Confirmer",key=f"bpdelok_{bid}",type="primary"):
+                            delete_bilan_bpco(bid)
+                            st.session_state.pop(f"bp_confirm_del_{bid}",None)
+                            st.session_state["bp_selected_ids"]=[i for i in sel_ids if i!=bid]
                             st.rerun()
                     with cb:
-                        if st.button("✖ Annuler", key=f"eqdelcancel_{bid}"):
-                            st.session_state.pop(f"eq_confirm_del_{bid}", None)
-                            st.rerun()
-            st.session_state["eq_selected_ids"] = new_sel
-
+                        if st.button("✖ Annuler",key=f"bpdelcancel_{bid}"):
+                            st.session_state.pop(f"bp_confirm_del_{bid}",None); st.rerun()
+            st.session_state["bp_selected_ids"]=new_sel
     with col_right:
         st.markdown("#### ➕ Nouveau bilan")
-        with st.form("eq_new_bilan"):
-            bilan_date = st.date_input("Date", value=date.today())
-            bilan_type = st.selectbox("Type", ["Bilan initial","Bilan intermédiaire","Bilan final"])
-            praticien  = st.text_input("Praticien")
-            go = st.form_submit_button("➕ Créer", type="primary")
+        with st.form("bp_new_bilan"):
+            bilan_date=st.date_input("Date",value=date.today())
+            bilan_type=st.selectbox("Type",["Bilan initial","Bilan intermédiaire","Bilan final"])
+            praticien=st.text_input("Praticien")
+            go=st.form_submit_button("➕ Créer",type="primary")
         if go:
-            st.session_state.eq_bilan_id   = None
-            st.session_state.eq_bilan_data = {
-                "patient_id": st.session_state.eq_patient_id,
-                "date_bilan": str(bilan_date),
-                "type_bilan": bilan_type,
-                "praticien": praticien,
-            }
-            st.session_state.eq_mode    = "formulaire"
-            st.session_state.eq_unsaved = True
-            st.rerun()
+            st.session_state.bp_bilan_id=None
+            st.session_state.bp_bilan_data={"patient_id":st.session_state.bp_patient_id,
+                "date_bilan":str(bilan_date),"type_bilan":bilan_type,"praticien":praticien}
+            st.session_state.bp_mode="formulaire"; st.session_state.bp_unsaved=True; st.rerun()
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  FORMULAIRE BILAN
-# ═══════════════════════════════════════════════════════════════════════════════
+# ─── Formulaire ───────────────────────────────────────────────────────────────
 def render_formulaire():
-    info = st.session_state.eq_patient_info
-    bd   = st.session_state.eq_bilan_data
-    st.markdown(
-        f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} '
-        f'— {bd.get("type_bilan","—")} du {bd.get("date_bilan","—")}</div>',
-        unsafe_allow_html=True)
-
-    col_back, col_save, _ = st.columns([1,1,4])
+    info=st.session_state.bp_patient_info; bd=st.session_state.bp_bilan_data
+    st.markdown(f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} '
+                f'— {bd.get("type_bilan","—")} du {bd.get("date_bilan","—")}</div>',
+                unsafe_allow_html=True)
+    col_back,col_save,_=st.columns([1,1,4])
     with col_back:
         if st.button("⬅️ Retour"):
-            if not st.session_state.get("eq_just_saved", False):
-                st.session_state["eq_confirm_back"] = True
+            if not st.session_state.get("bp_just_saved",False):
+                st.session_state["bp_confirm_back"]=True
             else:
-                st.session_state.pop("eq_just_saved", None)
-                st.session_state.eq_mode = "bilan"
-                st.rerun()
+                st.session_state.pop("bp_just_saved",None)
+                st.session_state.bp_mode="bilan"; st.rerun()
     with col_save:
-        save_top = st.button("💾 Sauvegarder", type="primary")
-
-    if st.session_state.get("eq_confirm_back", False):
+        save_top=st.button("💾 Sauvegarder",type="primary")
+    if st.session_state.get("bp_confirm_back",False):
         st.warning("⚠️ **Modifications non sauvegardées.** Quitter sans sauvegarder ?")
-        ca, cb, _ = st.columns([1.5, 1.5, 4])
+        ca,cb,_=st.columns([1.5,1.5,4])
         with ca:
-            if st.button("🚪 Quitter sans sauvegarder", type="primary", key="eq_back_ok"):
-                st.session_state["eq_confirm_back"] = False
-                st.session_state.eq_mode = "bilan"
-                st.rerun()
+            if st.button("🚪 Quitter sans sauvegarder",type="primary",key="bp_back_ok"):
+                st.session_state["bp_confirm_back"]=False
+                st.session_state.bp_mode="bilan"; st.rerun()
         with cb:
-            if st.button("✏️ Continuer l'édition", key="eq_back_cancel"):
-                st.session_state["eq_confirm_back"] = False
-                st.rerun()
-
+            if st.button("✏️ Continuer l'édition",key="bp_back_cancel"):
+                st.session_state["bp_confirm_back"]=False; st.rerun()
     st.markdown("---")
-    collected = dict(st.session_state.eq_bilan_data)
+    collected=dict(st.session_state.bp_bilan_data)
 
-    tab_gen, tab_tinetti, tab_sts, tab_unip, tab_tug, tab_berg, tab_sppb, tab_musc, tab_lp = st.tabs([
-        "📝 Général", "🧍 Tinetti", "🪑 STS 1 min",
-        "🦵 Unipodal", "⏱️ TUG", "⚖️ Berg", "📊 SPPB",
-        "💪 Musculaire", "🏋️ 1RM Leg Press",
+    tab_gen,tab_spiro,tab_mwt,tab_sts,tab_mmrc,tab_cat,tab_bode,tab_musc,tab_lp = st.tabs([
+        "📝 Général","🌬️ Spirométrie","🏃 6MWT","🪑 STS 1min",
+        "😮‍💨 mMRC","📋 CAT","📊 BODE","💪 Musculaire","🏋️ 1RM Leg Press",
     ])
 
     # ── GÉNÉRAL ───────────────────────────────────────────────────────────────
     with tab_gen:
-        st.markdown('<div class="section-title">Informations générales</div>',
-                    unsafe_allow_html=True)
-        g1, g2 = st.columns(2)
+        st.markdown('<div class="section-title">Informations générales</div>',unsafe_allow_html=True)
+        g1,g2=st.columns(2)
         with g1:
-            bilan_date = st.date_input("Date du bilan", value=pd.to_datetime(lv("date_bilan", str(date.today()))))
-            bilan_type = st.selectbox("Type", ["Bilan initial","Bilan intermédiaire","Bilan final"],
+            bd_date=st.date_input("Date",value=pd.to_datetime(lv("date_bilan",str(date.today()))))
+            bd_type=st.selectbox("Type",["Bilan initial","Bilan intermédiaire","Bilan final"],
                 index=["Bilan initial","Bilan intermédiaire","Bilan final"].index(
                     lv("type_bilan","Bilan initial")) if lv("type_bilan") else 0)
         with g2:
-            praticien = st.text_input("Praticien", value=lv("praticien",""))
-            notes = st.text_area("Notes générales", value=lv("notes_generales",""), height=80)
-        collected.update({"date_bilan": str(bilan_date), "type_bilan": bilan_type,
-                          "praticien": praticien, "notes_generales": notes})
+            prat=st.text_input("Praticien",value=lv("praticien",""))
+            notes=st.text_area("Notes",value=lv("notes_generales",""),height=80)
+        g3,g4=st.columns(2)
+        with g3:
+            poids=st.number_input("Poids (kg)",0.0,250.0,lv_float_or_none("poids"),0.5,
+                                  key="bp_poids",help="0 = non mesuré")
+        with g4:
+            taille=st.number_input("Taille (cm)",0.0,220.0,lv_float_or_none("taille"),0.5,
+                                   key="bp_taille",help="0 = non mesuré")
+        bmi=None
+        if poids and taille and poids>0 and taille>0:
+            bmi=round(poids/(taille/100)**2,1)
+            st.metric("IMC",f"{bmi} kg/m²")
+        collected.update({"date_bilan":str(bd_date),"type_bilan":bd_type,"praticien":prat,
+                          "notes_generales":notes,"poids":poids or "","taille":taille or "",
+                          "bmi":bmi or ""})
 
-    # ── TINETTI ───────────────────────────────────────────────────────────────
-    with tab_tinetti:
-        st.markdown('<div class="section-title">Tinetti — POMA</div>', unsafe_allow_html=True)
-        st.markdown('<div class="info-box">Évaluation de l\'équilibre et de la marche. '
-                    'Seuil de risque de chute : < 24/28</div>', unsafe_allow_html=True)
+    # ── SPIROMÉTRIE ───────────────────────────────────────────────────────────
+    with tab_spiro:
+        st.markdown('<div class="section-title">Spirométrie</div>',unsafe_allow_html=True)
+        st.markdown('<div class="info-box">Valeurs post-bronchodilatateur si disponibles.</div>',
+                    unsafe_allow_html=True)
+        s1,s2=st.columns(2)
+        with s1:
+            vems=st.number_input("VEMS (L)",0.0,8.0,lv_float_or_none("spiro_vems"),0.01,
+                                 key="sp_vems",help="Volume Expiratoire Maximal Seconde")
+            cvf=st.number_input("CVF (L)",0.0,10.0,lv_float_or_none("spiro_cvf"),0.01,
+                                key="sp_cvf",help="Capacité Vitale Forcée")
+            ratio=st.number_input("VEMS/CVF (%)",0.0,100.0,lv_float_or_none("spiro_ratio"),0.1,
+                                  key="sp_ratio")
+        with s2:
+            vems_pct=st.number_input("VEMS % prédit",0.0,200.0,lv_float_or_none("spiro_vems_pct"),0.1,
+                                     key="sp_vems_pct")
+            cvf_pct=st.number_input("CVF % prédit",0.0,200.0,lv_float_or_none("spiro_cvf_pct"),0.1,
+                                    key="sp_cvf_pct")
+            gold_opts=["— Non renseigné —","GOLD 1 (léger ≥ 80%)","GOLD 2 (modéré 50–79%)",
+                       "GOLD 3 (sévère 30–49%)","GOLD 4 (très sévère < 30%)"]
+            stored_gold=lv("spiro_gold","— Non renseigné —")
+            gold=st.selectbox("Stade GOLD",gold_opts,
+                index=gold_opts.index(stored_gold) if stored_gold in gold_opts else 0)
+        if vems_pct and vems_pct>0:
+            if vems_pct>=80:   gc,gi="#388e3c","GOLD 1 — Léger"
+            elif vems_pct>=50: gc,gi="#f57c00","GOLD 2 — Modéré"
+            elif vems_pct>=30: gc,gi="#e64a19","GOLD 3 — Sévère"
+            else:              gc,gi="#d32f2f","GOLD 4 — Très sévère"
+            st.markdown(f'<div class="score-box" style="background:{gc};">'
+                        f'VEMS {vems_pct}% prédit → {gi}</div>',unsafe_allow_html=True)
+        spo2_r=st.number_input("SpO₂ repos (%)",0.0,100.0,lv_float_or_none("spo2_repos"),0.1,
+                                key="sp_spo2r",help="0 = non mesuré")
+        spiro_notes=st.text_area("Notes spirométrie",value=lv("spiro_notes",""),height=60,key="sp_notes")
+        collected.update({"spiro_vems":vems or "","spiro_cvf":cvf or "","spiro_ratio":ratio or "",
+            "spiro_vems_pct":vems_pct or "","spiro_cvf_pct":cvf_pct or "",
+            "spiro_gold":"" if gold=="— Non renseigné —" else gold,
+            "spo2_repos":spo2_r or "","spiro_notes":spiro_notes})
 
-        tin_answers = {}
-        st.markdown("**Partie A — Équilibre (0–16)**")
-        for key, label, options in TINETTI_EQUILIBRE:
-            stored = lv(key, "")
-            opts_ext = ["— Non évalué —"] + [f"{s} — {d}" for s,d in options]
-            stored_idx = 0
-            if stored != "":
-                try:
-                    s_int = int(float(stored))
-                    stored_idx = next((i+1 for i,(s,_) in enumerate(options) if s==s_int), 0)
-                except: pass
-            chosen = st.radio(label, opts_ext, index=stored_idx, key=f"tin_{key}", horizontal=False)
-            if chosen != "— Non évalué —":
-                score = int(chosen.split(" — ")[0])
-                tin_answers[key] = score
-                collected[key]   = score
-            else:
-                collected[key] = ""
-
-        st.markdown("---")
-        st.markdown("**Partie B — Marche (0–12)**")
-        for key, label, options in TINETTI_MARCHE:
-            stored = lv(key, "")
-            opts_ext = ["— Non évalué —"] + [f"{s} — {d}" for s,d in options]
-            stored_idx = 0
-            if stored != "":
-                try:
-                    s_int = int(float(stored))
-                    stored_idx = next((i+1 for i,(s,_) in enumerate(options) if s==s_int), 0)
-                except: pass
-            chosen = st.radio(label, opts_ext, index=stored_idx, key=f"tin_{key}", horizontal=False)
-            if chosen != "— Non évalué —":
-                score = int(chosen.split(" — ")[0])
-                tin_answers[key] = score
-                collected[key]   = score
-            else:
-                collected[key] = ""
-
-        result = compute_tinetti(tin_answers)
-        if result["total"] is not None:
-            st.markdown("---")
-            eq_s = f"{result['eq']}/{TINETTI_EQ_MAX}" if result['eq'] is not None else "—"
-            ma_s = f"{result['ma']}/{TINETTI_MA_MAX}" if result['ma'] is not None else "—"
-            st.markdown(
-                f'<div class="score-box" style="background:{result["color"]};">'
-                f'Tinetti : {result["total"]}/28 — {result["interpretation"]}'
-                f'  <small>(Équilibre : {eq_s} · Marche : {ma_s})</small></div>',
-                unsafe_allow_html=True)
-        collected.update({
-            "tinetti_eq_score": result["eq"] if result["eq"] is not None else "",
-            "tinetti_ma_score": result["ma"] if result["ma"] is not None else "",
-            "tinetti_total": result["total"] if result["total"] is not None else "",
-            "tinetti_interpretation": result["interpretation"],
-        })
+    # ── 6MWT ──────────────────────────────────────────────────────────────────
+    with tab_mwt:
+        st.markdown('<div class="section-title">Test de marche de 6 minutes (6MWT)</div>',
+                    unsafe_allow_html=True)
+        m1,m2=st.columns(2)
+        with m1:
+            st.markdown("**Avant**")
+            spo2_av=st.number_input("SpO₂ avant (%)",0.0,100.0,lv_float_or_none("mwt_spo2_avant"),0.1,key="mwt_s1")
+            fc_av=st.number_input("FC avant (bpm)",0,250,lv_int_or_none("mwt_fc_avant"),1,key="mwt_f1")
+            dysp_av=st.select_slider("Dyspnée avant (Borg 0–10)",
+                options=[None,0,1,2,3,4,5,6,7,8,9,10],
+                value=lv_int_or_none("mwt_dyspnee_avant"),
+                format_func=lambda x: "—" if x is None else str(x), key="mwt_d1")
+            fat_av=st.select_slider("Fatigue avant (Borg 0–10)",
+                options=[None,0,1,2,3,4,5,6,7,8,9,10],
+                value=lv_int_or_none("mwt_fatigue_avant"),
+                format_func=lambda x: "—" if x is None else str(x), key="mwt_fa1")
+        with m2:
+            st.markdown("**Après**")
+            spo2_ap=st.number_input("SpO₂ après (%)",0.0,100.0,lv_float_or_none("mwt_spo2_apres"),0.1,key="mwt_s2")
+            spo2_min=st.number_input("SpO₂ min (%)",0.0,100.0,lv_float_or_none("mwt_spo2_min"),0.1,key="mwt_s3",help="SpO₂ minimale pendant le test")
+            fc_ap=st.number_input("FC après (bpm)",0,250,lv_int_or_none("mwt_fc_apres"),1,key="mwt_f2")
+            dysp_ap=st.select_slider("Dyspnée après (Borg 0–10)",
+                options=[None,0,1,2,3,4,5,6,7,8,9,10],
+                value=lv_int_or_none("mwt_dyspnee_apres"),
+                format_func=lambda x: "—" if x is None else str(x), key="mwt_d2")
+            fat_ap=st.select_slider("Fatigue après (Borg 0–10)",
+                options=[None,0,1,2,3,4,5,6,7,8,9,10],
+                value=lv_int_or_none("mwt_fatigue_apres"),
+                format_func=lambda x: "—" if x is None else str(x), key="mwt_fa2")
+        dist=st.number_input("Distance parcourue (mètres)",0,1000,lv_int_or_none("mwt_distance"),1,
+                             key="mwt_dist",help="0 = non réalisé")
+        aide_opts=["Aucune","Canne","Déambulateur","Oxygène","Autre"]
+        # Charger valeurs existantes (stockées comme "Canne|Oxygène")
+        stored_aide = lv("mwt_aide_technique","")
+        default_aide = [x for x in str(stored_aide).split("|") if x in aide_opts] if stored_aide else []
+        mwt_aides = st.multiselect("Aide(s) technique(s)", aide_opts,
+                                   default=default_aide, key="mwt_aide_multi")
+        mwt_aide_val = "|".join(mwt_aides) if mwt_aides else ""
+        mwt_inc=st.text_area("Incidents / arrêts",value=lv("mwt_incidents",""),height=50,key="mwt_inc")
+        mwt_interp=""
+        if dist and dist>0:
+            r6=interpret_6mwt(dist)
+            mwt_interp=r6["interpretation"]
+            st.markdown(f'<div class="score-box" style="background:{r6["color"]};">'
+                        f'6MWT : {dist} m — {mwt_interp}</div>',unsafe_allow_html=True)
+        collected.update({"mwt_distance":dist or "","mwt_spo2_avant":spo2_av or "",
+            "mwt_spo2_apres":spo2_ap or "","mwt_spo2_min":spo2_min or "",
+            "mwt_fc_avant":fc_av or "","mwt_fc_apres":fc_ap or "",
+            "mwt_dyspnee_avant":"" if dysp_av is None else dysp_av,
+            "mwt_dyspnee_apres":"" if dysp_ap is None else dysp_ap,
+            "mwt_fatigue_avant":"" if fat_av is None else fat_av,
+            "mwt_fatigue_apres":"" if fat_ap is None else fat_ap,
+            "mwt_aide_technique":mwt_aide_val,
+            "mwt_incidents":mwt_inc,"mwt_interpretation":mwt_interp,
+            "spo2_effort":spo2_ap or "","spo2_min_effort":spo2_min or ""})
 
     # ── STS 1 MIN ─────────────────────────────────────────────────────────────
     with tab_sts:
         st.markdown('<div class="section-title">STS — Sit to Stand 1 minute</div>',
                     unsafe_allow_html=True)
-        st.markdown('<div class="info-box">Compter le nombre de levers complets en 1 minute '
-                    'depuis une chaise standard sans appui-bras.</div>', unsafe_allow_html=True)
-        sts_reps = st.number_input("Nombre de répétitions / minute",
-                                   min_value=0, max_value=60, step=1,
-                                   value=lv_int_or_none("sts_1min_reps"),
-                                   help="0 = non réalisé")
-        sts_interp = ""
-        if sts_reps and sts_reps > 0:
-            # Normes approximatives par tranche d'âge (à affiner selon population)
-            if sts_reps >= 14: sts_color, sts_interp = "#388e3c", "Bonne capacité fonctionnelle (≥ 14)"
-            elif sts_reps >= 10: sts_color, sts_interp = "#f57c00", "Capacité modérée (10–13)"
-            else: sts_color, sts_interp = "#d32f2f", "Capacité limitée (< 10)"
-            st.markdown(f'<div class="score-box" style="background:{sts_color};">'
-                        f'{sts_reps} rép/min — {sts_interp}</div>', unsafe_allow_html=True)
-        collected.update({"sts_1min_reps": sts_reps or "", "sts_1min_interpretation": sts_interp})
+        sts=st.number_input("Répétitions / minute",0,60,lv_int_or_none("sts_1min_reps"),1,
+                            key="bp_sts",help="0 = non réalisé")
+        sts_interp=""
+        if sts and sts>0:
+            if sts>=25:   sc,sts_interp="#388e3c","Bonne capacité (≥ 25)"
+            elif sts>=20: sc,sts_interp="#f57c00","Capacité modérée (20–24)"
+            elif sts>=15: sc,sts_interp="#e64a19","Capacité limitée (15–19)"
+            else:         sc,sts_interp="#d32f2f","Capacité très limitée (< 15)"
+            st.markdown(f'<div class="score-box" style="background:{sc};">'
+                        f'{sts} rép/min — {sts_interp}</div>',unsafe_allow_html=True)
+        collected.update({"sts_1min_reps":sts or "","sts_1min_interpretation":sts_interp})
 
-    # ── UNIPODAL ──────────────────────────────────────────────────────────────
-    with tab_unip:
-        st.markdown('<div class="section-title">Équilibre unipodal (secondes)</div>',
-                    unsafe_allow_html=True)
-        st.markdown('<div class="info-box">Temps de maintien sur un pied (max 30 sec). '
-                    'Seuil : < 5 sec = risque de chute élevé.</div>', unsafe_allow_html=True)
-        u1, u2 = st.columns(2)
-        with u1:
-            st.markdown("**Yeux ouverts**")
-            u_do = st.number_input("Côté droit (sec)", 0.0, 30.0,
-                                   lv_float_or_none("unipodal_d_ouvert"), 0.5, key="ueq_do",
-                                   help="0 = non mesuré")
-            u_go = st.number_input("Côté gauche (sec)", 0.0, 30.0,
-                                   lv_float_or_none("unipodal_g_ouvert"), 0.5, key="ueq_go",
-                                   help="0 = non mesuré")
-        with u2:
-            st.markdown("**Yeux fermés**")
-            u_df = st.number_input("Côté droit (sec)", 0.0, 30.0,
-                                   lv_float_or_none("unipodal_d_ferme"), 0.5, key="ueq_df",
-                                   help="0 = non mesuré")
-            u_gf = st.number_input("Côté gauche (sec)", 0.0, 30.0,
-                                   lv_float_or_none("unipodal_g_ferme"), 0.5, key="ueq_gf",
-                                   help="0 = non mesuré")
-        for val, label in [(u_do,"D ouvert"),(u_go,"G ouvert"),(u_df,"D fermé"),(u_gf,"G fermé")]:
-            if val is not None and val > 0:
-                color = "#388e3c" if val >= 10 else "#f57c00" if val >= 5 else "#d32f2f"
-                st.markdown(f'<small style="color:{color}">● {label} : {val}s</small>',
-                            unsafe_allow_html=True)
-        collected.update({"unipodal_d_ouvert": u_do or "", "unipodal_g_ouvert": u_go or "",
-                          "unipodal_d_ferme": u_df or "", "unipodal_g_ferme": u_gf or ""})
+    # ── mMRC ──────────────────────────────────────────────────────────────────
+    with tab_mmrc:
+        st.markdown('<div class="section-title">mMRC — Dyspnée</div>',unsafe_allow_html=True)
+        mmrc_opts=["— Non renseigné —"] + [f"Grade {g} — {d}" for g,d in MMRC_GRADES]
+        stored_mmrc=lv("mmrc_grade","")
+        mmrc_idx=0
+        if stored_mmrc != "":
+            try:
+                g=int(float(stored_mmrc))
+                mmrc_idx=g+1
+            except: pass
+        mmrc_chosen=st.radio("Grade mMRC",mmrc_opts,index=mmrc_idx,key="bp_mmrc")
+        mmrc_val=""
+        if mmrc_chosen!="— Non renseigné —":
+            mmrc_val=int(mmrc_chosen.split(" ")[1])
+            colors=["#388e3c","#8bc34a","#f57c00","#e64a19","#d32f2f"]
+            st.markdown(f'<div class="score-box" style="background:{colors[mmrc_val]};">'
+                        f'mMRC Grade {mmrc_val}</div>',unsafe_allow_html=True)
+        collected["mmrc_grade"]=mmrc_val
 
-    # ── TUG ───────────────────────────────────────────────────────────────────
-    with tab_tug:
-        st.markdown('<div class="section-title">TUG — Timed Up and Go</div>',
+    # ── CAT ───────────────────────────────────────────────────────────────────
+    with tab_cat:
+        st.markdown('<div class="section-title">CAT — COPD Assessment Test</div>',
                     unsafe_allow_html=True)
-        st.markdown('<div class="info-box">Lever, marcher 3 m, demi-tour, revenir, s\'asseoir. '
-                    'Normal < 12 sec chez l\'adulte âgé. < 20 sec = indépendant.</div>',
+        st.markdown('<div class="info-box">8 questions, chacune de 0 à 5. '
+                    'Seuils : 0–10 faible · 11–20 modéré · 21–30 sévère · 31–40 très sévère</div>',
                     unsafe_allow_html=True)
-        t1, t2 = st.columns(2)
-        with t1:
-            tug_temps = st.number_input("Temps (secondes)", 0.0, 120.0,
-                                        lv_float_or_none("tug_temps"), 0.1, key="tug_t",
-                                        help="0 = non mesuré")
-        with t2:
-            tug_aide = st.selectbox("Aide technique",
-                                    ["— Non renseigné —","Aucune","Canne","Déambulateur","Autre"],
-                                    index=["— Non renseigné —","Aucune","Canne","Déambulateur","Autre"].index(
-                                        lv("tug_aide","— Non renseigné —"))
-                                    if lv("tug_aide","") in ["Aucune","Canne","Déambulateur","Autre","— Non renseigné —"] else 0)
-        tug_interp = ""
-        if tug_temps and tug_temps > 0:
-            if tug_temps < 10:   tc, tug_interp = "#388e3c", "Mobilité normale (< 10 sec)"
-            elif tug_temps < 12: tc, tug_interp = "#8bc34a", "Bon score (10–11 sec)"
-            elif tug_temps < 20: tc, tug_interp = "#f57c00", "Risque modéré (12–19 sec)"
-            else:                tc, tug_interp = "#d32f2f", "Risque élevé de chute (≥ 20 sec)"
-            st.markdown(f'<div class="score-box" style="background:{tc};">'
-                        f'TUG : {tug_temps} sec — {tug_interp}</div>', unsafe_allow_html=True)
-        collected.update({
-            "tug_temps": tug_temps or "",
-            "tug_aide": "" if tug_aide == "— Non renseigné —" else tug_aide,
-            "tug_interpretation": tug_interp,
-        })
-
-    # ── BERG ──────────────────────────────────────────────────────────────────
-    with tab_berg:
-        st.markdown('<div class="section-title">Berg Balance Scale (0–56)</div>',
-                    unsafe_allow_html=True)
-        st.markdown('<div class="info-box">14 items cotés 0–4. '
-                    'Seuils : ≤ 20 = risque élevé · 21–40 = risque modéré · ≥ 41 = faible</div>',
-                    unsafe_allow_html=True)
-        berg_answers = {}
-        for key, label, options in BERG_ITEMS:
-            stored = lv(key, "")
-            opts_ext = ["— Non évalué —"] + [f"{s} — {d}" for s,d in options]
-            stored_idx = 0
-            if stored != "":
-                try:
-                    s_int = int(float(stored))
-                    stored_idx = next((i+1 for i,(s,_) in enumerate(options) if s==s_int), 0)
-                except: pass
-            chosen = st.radio(label, opts_ext, index=stored_idx, key=f"berg_{key}", horizontal=False)
-            if chosen != "— Non évalué —":
-                score = int(chosen.split(" — ")[0])
-                berg_answers[key] = score
-                collected[key]    = score
+        cat_answers={}
+        for key,left,right in CAT_ITEMS:
+            num=int(key.split("_")[1])
+            stored=lv(key,"")
+            opts=[None,0,1,2,3,4,5]
+            def fmt(x,l=left,r=right):
+                if x is None: return "— Non renseigné —"
+                if x==0: return f"0 — {l}"
+                if x==5: return f"5 — {r}"
+                return str(x)
+            default_v=None if stored=="" else int(float(stored))
+            chosen=st.select_slider(f"Question {num}",options=opts,
+                value=default_v,format_func=fmt,key=f"cat_{key}")
+            if chosen is not None:
+                cat_answers[key]=chosen; collected[key]=chosen
             else:
-                collected[key] = ""
-        berg_r = compute_berg(berg_answers)
-        if berg_r["score"] is not None:
+                collected[key]=""
+        cat_r=compute_cat(cat_answers)
+        if cat_r["score"] is not None:
             st.markdown("---")
-            st.markdown(
-                f'<div class="score-box" style="background:{berg_r["color"]};">'
-                f'Berg : {berg_r["score"]}/56 — {berg_r["interpretation"]}</div>',
-                unsafe_allow_html=True)
-        collected.update({
-            "berg_score": berg_r["score"] if berg_r["score"] is not None else "",
-            "berg_interpretation": berg_r["interpretation"],
-        })
+            st.markdown(f'<div class="score-box" style="background:{cat_r["color"]};">'
+                        f'CAT : {cat_r["score"]}/40 — {cat_r["interpretation"]}</div>',
+                        unsafe_allow_html=True)
+        collected.update({"cat_score":cat_r["score"] if cat_r["score"] is not None else "",
+                          "cat_interpretation":cat_r["interpretation"]})
 
-    # ── SPPB ──────────────────────────────────────────────────────────────────
-    with tab_sppb:
-        st.markdown('<div class="section-title">SPPB — Short Physical Performance Battery (0–12)</div>',
+    # ── BODE ──────────────────────────────────────────────────────────────────
+    with tab_bode:
+        st.markdown('<div class="section-title">BODE Index (0–10)</div>',unsafe_allow_html=True)
+        st.markdown('<div class="info-box">Calculé automatiquement à partir des données saisies '
+                    '(VEMS%, mMRC, 6MWT, IMC). Complétez les onglets correspondants d\'abord.</div>',
                     unsafe_allow_html=True)
+        bmi_val=lv_float_or_none("bmi") or (collected.get("bmi") if collected.get("bmi") else None)
+        fev1_val=lv_float_or_none("spiro_vems_pct") or (float(collected.get("spiro_vems_pct",0)) if collected.get("spiro_vems_pct") else None)
+        mmrc_val2=lv_int_or_none("mmrc_grade") or (int(float(collected.get("mmrc_grade",0))) if collected.get("mmrc_grade") else None)
+        dist_val=lv_int_or_none("mwt_distance") or (int(float(collected.get("mwt_distance",0))) if collected.get("mwt_distance") else None)
 
-        def _sppb_radio(label, opts, key):
-            stored = lv(key, "")
-            ext = ["— Non évalué —"] + [f"{s} — {d}" for s,d in opts]
-            idx = 0
-            if stored != "":
-                try:
-                    sv = int(float(stored))
-                    idx = next((i+1 for i,(s,_) in enumerate(opts) if s==sv), 0)
-                except: pass
-            chosen = st.radio(label, ext, index=idx, key=f"sppb_{key}", horizontal=False)
-            if chosen == "— Non évalué —":
-                collected[key] = ""; return None
-            else:
-                score = int(chosen.split(" — ")[0])
-                collected[key] = score; return score
+        c1,c2,c3,c4=st.columns(4)
+        with c1: st.metric("VEMS % prédit", f"{fev1_val}%" if fev1_val else "—")
+        with c2: st.metric("mMRC", str(mmrc_val2) if mmrc_val2 is not None else "—")
+        with c3: st.metric("6MWT", f"{dist_val} m" if dist_val else "—")
+        with c4: st.metric("IMC", f"{bmi_val}" if bmi_val else "—")
 
-        st.markdown("**1. Équilibre statique**")
-        bal = _sppb_radio("Score équilibre", SPPB_BALANCE_OPTS, "sppb_balance")
-        st.markdown("---")
-        st.markdown("**2. Vitesse de marche (4 mètres)**")
-        walk_t = st.number_input("Temps de marche (sec)", 0.0, 60.0,
-                                  lv_float_or_none("sppb_walk_time"), 0.1, key="sppb_walk_t",
-                                  help="0 = non mesuré")
-        walk_s = _sppb_radio("Score vitesse de marche", SPPB_WALK_OPTS, "sppb_walk_score")
-        collected["sppb_walk_time"] = walk_t or ""
-        st.markdown("---")
-        st.markdown("**3. Lever de chaise (5 répétitions)**")
-        chair_t = st.number_input("Temps pour 5 levers (sec)", 0.0, 60.0,
-                                   lv_float_or_none("sppb_chair_time"), 0.1, key="sppb_chair_t",
-                                   help="0 = non mesuré")
-        chair_s = _sppb_radio("Score lever de chaise", SPPB_CHAIR_OPTS, "sppb_chair_score")
-        collected["sppb_chair_time"] = chair_t or ""
-
-        sppb_r = compute_sppb(bal, walk_s, chair_s)
-        if sppb_r["score"] is not None:
-            st.markdown("---")
-            st.markdown(
-                f'<div class="score-box" style="background:{sppb_r["color"]};">'
-                f'SPPB : {sppb_r["score"]}/12 — {sppb_r["interpretation"]}</div>',
-                unsafe_allow_html=True)
-        collected.update({
-            "sppb_score": sppb_r["score"] if sppb_r["score"] is not None else "",
-            "sppb_interpretation": sppb_r["interpretation"],
-        })
+        if any(v is not None for v in [fev1_val,mmrc_val2,dist_val,bmi_val]):
+            bode_r=compute_bode(fev1_val,mmrc_val2,dist_val,bmi_val)
+            st.markdown(f'<div class="score-box" style="background:{bode_r["color"]};">'
+                        f'BODE : {bode_r["score"]}/10 — {bode_r["interpretation"]}'
+                        f'  <small>({bode_r["survival"]})</small></div>',unsafe_allow_html=True)
+            collected.update({"bode_score":bode_r["score"],"bode_interpretation":bode_r["interpretation"]})
 
     # ── TESTING MUSCULAIRE ───────────────────────────────────────────────────
     with tab_musc:
         musc_collected = render_muscle_tab(
             lv_fn=lv,
-            key_prefix="eq",
+            key_prefix="bp",
             show_leg_press=False,
         )
         collected.update(musc_collected)
@@ -603,131 +506,118 @@ def render_formulaire():
     with tab_lp:
         lp_collected = render_muscle_tab(
             lv_fn=lv,
-            key_prefix="eq_lp",
+            key_prefix="bp_lp",
             leg_press_only=True,
+            body_weight_key="poids",
+            bilan_data=st.session_state.bp_bilan_data,
         )
-        # Only keep leg press keys
         for k in ["lp_charge_kg","lp_reps","lp_1rm_estime","lp_interpretation","lp_notes"]:
             if k in lp_collected:
                 collected[k] = lp_collected[k]
 
 
     # ── SAUVEGARDE ────────────────────────────────────────────────────────────
-    if save_top or st.button("💾 Sauvegarder le bilan", type="primary", key="eq_save_bot"):
-        final = {**st.session_state.eq_bilan_data, **collected,
-                 "patient_id": st.session_state.eq_patient_id}
-        if st.session_state.eq_bilan_id:
-            final["bilan_id"] = st.session_state.eq_bilan_id
+    if save_top or st.button("💾 Sauvegarder le bilan",type="primary",key="bp_save_bot"):
+        final={**st.session_state.bp_bilan_data,**collected,
+               "patient_id":st.session_state.bp_patient_id}
+        if st.session_state.bp_bilan_id: final["bilan_id"]=st.session_state.bp_bilan_id
         with st.spinner("Enregistrement…"):
-            new_id = save_bilan_equilibre(final)
-        st.session_state.eq_bilan_id   = new_id
-        final["bilan_id"]              = new_id
-        st.session_state.eq_bilan_data = final
-        st.session_state.eq_just_saved = True
-        st.session_state.eq_unsaved    = False
-        st.success(f"✅ Bilan sauvegardé ! (ID : {new_id})")
-        st.balloons()
+            new_id=save_bilan_bpco(final)
+        st.session_state.bp_bilan_id=new_id; final["bilan_id"]=new_id
+        st.session_state.bp_bilan_data=final
+        st.session_state.bp_just_saved=True; st.session_state.bp_unsaved=False
+        st.success(f"✅ Bilan sauvegardé ! (ID : {new_id})"); st.balloons()
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  ÉVOLUTION
-# ═══════════════════════════════════════════════════════════════════════════════
+# ─── Évolution ────────────────────────────────────────────────────────────────
 def render_evolution():
-    info      = st.session_state.eq_patient_info
-    all_df    = get_patient_bilans_equilibre(st.session_state.eq_patient_id)
-    sel       = st.session_state.get("eq_selected_ids", None)
-    bilans_df = all_df[all_df["bilan_id"].isin(sel)] if sel else all_df
-    if bilans_df.empty: bilans_df = all_df
+    info=st.session_state.bp_patient_info
+    all_df=get_patient_bilans_bpco(st.session_state.bp_patient_id)
+    sel=st.session_state.get("bp_selected_ids",None)
+    bilans_df=all_df[all_df["bilan_id"].isin(sel)] if sel else all_df
+    if bilans_df.empty: bilans_df=all_df
 
-    st.markdown(f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} — Évolution Équilibre</div>',
-                unsafe_allow_html=True)
-    n_sel, n_tot = len(bilans_df), len(all_df)
-    if n_sel < n_tot:
-        st.info(f"ℹ️ Affichage de {n_sel}/{n_tot} bilans sélectionnés.")
+    st.markdown(f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} '
+                f'— Évolution BPCO</div>',unsafe_allow_html=True)
+    n_sel,n_tot=len(bilans_df),len(all_df)
+    if n_sel<n_tot: st.info(f"ℹ️ {n_sel}/{n_tot} bilans sélectionnés.")
 
-    col_back, col_pdf, _ = st.columns([1, 1.5, 4])
+    col_back,col_pdf,_=st.columns([1,1.5,4])
     with col_back:
         if st.button("⬅️ Retour"):
-            st.session_state.eq_mode = "bilan"
-            st.rerun()
+            st.session_state.bp_mode="bilan"; st.rerun()
     with col_pdf:
         if not bilans_df.empty:
-            from utils.equilibre_pdf import generate_pdf_equilibre
+            from utils.bpco_pdf import generate_pdf_bpco
             with st.spinner("PDF…"):
-                pdf = generate_pdf_equilibre(bilans_df, info)
-            st.download_button(
-                f"📄 Exporter PDF ({n_sel})",
-                data=pdf,
-                file_name=f"evolution_equilibre_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
-                mime="application/pdf", type="primary")
+                pdf=generate_pdf_bpco(bilans_df,info)
+            st.download_button(f"📄 PDF ({n_sel})",data=pdf,
+                file_name=f"evolution_bpco_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
+                mime="application/pdf",type="primary")
     st.markdown("---")
+    if bilans_df.empty: st.info("Aucun bilan."); return
 
-    if bilans_df.empty:
-        st.info("Aucun bilan disponible."); return
+    bilans_df=bilans_df.copy()
+    bilans_df["date_bilan"]=pd.to_datetime(bilans_df["date_bilan"],errors="coerce")
+    bilans_df=bilans_df.sort_values("date_bilan").reset_index(drop=True)
+    labels=[f"{r['date_bilan'].strftime('%d/%m/%y')} – {r.get('type_bilan','')}"
+            for _,r in bilans_df.iterrows()]
 
-    bilans_df = bilans_df.copy()
-    bilans_df["date_bilan"] = pd.to_datetime(bilans_df["date_bilan"], errors="coerce")
-    bilans_df = bilans_df.sort_values("date_bilan").reset_index(drop=True)
-    labels = [f"{r['date_bilan'].strftime('%d/%m/%y')} – {r.get('type_bilan','')}"
-              for _, r in bilans_df.iterrows()]
-
-    def safe_n(v):
+    def sn(v):
         try: r=float(v); return r if r!=0 else None
         except: return None
 
     import plotly.graph_objects as go
-    tab_scores, tab_detail = st.tabs(["📊 Scores", "📋 Détail"])
+    tab_scores,tab_detail=st.tabs(["📊 Scores","📋 Détail"])
 
     with tab_scores:
-        # Graphique scores principaux
-        scores_data = {
-            "Tinetti /28": [safe_n(r.get("tinetti_total")) for _, r in bilans_df.iterrows()],
-            "Berg /56": [safe_n(r.get("berg_score")) for _, r in bilans_df.iterrows()],
-            "SPPB /12": [safe_n(r.get("sppb_score")) for _, r in bilans_df.iterrows()],
-            "TUG (sec)": [safe_n(r.get("tug_temps")) for _, r in bilans_df.iterrows()],
-            "STS 1min": [safe_n(r.get("sts_1min_reps")) for _, r in bilans_df.iterrows()],
-        }
-        colors = ["#2B57A7","#C4603A","#388e3c","#f57c00","#7b1fa2"]
-        fig = go.Figure()
-        for (name, vals), color in zip(scores_data.items(), colors):
-            xp = [labels[i] for i,v in enumerate(vals) if v is not None]
-            yp = [v for v in vals if v is not None]
+        fig=go.Figure()
+        for name,key,color,denom in [
+            ("6MWT (m)","mwt_distance","#2B57A7","m"),
+            ("STS 1min","sts_1min_reps","#C4603A","rép"),
+            ("CAT /40","cat_score","#f57c00","/40"),
+            ("VEMS % prédit","spiro_vems_pct","#388e3c","%"),
+            ("BODE /10","bode_score","#7b1fa2","/10"),
+        ]:
+            vals=[sn(r.get(key)) for _,r in bilans_df.iterrows()]
+            xp=[labels[i] for i,v in enumerate(vals) if v is not None]
+            yp=[v for v in vals if v is not None]
             if xp:
-                fig.add_trace(go.Scatter(x=xp, y=yp, mode="lines+markers+text",
-                    name=name, line=dict(color=color, width=2.5),
-                    marker=dict(size=9), text=[str(int(v)) for v in yp],
-                    textposition="top center"))
-        fig.update_layout(height=400, legend=dict(orientation="h", y=-0.2),
-                          xaxis_title="Bilan", yaxis_title="Score",
-                          plot_bgcolor="white", paper_bgcolor="white")
-        st.plotly_chart(fig, use_container_width=True)
+                fig.add_trace(go.Scatter(x=xp,y=yp,mode="lines+markers+text",name=name,
+                    line=dict(color=color,width=2.5),marker=dict(size=9),
+                    text=[str(int(v)) for v in yp],textposition="top center"))
+        fig.update_layout(height=400,legend=dict(orientation="h",y=-0.2),
+                          xaxis_title="Bilan",plot_bgcolor="white",paper_bgcolor="white")
+        st.plotly_chart(fig,use_container_width=True)
 
-        # Tableau synthèse
-        synth = {"Bilan": labels}
-        for name, vals in scores_data.items():
-            synth[name] = [str(int(v)) if v is not None else "—" for v in vals]
-        synth["TUG aide"] = [r.get("tug_aide","—") or "—" for _, r in bilans_df.iterrows()]
-        st.dataframe(pd.DataFrame(synth), use_container_width=True, hide_index=True)
+        synth={"Bilan":labels}
+        for name,key in [("6MWT (m)","mwt_distance"),("STS 1min","sts_1min_reps"),
+                         ("mMRC","mmrc_grade"),("CAT /40","cat_score"),
+                         ("VEMS %","spiro_vems_pct"),("SpO₂ repos","spo2_repos"),
+                         ("BODE","bode_score")]:
+            synth[name]=[str(int(float(v))) if sn(r.get(key)) is not None else "—"
+                         for _,r in bilans_df.iterrows()
+                         for v in [r.get(key,"")]]
+        st.dataframe(pd.DataFrame(synth),use_container_width=True,hide_index=True)
 
     with tab_detail:
-        for i, (_, row) in enumerate(bilans_df.iterrows()):
+        for i,(_,row) in enumerate(bilans_df.iterrows()):
             with st.expander(f"Bilan {i+1} — {labels[i]}"):
-                c1, c2, c3 = st.columns(3)
+                c1,c2,c3=st.columns(3)
                 with c1:
-                    st.metric("Tinetti", f"{row.get('tinetti_total','—')}/28")
-                    st.metric("TUG", f"{row.get('tug_temps','—')} sec")
+                    st.metric("6MWT",f"{row.get('mwt_distance','—')} m")
+                    st.metric("VEMS %",f"{row.get('spiro_vems_pct','—')} %")
                 with c2:
-                    st.metric("Berg", f"{row.get('berg_score','—')}/56")
-                    st.metric("STS 1min", f"{row.get('sts_1min_reps','—')} rép")
+                    st.metric("CAT",f"{row.get('cat_score','—')}/40")
+                    st.metric("mMRC",f"Grade {row.get('mmrc_grade','—')}")
                 with c3:
-                    st.metric("SPPB", f"{row.get('sppb_score','—')}/12")
+                    st.metric("BODE",f"{row.get('bode_score','—')}/10")
+                    st.metric("STS 1min",f"{row.get('sts_1min_reps','—')} rép")
                 if row.get("notes_generales"):
                     st.markdown(f"*{row['notes_generales']}*")
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  ROUTER
-# ═══════════════════════════════════════════════════════════════════════════════
-mode = st.session_state.eq_mode
-if mode == "accueil":       render_accueil()
-elif mode == "bilan":       render_bilan_selection()
-elif mode == "formulaire":  render_formulaire()
-elif mode == "evolution":   render_evolution()
+# ─── Router ───────────────────────────────────────────────────────────────────
+mode=st.session_state.bp_mode
+if mode=="accueil":      render_accueil()
+elif mode=="bilan":      render_bilan_selection()
+elif mode=="formulaire": render_formulaire()
+elif mode=="evolution":  render_evolution()
