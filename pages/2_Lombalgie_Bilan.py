@@ -141,7 +141,7 @@ def render_accueil():
     st.markdown("##### Bilan physiothérapeutique — Lombalgie")
     col_t,col_b = st.columns([5,1])
     with col_b:
-        if st.button("🖨️ Questionnaires vierges", key="print_lomb_accueil"):
+        if st.button("🖨️ Imprimer questionnaires", key="print_lomb_accueil"):
             st.session_state["show_print_lomb_accueil"] = True
     st.markdown("---")
     if st.session_state.get("show_print_lomb_accueil", False):
@@ -179,7 +179,7 @@ def render_accueil():
             nom  = st.text_input("Nom *"); prenom = st.text_input("Prénom *")
             ddn  = st.date_input("Date de naissance *", min_value=date(1900,1,1), max_value=date.today())
             sexe = st.selectbox("Sexe", ["Féminin","Masculin","Autre"])
-            sub  = st.form_submit_button("Créer", type="primary")
+            sub  = st.form_submit_button("➕ Créer", type="primary")
         if sub:
             if not nom or not prenom: st.error("Nom et prénom obligatoires.")
             else:
@@ -277,7 +277,7 @@ def render_bilan_selection():
                     st.markdown(f"**{bdate}** — {btype}{groupe_str}  \n<small>`{bid}`</small>",
                                 unsafe_allow_html=True)
                 with c_open:
-                    if st.button("✏️ Ouvrir", key=f"lopen_{bid}"):
+                    if st.button("✏️", key=f"lopen_{bid}", help="Ouvrir ce bilan"):
                         st.session_state.lomb_bilan_id   = bid
                         st.session_state.lomb_bilan_data = row.to_dict()
                         st.session_state.lomb_mode       = "formulaire"
@@ -326,7 +326,7 @@ def render_bilan_selection():
             bilan_date = st.date_input("Date du bilan", value=date.today())
             bilan_type = st.selectbox("Type", ["Bilan initial","Bilan intermédiaire","Bilan final"])
             praticien  = st.text_input("Praticien")
-            go_btn     = st.form_submit_button("Créer le bilan", type="primary")
+            go_btn     = st.form_submit_button("➕ Créer", type="primary")
         if go_btn:
             st.session_state.lomb_bilan_id   = None
             st.session_state.lomb_bilan_data = {"patient_id": st.session_state.lomb_patient_id,
@@ -361,13 +361,13 @@ def render_formulaire():
         )
         ca, cb, _ = st.columns([1.2, 1.2, 4])
         with ca:
-            if st.button("✅ Quitter sans sauvegarder", type="primary", key="lomb_back_ok"):
+            if st.button("🚪 Quitter sans sauvegarder", type="primary", key="lomb_back_ok"):
                 st.session_state["lomb_confirm_back"] = False
                 st.session_state["lomb_unsaved"] = False
                 st.session_state.lomb_mode = "bilan"
                 st.rerun()
         with cb:
-            if st.button("✖ Continuer l'édition", key="lomb_back_cancel"):
+            if st.button("✏️ Continuer l'édition", key="lomb_back_cancel"):
                 st.session_state["lomb_confirm_back"] = False
                 st.rerun()
     with col_save:
