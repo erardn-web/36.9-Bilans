@@ -1,1791 +1,1190 @@
 """
-lombalgie_pdf.py — PDF Lombalgie
-Fusion : pdf_lombalgie.py · questionnaires_lombalgie.py
+Page : Bilan Lombalgie — Formulaire SOAP complet
 """
 
-import os as _os
-from reportlab.lib import colors as _colors
-from reportlab.lib.pagesizes import A4 as _A4
-from reportlab.lib.units import cm as _cm
-from reportlab.lib.enums import TA_CENTER as _TA_CENTER
-from reportlab.lib.styles import ParagraphStyle as _PS
-from reportlab.platypus import Table as _Table, TableStyle as _TableStyle, Paragraph as _Para, Image as _Image
-import io
-import numpy as np
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from datetime import date
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import cm
-from reportlab.lib.enums import TA_CENTER
-from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    HRFlowable, PageBreak, Image,
+import sys, os
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from utils.db import (
+    get_all_patients, create_patient,
+    get_patient_bilans_lombalgie, save_bilan_lombalgie, delete_bilan_lombalgie,
 )
-import matplotlib
-import matplotlib.pyplot as plt
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from utils.lombalgie_data import (
+    GROUPES_CLINIQUES, GROUPES_OPTIONS, GROUPES_CODES,
+    GROUPES_DESC, GROUPES_COLORS,
+    DRAPEAUX_ROUGES, DRAPEAUX_JAUNES,
+    LOCALISATIONS,
+    FACTEURS_AGGRAVANTS, FACTEURS_SOULAGEANTS,
+    TYPES_DOULEUR, RYTHME_DOULEUR,
+    TESTS_CLINIQUES, RESULTATS_TEST,
+)
+from utils.lombalgie_pdf import (
+    generate_questionnaires_lombalgie_pdf,
+    ODI_SECTIONS, ODI_KEYS, compute_odi,
+    TAMPA_ITEMS, TAMPA_KEYS, TAMPA_SCALE, TAMPA_SCALE_VALUES, compute_tampa,
+    OREBRO_ITEMS, OREBRO_KEYS, compute_orebro,
+)
+from utils.lombalgie_pdf import generate_pdf_lombalgie
 
-# ─── Palette 36.9 Bilans ──────────────────────────────────────────────────────
-TERRA       = _colors.HexColor("#C4603A")
-TERRA_LIGHT = _colors.HexColor("#FAEEE9")
-BLEU        = _colors.HexColor("#2B57A7")
-BLEU_LIGHT  = _colors.HexColor("#E8EEF9")
-GRIS        = _colors.HexColor("#F4F4F4")
-GRIS_BORD   = _colors.HexColor("#DEDEDE")
-GRIS_TEXTE  = _colors.HexColor("#555555")
-NOIR        = _colors.HexColor("#1A1A1A")
-BLANC       = _colors.white
-VERT        = _colors.HexColor("#388e3c")
-ORANGE      = _colors.HexColor("#f57c00")
-ROUGE       = _colors.HexColor("#d32f2f")
-JAUNE       = _colors.HexColor("#fbc02d")
+st.set_page_config(page_title="Bilan Lombalgie", page_icon="🦴",
+                   layout="wide", initial_sidebar_state="collapsed")
 
-# Aliases ancienne palette
-BLEU_FONCE  = BLEU
-BLEU_CLAIR  = BLEU_LIGHT
-GRIS_CLAIR  = GRIS
-
-USEFUL_W = _A4[0] - 3*_cm
-MARGIN   = 1.5*_cm
-HEADER_H = 1.6*_cm
-W        = USEFUL_W
-
-# ─── Case à cocher dessinée (pas unicode) ────────────────────────────────────
-from reportlab.platypus import Flowable as _Flowable
-
-class Checkbox(_Flowable):
-    """Case à cocher vide dessinée proprement."""
-    def __init__(self, size=8):
-        _Flowable.__init__(self)
-        self.size = size
-        self.width = size + 4
-        self.height = size
-    def draw(self):
-        self.canv.setStrokeColor(_colors.HexColor("#333333"))
-        self.canv.setLineWidth(0.7)
-        self.canv.rect(1, 0, self.size, self.size, fill=0, stroke=1)
-
-def make_styles():
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.lib.enums import TA_CENTER
-    base = getSampleStyleSheet()
-    return {
-        "title": _PS("title", fontSize=26, fontName="Helvetica-Bold", textColor=BLEU,
-            spaceAfter=4, alignment=TA_CENTER),
-        "subtitle": _PS("subtitle", fontSize=12, fontName="Helvetica", textColor=GRIS_TEXTE,
-            spaceAfter=2, alignment=TA_CENTER),
-        "section": _PS("section369", fontSize=11, fontName="Helvetica-Bold", textColor=BLANC,
-            spaceBefore=12, spaceAfter=6, backColor=BLEU,
-            leftIndent=-6, rightIndent=-6, borderPadding=(5,8,5,8)),
-        "subsection": _PS("subsection369", fontSize=10, fontName="Helvetica-Bold",
-            textColor=TERRA, spaceBefore=10, spaceAfter=4),
-        "normal": _PS("normal369", fontSize=9, fontName="Helvetica",
-            textColor=NOIR, spaceAfter=2),
-        "small": _PS("small369", fontSize=7.5, fontName="Helvetica", textColor=GRIS_TEXTE),
-        "bold": _PS("bold369", fontSize=9, fontName="Helvetica-Bold", textColor=BLEU),
-        "note": _PS("note369", fontSize=8, fontName="Helvetica",
-            textColor=GRIS_TEXTE, leftIndent=8, spaceAfter=4),
-        "center": _PS("center369", fontSize=9, fontName="Helvetica", alignment=TA_CENTER),
-        # Styles questionnaires imprimables
-        "intro":    _PS("intro369", fontSize=9, fontName="Helvetica-Oblique",
-            textColor=_colors.HexColor("#444"), spaceAfter=6, leftIndent=4),
-        "question": _PS("question369", fontSize=10, fontName="Helvetica-Bold",
-            textColor=NOIR, spaceBefore=8, spaceAfter=3, leftIndent=4),
-        "option":   _PS("option369", fontSize=9, fontName="Helvetica",
-            textColor=NOIR, spaceAfter=2, leftIndent=20),
-    }
+st.markdown("""
+<style>
+    .page-title{font-size:2rem;font-weight:700;color:#2e5a1c}
+    .section-title{font-size:1.1rem;font-weight:600;color:#2e5a1c;
+        border-bottom:2px solid #d0e8c0;padding-bottom:4px;margin-bottom:1rem}
+    .score-box{border-radius:10px;padding:0.8rem;text-align:center;color:white;
+        font-size:1.2rem;font-weight:700}
+    .info-box{background:#f0f8e8;border-left:4px solid #2e5a1c;
+        padding:0.8rem 1rem;border-radius:0 8px 8px 0;margin-bottom:1rem}
+    .warn-box{background:#fff8e1;border-left:4px solid #f9a825;
+        padding:0.8rem 1rem;border-radius:0 8px 8px 0;margin-bottom:1rem}
+    .danger-box{background:#ffebee;border-left:4px solid #d32f2f;
+        padding:0.8rem 1rem;border-radius:0 8px 8px 0;margin-bottom:1rem}
+    .patient-badge{background:#2e5a1c;color:white;border-radius:8px;
+        padding:0.4rem 1rem;display:inline-block;font-weight:600}
+    .soap-label{font-size:1.3rem;font-weight:800;color:#2e5a1c}
+</style>
+""", unsafe_allow_html=True)
 
 
+def init_state():
+    for k, v in {"lomb_patient_id":None,"lomb_patient_info":None,
+                  "lomb_bilan_id":None,"lomb_bilan_data":{},"lomb_mode":"accueil"}.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+init_state()
+
+
+def lv(key, default=None):
+    v = st.session_state.lomb_bilan_data.get(key)
+    return default if (v is None or str(v).strip() in ("","None")) else v
+
+def lv_int(key, default=0):
+    try: return int(float(lv(key, default)))
+    except: return default
+
+def lv_float(key, default=0.0):
+    try: return float(lv(key, default))
+    except: return default
+
+def lv_list(key):
+    v = lv(key, "")
+    return [x for x in str(v).split("|") if x] if v else []
+
+def lv_int_or_none(key):
+    """Returns stored int value or None (for number_input blank state)."""
+    v = lv(key, None)
+    if v is None or str(v).strip() in ("", "None", "0"): return None
+    try:
+        result = int(float(v))
+        return result if result != 0 else None
+    except: return None
+
+def lv_float_or_none(key):
+    """Returns stored float value or None."""
+    v = lv(key, None)
+    if v is None or str(v).strip() in ("", "None"): return None
+    try:
+        result = float(v)
+        return result if result != 0.0 else None
+    except: return None
 
 
 
-def option_row(text, style, col_w=None):
-    """Ligne avec case à cocher + texte."""
-    if col_w is None: col_w = USEFUL_W
-    cb   = Checkbox(size=8)
-    para = Paragraph(f"  {text}", style)
-    tbl  = _Table([[cb, para]], colWidths=[0.5*_cm, col_w - 0.5*_cm])
-    tbl.setStyle(_TableStyle([
-        ("VALIGN",         (0,0),(-1,-1), "MIDDLE"),
-        ("LEFTPADDING",    (0,0),(-1,-1), 2),
-        ("RIGHTPADDING",   (0,0),(-1,-1), 2),
-        ("TOPPADDING",     (0,0),(-1,-1), 3),
-        ("BOTTOMPADDING",  (0,0),(-1,-1), 3),
-    ]))
-    return tbl
+def _render_print_panel(patient_info, key_prefix):
+    st.markdown("""<div style="background:#f0f8e8;border:2px solid #2e5a1c;border-radius:10px;
+        padding:1.2rem 1.5rem;margin-bottom:1rem;">
+        <span style="font-size:1.1rem;font-weight:700;color:#2e5a1c;">
+        🖨️ Sélectionner les questionnaires à imprimer</span></div>""",
+        unsafe_allow_html=True)
+    p1,p2,p3,p4,p5 = st.columns(5)
+    with p1: pr_odi   = st.checkbox("📊 Oswestry (ODI)",   value=True, key=f"{key_prefix}_odi")
+    with p2: pr_tampa = st.checkbox("😨 Tampa Scale",       value=True, key=f"{key_prefix}_tampa")
+    with p3: pr_oreb  = st.checkbox("🧠 Örebro",            value=True, key=f"{key_prefix}_orebro")
+    with p4: pr_drap  = st.checkbox("🚩 Drapeaux",          value=True, key=f"{key_prefix}_drap")
+    with p5: pr_luom  = st.checkbox("🏃 Luomajoki",         value=True, key=f"{key_prefix}_luom")
+    p6, p7, _ = st.columns([1, 1, 3])
+    with p6: pr_musc = st.checkbox("💪 Testing MI",    value=True, key=f"{key_prefix}_musc")
+    with p7: pr_lp   = st.checkbox("🏋️ 1RM Leg Press", value=True, key=f"{key_prefix}_lp")
+    selected = (
+        (["odi"]       if pr_odi   else []) +
+        (["tampa"]     if pr_tampa else []) +
+        (["orebro"]    if pr_oreb  else []) +
+        (["drapeaux"]  if pr_drap  else []) +
+        (["luomajoki"] if pr_luom  else []) +
+        (["muscle"]    if pr_musc  else []) +
+        (["leg_press"] if pr_lp    else [])
+    )
+    ga,gb,_ = st.columns([1.5,1,4])
+    with ga:
+        if selected:
+            with st.spinner("Génération…"):
+                q_pdf = generate_questionnaires_lombalgie_pdf(selected, patient_info)
+            fname = (f"questionnaires_lomb_{patient_info['nom']}_{patient_info['prenom']}_{date.today()}.pdf"
+                     if patient_info else f"questionnaires_lomb_vierges_{date.today()}.pdf")
+            st.download_button("📥 Télécharger le PDF", data=q_pdf, file_name=fname,
+                               mime="application/pdf", type="primary", key=f"{key_prefix}_dl")
+        else:
+            st.warning("Sélectionnez au moins un questionnaire.")
+    with gb:
+        ck = "show_print_lomb_patient" if patient_info else "show_print_lomb_accueil"
+        if st.button("✖ Fermer", key=f"{key_prefix}_close"):
+            st.session_state[ck] = False
+            st.rerun()
 
 
-def _find_logo():
-    candidates = [
-        _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "assets", "logo_369.png"),
-        _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "assets", "logo_369.png"),
-        "assets/logo_369.png",
-        "/mount/src/36.9-bilans/assets/logo_369.png",
-    ]
-    for c in candidates:
-        if _os.path.exists(c):
-            return c
-    return None
-
-def get_logo(width=3.2*_cm, height=1.1*_cm):
-    p = _find_logo()
-    if p:
-        return _Image(p, width=width, height=height, kind="proportional")
-    return None
-
-def make_header_footer(report_title, patient_name=""):
-    from datetime import date as _date
-    def _draw(canvas, doc):
-        canvas.saveState()
-        w, h = _A4
-
-        # Fond blanc header (transparent — pas de fond coloré)
-        # Trait terracotta en haut de page
-                # Logo à gauche
-        logo_p = _find_logo()
-        if logo_p:
-            try:
-                canvas.drawImage(logo_p, MARGIN, h - 1.4*_cm,
-                    width=2.6*_cm, height=1.0*_cm,
-                    preserveAspectRatio=True, mask="auto")
-            except Exception:
-                pass
-
-        # Titre rapport (centre, discret)
-        canvas.setFillColor(GRIS_TEXTE)
-        canvas.setFont("Helvetica", 8)
-        canvas.drawCentredString(w/2, h - 1.1*_cm, report_title)
-
-        # Patient (droite, en bleu)
-        if patient_name:
-            canvas.setFillColor(BLEU)
-            canvas.setFont("Helvetica-Bold", 8)
-            canvas.drawRightString(w - MARGIN, h - 1.1*_cm, patient_name)
-
-        # Ligne séparatrice fine
-        canvas.setStrokeColor(GRIS_BORD)
-        canvas.setLineWidth(0.5)
-        canvas.line(MARGIN, h - 1.5*_cm, w - MARGIN, h - 1.5*_cm)
-
-        # Pied de page
-        canvas.setStrokeColor(GRIS_BORD)
-        canvas.setLineWidth(0.5)
-        canvas.line(MARGIN, 0.9*_cm, w - MARGIN, 0.9*_cm)
-        canvas.setFillColor(GRIS_TEXTE)
-        canvas.setFont("Helvetica", 7)
-        canvas.drawString(MARGIN, 0.35*_cm, "Document confidentiel — Usage médical exclusif")
-        canvas.drawCentredString(w/2, 0.35*_cm, "36.9 Bilans")
-        canvas.drawRightString(w - MARGIN, 0.35*_cm,
-            f"Page {doc.page}  ·  {_date.today().strftime('%d/%m/%Y')}")
-        canvas.restoreState()
-    return _draw
-
-def section_band(title, color=None):
-    """Titre sobre : bleu gras + filet bleu bas."""
-    row = [[Paragraph(f"<b>{title}</b>",
-        ParagraphStyle("lsb", fontSize=11, fontName="Helvetica-Bold",
-                       textColor=BLEU_FONCE, leading=15))]]
-    tbl = Table(row, colWidths=[USEFUL_W if "USEFUL_W" in dir() else W])
-    tbl.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0),(-1,-1), BLANC),
-        ("LINEBELOW",     (0,0),(-1,-1), 1.2, BLEU_FONCE),
-        ("TOPPADDING",    (0,0),(-1,-1), 8),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 4),
-        ("LEFTPADDING",   (0,0),(-1,-1), 0),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 0),
-    ]))
-    return tbl
-
-def make_table(data, col_widths=None, header=True, accent=None):
-    if accent is None: accent = BLEU
-    t = _Table(data, colWidths=col_widths, repeatRows=1 if header else 0)
-    cmds = [
-        ("FONTNAME",      (0,0),(-1,-1), "Helvetica"),
-        ("FONTSIZE",      (0,0),(-1,-1), 8),
-        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
-        ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
-        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
-        ("TOPPADDING",    (0,0),(-1,-1), 5),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 5),
-        ("LEFTPADDING",   (0,0),(-1,-1), 7),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 7),
-    ]
-    if header:
-        cmds += [
-            ("BACKGROUND",   (0,0),(-1,0), accent),
-            ("TEXTCOLOR", (0,0),(-1,0), BLEU),
-            ("LINEBELOW",(0,0),(-1,0), 1.0, BLEU),
-            ("FONTNAME",     (0,0),(-1,0), "Helvetica-Bold"),
-            ("FONTSIZE",     (0,0),(-1,0), 8),
-            ("TOPPADDING",   (0,0),(-1,0), 7),
-            ("BOTTOMPADDING",(0,0),(-1,0), 7),
-        ]
-    t.setStyle(_TableStyle(cmds))
-    return t
-
-def make_cover(story, title, subtitle, patient_info, bilans_df, labels, styles):
-    import pandas as _pd
-    from datetime import date as _date
-    from reportlab.platypus import Spacer, PageBreak
-    # Bandeau titre bleu
-    band_data = [[_Para(f"<font color='white'><b>{title}</b></font>",
-        _PS("ct369", fontSize=22, fontName="Helvetica-Bold",
-            textColor=BLANC, alignment=_TA_CENTER))]]
-    band = _Table(band_data, colWidths=[USEFUL_W])
-    band.setStyle(_TableStyle([("BACKGROUND",(0,0),(-1,-1),BLEU),
-        ("TOPPADDING",(0,0),(-1,-1),20),("BOTTOMPADDING",(0,0),(-1,-1),20)]))
-    story.append(Spacer(1, 0.8*_cm))
-    story.append(band)
-    # Sous-bande terracotta
-    sub_data = [[_Para(f"<font color='white'>{subtitle}</font>",
-        _PS("cs369", fontSize=11, fontName="Helvetica",
-            textColor=BLANC, alignment=_TA_CENTER))]]
-    sub = _Table(sub_data, colWidths=[USEFUL_W])
-    sub.setStyle(_TableStyle([("BACKGROUND",(0,0),(-1,-1),TERRA),
-        ("TOPPADDING",(0,0),(-1,-1),8),("BOTTOMPADDING",(0,0),(-1,-1),8)]))
-    story.append(sub)
-    story.append(Spacer(1, 0.6*_cm))
-    # Logo centré
-    logo = get_logo(width=5*_cm, height=2*_cm)
-    if logo:
-        lt = _Table([[logo]], colWidths=[USEFUL_W])
-        lt.setStyle(_TableStyle([("ALIGN",(0,0),(-1,-1),"CENTER")]))
-        story.append(lt)
-        story.append(Spacer(1, 0.5*_cm))
-    # Infos patient
-    n = len(bilans_df)
-    pat = [
-        ["Patient",           f"{patient_info.get('nom','')} {patient_info.get('prenom','')}"],
-        ["Date de naissance", str(patient_info.get("date_naissance","—"))],
-        ["Sexe",              patient_info.get("sexe","—")],
-        ["Profession",        patient_info.get("profession","—") or "—"],
-        ["Nombre de bilans",  str(n)],
-        ["Généré le",         _date.today().strftime("%d/%m/%Y")],
-    ]
-    pt = _Table(pat, colWidths=[4.5*_cm, USEFUL_W-4.5*_cm])
-    pt.setStyle(_TableStyle([
-        ("FONTNAME",(0,0),(0,-1),"Helvetica-Bold"),
-        ("FONTNAME",(1,0),(1,-1),"Helvetica"),
-        ("FONTSIZE",(0,0),(-1,-1),9),
-        ("TEXTCOLOR",(0,0),(0,-1),BLEU),
-        ("ROWBACKGROUNDS",(0,0),(-1,-1),[BLANC,BLEU_LIGHT]),
-        ("LINEBELOW",(0,0),(-1,-1),0.3,GRIS_BORD),
-        ("TOPPADDING",(0,0),(-1,-1),6),
-        ("BOTTOMPADDING",(0,0),(-1,-1),6),
-        ("LEFTPADDING",(0,0),(-1,-1),10),
-    ]))
-    story.append(pt)
-    story.append(Spacer(1, 0.6*_cm))
-    # Tableau bilans
-    story.append(_Para("Bilans inclus dans ce rapport",
-        _PS("subs369b", fontSize=10, fontName="Helvetica-Bold",
-            textColor=TERRA, spaceBefore=8, spaceAfter=4)))
-    bil = [["#","Date","Type","Praticien"]]
-    for i,(_, row) in enumerate(bilans_df.iterrows()):
-        d = row["date_bilan"]
-        ds = d.strftime("%d/%m/%Y") if _pd.notna(d) else "—"
-        bil.append([str(i+1), ds, row.get("type_bilan","—") or "—",
-                    row.get("praticien","—") or "—"])
-    story.append(make_table(bil, col_widths=[1.2*_cm,3.2*_cm,5*_cm,USEFUL_W-9.4*_cm]))
+def render_accueil():
+    st.markdown('<div class="page-title">🦴 Bilan Lombalgie</div>', unsafe_allow_html=True)
+    st.markdown("##### Bilan physiothérapeutique — Lombalgie")
+    col_t,col_b = st.columns([5,1])
+    with col_b:
+        if st.button("🖨️ Imprimer questionnaires", key="print_lomb_accueil"):
+            st.session_state["show_print_lomb_accueil"] = True
+    st.markdown("---")
+    if st.session_state.get("show_print_lomb_accueil", False):
+        _render_print_panel(patient_info=None, key_prefix="acc")
+    col_a,col_b2 = st.columns(2)
+    with col_a:
+        st.markdown("#### 🔍 Rechercher un patient")
+        patients_df = get_all_patients()
+        if patients_df.empty:
+            st.info("Aucun patient enregistré.")
+        else:
+            search = st.text_input("Nom ou prénom…", key="lomb_search")
+            filtered = patients_df
+            if search:
+                mask = (patients_df["nom"].str.contains(search.upper(), na=False) |
+                        patients_df["prenom"].str.contains(search.capitalize(), na=False))
+                filtered = patients_df[mask]
+            if filtered.empty:
+                st.warning("Aucun résultat.")
+            else:
+                for _, row in filtered.iterrows():
+                    c1, c2 = st.columns([3, 1])
+                    with c1:
+                        st.markdown(f"**{row['nom']} {row['prenom']}** | {row.get('date_naissance','—')} — `{row['patient_id']}`",
+                                    unsafe_allow_html=True)
+                    with c2:
+                        if st.button("Sélectionner", key=f"lsel_{row['patient_id']}"):
+                            st.session_state.lomb_patient_id   = row["patient_id"]
+                            st.session_state.lomb_patient_info = row.to_dict()
+                            st.session_state.lomb_mode         = "bilan"
+                            st.rerun()
+    with col_b2:
+        st.markdown("#### ➕ Nouveau patient")
+        with st.form("lomb_new_pat", clear_on_submit=True):
+            nom  = st.text_input("Nom *"); prenom = st.text_input("Prénom *")
+            ddn  = st.date_input("Date de naissance *", min_value=date(1900,1,1), max_value=date.today())
+            sexe = st.selectbox("Sexe", ["Féminin","Masculin","Autre"])
+            sub  = st.form_submit_button("➕ Créer", type="primary")
+        if sub:
+            if not nom or not prenom: st.error("Nom et prénom obligatoires.")
+            else:
+                pid = create_patient(nom, prenom, ddn, sexe, "")
+                df2 = get_all_patients()
+                row = df2[df2["patient_id"]==pid].iloc[0]
+                st.session_state.lomb_patient_id   = pid
+                st.session_state.lomb_patient_info = row.to_dict()
+                st.session_state.lomb_mode         = "bilan"
+                st.rerun()
 
 
-matplotlib.use("Agg")
+def render_bilan_selection():
+    info      = st.session_state.lomb_patient_info
+    bilans_df = get_patient_bilans_lombalgie(st.session_state.lomb_patient_id)
 
-GRIS = GRIS
-W = USEFUL_W
+    st.markdown(f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} — {info.get("date_naissance","—")} — ID : {info["patient_id"]}</div>',
+                unsafe_allow_html=True)
+    st.markdown("")
 
+    def get_selected_bilans(df):
+        sel = st.session_state.get("lomb_selected_bilan_ids", None)
+        if sel is None or df.empty: return df
+        filtered = df[df["bilan_id"].isin(sel)]
+        return filtered if not filtered.empty else df
+
+    col_back, col_print, col_evol, col_pdf, _ = st.columns([1, 1.5, 1.2, 1.2, 1])
+    with col_back:
+        if st.button("⬅️ Changer de patient"):
+            for k in ["lomb_patient_id","lomb_patient_info","lomb_bilan_id"]:
+                st.session_state[k] = None
+            st.session_state.lomb_bilan_data = {}
+            st.session_state.pop("lomb_selected_bilan_ids", None)
+            st.session_state.lomb_mode = "accueil"
+            st.rerun()
+    with col_print:
+        if st.button("🖨️ Imprimer questionnaires", key="print_lomb_pat_btn"):
+            st.session_state["show_print_lomb_patient"] = True
+    with col_evol:
+        if not bilans_df.empty:
+            if st.button("📈 Voir l'évolution", type="primary", key="lomb_evol_btn"):
+                st.session_state.lomb_mode = "evolution"
+                st.rerun()
+    with col_pdf:
+        if not bilans_df.empty:
+            sel_df = get_selected_bilans(bilans_df)
+            with st.spinner("PDF…"):
+                pdf_bytes = generate_pdf_lombalgie(sel_df, info)
+            n_sel = len(sel_df)
+            st.download_button(
+                label=f"📄 Exporter PDF ({n_sel} bilan{'s' if n_sel > 1 else ''})",
+                data=pdf_bytes,
+                file_name=f"evolution_lombalgie_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
+                mime="application/pdf",
+            )
+
+    if st.session_state.get("show_print_lomb_patient", False):
+        _render_print_panel(patient_info=info, key_prefix="pat")
+
+    st.markdown("---")
+    col_left, col_right = st.columns(2)
+
+    with col_left:
+        st.markdown("#### 📋 Bilans existants")
+        if bilans_df.empty:
+            st.info("Aucun bilan pour ce patient.")
+        else:
+            st.markdown("<small style='color:#888'>Cochez les bilans à inclure dans l'évolution et le PDF</small>",
+                        unsafe_allow_html=True)
+
+            selected_ids = st.session_state.get("lomb_selected_bilan_ids", None)
+            if selected_ids is None:
+                selected_ids = list(bilans_df["bilan_id"])
+                st.session_state["lomb_selected_bilan_ids"] = selected_ids
+
+            valid_ids = list(bilans_df["bilan_id"])
+            selected_ids = [i for i in selected_ids if i in valid_ids]
+            st.session_state["lomb_selected_bilan_ids"] = selected_ids
+
+            new_selected = []
+            for _, row in bilans_df.iterrows():
+                bid   = row.get("bilan_id", "—")
+                bdate = row.get("date_bilan", "—")
+                btype = row.get("type_bilan", "—")
+                g     = row.get("groupe_clinique", "") or ""
+
+                c_check, c_info, c_open, c_del = st.columns([0.5, 3.5, 0.8, 0.8])
+                with c_check:
+                    checked = st.checkbox("", value=bid in selected_ids,
+                                         key=f"lsel_{bid}", label_visibility="collapsed")
+                    if checked:
+                        new_selected.append(bid)
+                with c_info:
+                    groupe_str = f" | **{g}**" if g and g != "—" else ""
+                    st.markdown(f"**{bdate}** — {btype}{groupe_str}  \n<small>`{bid}`</small>",
+                                unsafe_allow_html=True)
+                with c_open:
+                    if st.button("✏️", key=f"lopen_{bid}", help="Ouvrir ce bilan"):
+                        st.session_state.lomb_bilan_id   = bid
+                        st.session_state.lomb_bilan_data = row.to_dict()
+                        st.session_state.lomb_mode       = "formulaire"
+                        st.session_state["lomb_unsaved"] = True
+                        st.rerun()
+                with c_del:
+                    if st.button("🗑️", key=f"ldel_req_{bid}", help="Supprimer ce bilan"):
+                        st.session_state[f"lomb_confirm_del_{bid}"] = True
+
+                if st.session_state.get(f"lomb_confirm_del_{bid}", False):
+                    st.warning(
+                        f"⚠️ Supprimer définitivement le bilan **{bdate} — {btype}** ? "
+                        "Cette action est irréversible."
+                    )
+                    ca, cb, _ = st.columns([1, 1, 3])
+                    with ca:
+                        if st.button("✅ Confirmer", key=f"ldel_ok_{bid}", type="primary"):
+                            with st.spinner("Suppression…"):
+                                ok = delete_bilan_lombalgie(bid)
+                            if ok:
+                                st.success("Bilan supprimé.")
+                            else:
+                                st.error("Erreur lors de la suppression.")
+                            st.session_state.pop(f"lomb_confirm_del_{bid}", None)
+                            st.session_state["lomb_selected_bilan_ids"] = [
+                                i for i in selected_ids if i != bid]
+                            st.rerun()
+                    with cb:
+                        if st.button("✖ Annuler", key=f"ldel_cancel_{bid}"):
+                            st.session_state.pop(f"lomb_confirm_del_{bid}", None)
+                            st.rerun()
+
+            st.session_state["lomb_selected_bilan_ids"] = new_selected
+
+            n_sel = len(new_selected)
+            n_tot = len(bilans_df)
+            if n_sel < n_tot:
+                st.markdown(
+                    f"<small style='color:#f57c00'>⚡ {n_sel}/{n_tot} bilans sélectionnés pour l'évolution</small>",
+                    unsafe_allow_html=True,
+                )
+
+    with col_right:
+        st.markdown("#### ➕ Nouveau bilan")
+        with st.form("lomb_new_bilan"):
+            bilan_date = st.date_input("Date du bilan", value=date.today())
+            bilan_type = st.selectbox("Type", ["Bilan initial","Bilan intermédiaire","Bilan final"])
+            praticien  = st.text_input("Praticien")
+            go_btn     = st.form_submit_button("➕ Créer", type="primary")
+        if go_btn:
+            st.session_state.lomb_bilan_id   = None
+            st.session_state.lomb_bilan_data = {"patient_id": st.session_state.lomb_patient_id,
+                "date_bilan": str(bilan_date), "type_bilan": bilan_type, "praticien": praticien}
+            st.session_state.lomb_mode = "formulaire"
+            st.session_state["lomb_unsaved"] = True
+            st.rerun()
+
+
+
+
+def highlight_filled_tabs(tab_definitions: list):
+    """Fond vert sur les onglets remplis via CSS nth-child."""
+    bd = st.session_state.get("lomb_bilan_data", {})
+    css_rules = []
+    for i, (label, keys) in enumerate(tab_definitions):
+        filled = any(
+            str(bd.get(k, "")).strip() not in ("", "0", "0.0", "None", "nan")
+            and bd.get(k) is not None
+            for k in keys
+        )
+        if filled:
+            n = i + 1
+            css_rules.append(
+                "[data-baseweb=\'tab-list\'] button:nth-child("
+                + str(n)
+                + ") {background-color:#d4edda !important;"
+                  "border-bottom:3px solid #388e3c !important;}"
+            )
+    if css_rules:
+        st.markdown(
+            "<style>" + " ".join(css_rules) + "</style>",
+            unsafe_allow_html=True
+        )
+
+def render_formulaire():
+    info = st.session_state.lomb_patient_info
+    bd   = st.session_state.lomb_bilan_data
+    st.session_state["lomb_unsaved"] = True
+    st.markdown(
+        f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} '
+        f'— {bd.get("type_bilan","—")} du {bd.get("date_bilan","—")}</div>',
+        unsafe_allow_html=True)
+    st.markdown("")
+    col_back, col_save, _ = st.columns([1,1,4])
+    with col_back:
+        if st.button("⬅️ Retour"):
+            if st.session_state.get("lomb_unsaved", False):
+                st.session_state["lomb_confirm_back"] = True
+            else:
+                st.session_state.lomb_mode = "bilan"
+                st.rerun()
+
+    # Alerte si retour sans sauvegarde
+    if st.session_state.get("lomb_confirm_back", False):
+        st.warning(
+            "⚠️ **Modifications non sauvegardées.** "
+            "Êtes-vous sûr(e) de vouloir quitter sans sauvegarder ?"
+        )
+        ca, cb, _ = st.columns([1.2, 1.2, 4])
+        with ca:
+            if st.button("🚪 Quitter sans sauvegarder", type="primary", key="lomb_back_ok"):
+                st.session_state["lomb_confirm_back"] = False
+                st.session_state["lomb_unsaved"] = False
+                st.session_state.lomb_mode = "bilan"
+                st.rerun()
+        with cb:
+            if st.button("✏️ Continuer l'édition", key="lomb_back_cancel"):
+                st.session_state["lomb_confirm_back"] = False
+                st.rerun()
+    with col_save:
+        save_top = st.button("💾 Sauvegarder", type="primary")
+    highlight_filled_tabs([
+        ("📝 Général",                []),
+        ("🟦 S – Subjectif",          ["s_motif_consultation","s_eva_repos"]),
+        ("🚩 Drapeaux",               ["drapeaux_rouges_list","drapeaux_jaunes_list"]),
+        ("🔬 O – Objectif",           ["o_schober","o_luomajoki_score"]),
+        ("🩺 Raisonnement clinique",  ["diag_principal","diag_diff_list"]),
+        ("🔮 A – Pronostic",          ["a_appreciation"]),
+        ("📋 P – Plan",               ["p_objectifs","p_traitement"]),
+        ("📊 Questionnaires",         ["odi_score","tampa_score","orebro_score"]),
+    ])
+    st.markdown("---")
+    collected = {}
+
+    tab_gen, tab_s, tab_flags, tab_o, tab_diag, tab_pronostic, tab_p, tab_q = st.tabs([
+        "📝 Général", "🟦 S – Subjectif", "🚩 Drapeaux",
+        "🔬 O – Objectif", "🩺 Raisonnement clinique", "🔮 A – Pronostic",
+        "📋 P – Plan", "📊 Questionnaires",
+    ])
+
+    # ── GÉNÉRAL ──────────────────────────────────────────────────────────────
+    with tab_gen:
+        st.markdown('<div class="section-title">📝 Informations générales</div>', unsafe_allow_html=True)
+        c1,c2 = st.columns(2)
+        with c1:
+            bilan_date = st.date_input("Date du bilan",
+                value=date.fromisoformat(bd.get("date_bilan", str(date.today()))), key="lg_date")
+            bilan_type = st.selectbox("Type de bilan",
+                ["Bilan initial","Bilan intermédiaire","Bilan final"],
+                index=["Bilan initial","Bilan intermédiaire","Bilan final"].index(
+                    bd.get("type_bilan","Bilan initial")), key="lg_type")
+        with c2:
+            praticien = st.text_input("Praticien", value=lv("praticien",""), key="lg_prat")
+            notes_gen = st.text_area("Notes générales", value=lv("notes_generales",""), height=100, key="lg_notes")
+        st.markdown("---")
+        st.markdown('<div class="section-title">🏷️ Classification clinique</div>', unsafe_allow_html=True)
+        groupe_stored = lv("groupe_clinique","—")
+        groupe_idx    = GROUPES_CODES.index(groupe_stored) if groupe_stored in GROUPES_CODES else 0
+        groupe_chosen = st.selectbox("Groupe clinique", GROUPES_OPTIONS, index=groupe_idx, key="lg_groupe")
+        groupe_code   = GROUPES_CODES[GROUPES_OPTIONS.index(groupe_chosen)]
+        if groupe_code != "—":
+            color = GROUPES_COLORS[groupe_code]
+            st.markdown(
+                f'<div class="score-box" style="background:{color};font-size:1rem;padding:0.8rem;">'
+                f'{groupe_chosen}<br><small style="font-size:0.8rem;font-weight:400;">'
+                f'{GROUPES_DESC[groupe_code]}</small></div>',
+                unsafe_allow_html=True)
+        st.markdown("---")
+        st.markdown('<div class="section-title">🩺 Diagnostic principal</div>', unsafe_allow_html=True)
+        diag_principal = st.text_input("Diagnostic principal retenu",
+            value=lv("diag_principal",""), key="ld_principal")
+        collected.update({"date_bilan":str(bilan_date),"type_bilan":bilan_type,
+                          "praticien":praticien,"notes_generales":notes_gen,
+                          "groupe_clinique":groupe_code,"diag_principal":diag_principal})
+
+    # ── SUBJECTIF ─────────────────────────────────────────────────────────────
+    with tab_s:
+        st.markdown('<div class="soap-label">S — Subjectif</div>', unsafe_allow_html=True)
+        st.markdown("")
+        st.markdown('<div class="section-title">Motif de consultation</div>', unsafe_allow_html=True)
+        motif = st.text_area("Motif", value=lv("s_motif_consultation",""), height=80, key="ls_motif")
+        st.markdown('<div class="section-title">Caractéristiques de la douleur</div>', unsafe_allow_html=True)
+        sc1,sc2 = st.columns(2)
+        with sc1:
+            loc_stored = lv_list("s_douleur_localisation")
+            localisation = st.multiselect("Localisation", LOCALISATIONS,
+                default=[x for x in loc_stored if x in LOCALISATIONS], key="ls_loc")
+            # Type de douleur — avec option vide en premier
+            TYPES_DOULEUR_OPT = ["— Non renseigné —"] + TYPES_DOULEUR
+            td_stored = lv("s_type_douleur", "")
+            td_idx = TYPES_DOULEUR_OPT.index(td_stored) if td_stored in TYPES_DOULEUR_OPT else 0
+            type_douleur_sel = st.selectbox("Type de douleur", TYPES_DOULEUR_OPT,
+                index=td_idx, key="ls_type")
+            type_douleur = "" if type_douleur_sel == "— Non renseigné —" else type_douleur_sel
+        with sc2:
+            _EVA_OPTS = ["—", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+            def _eva_default(key):
+                v = lv(key, None)
+                if v is None or str(v).strip() in ("", "None"): return "—"
+                try: return int(float(v))
+                except: return "—"
+            eva_repos = st.select_slider("EVA repos (0–10)", options=_EVA_OPTS,
+                value=_eva_default("s_eva_repos"), key="ls_eva_r",
+                format_func=lambda x: "Non renseigné" if x == "—" else str(x))
+            eva_mvt   = st.select_slider("EVA mouvement (0–10)", options=_EVA_OPTS,
+                value=_eva_default("s_eva_mouvement"), key="ls_eva_m",
+                format_func=lambda x: "Non renseigné" if x == "—" else str(x))
+            eva_nuit  = st.select_slider("EVA nuit (0–10)", options=_EVA_OPTS,
+                value=_eva_default("s_eva_nuit"), key="ls_eva_n",
+                format_func=lambda x: "Non renseigné" if x == "—" else str(x))
+            # Convert "—" back to empty string for storage
+            eva_repos = "" if eva_repos == "—" else eva_repos
+            eva_mvt   = "" if eva_mvt   == "—" else eva_mvt
+            eva_nuit  = "" if eva_nuit  == "—" else eva_nuit
+            def ec(s): return "#388e3c" if s<=3 else "#f57c00" if s<=6 else "#d32f2f"
+            for lbl,val in [("Repos",eva_repos),("Mouvement",eva_mvt),("Nuit",eva_nuit)]:
+                if val == "": continue
+                st.markdown(f'<small style="color:{ec(val)}">● EVA {lbl} : <b>{val}/10</b></small>', unsafe_allow_html=True)
+        sc3,sc4 = st.columns(2)
+        with sc3:
+            agg_stored = lv_list("s_facteurs_aggravants")
+            aggravants = st.multiselect("Facteurs aggravants", FACTEURS_AGGRAVANTS,
+                default=[x for x in agg_stored if x in FACTEURS_AGGRAVANTS], key="ls_agg")
+        with sc4:
+            soul_stored = lv_list("s_facteurs_soulageants")
+            soulageants = st.multiselect("Facteurs soulageants", FACTEURS_SOULAGEANTS,
+                default=[x for x in soul_stored if x in FACTEURS_SOULAGEANTS], key="ls_soul")
+        st.markdown('<div class="section-title">Historique</div>', unsafe_allow_html=True)
+        sh1,sh2 = st.columns(2)
+        with sh1:
+            debut      = st.text_input("Début de la douleur", value=lv("s_debut_douleur",""), key="ls_debut")
+            mode_debut = st.text_input("Mode d'apparition", value=lv("s_mode_debut",""), key="ls_mode")
+            duree_ep   = st.text_input("Durée épisode actuel", value=lv("s_duree_episode",""), key="ls_duree")
+            episodes   = st.text_input("Épisodes antérieurs", value=lv("s_episodes_anterieurs",""), key="ls_eps")
+        with sh2:
+            atcd       = st.text_area("Antécédents", value=lv("s_antecedents",""), height=80, key="ls_atcd")
+            traitements= st.text_area("Traitements en cours", value=lv("s_traitements_en_cours",""), height=80, key="ls_trait")
+        st.markdown('<div class="section-title">Impact fonctionnel</div>', unsafe_allow_html=True)
+
+        # Cases à cocher
+        ck1, ck2, _ = st.columns([1, 1, 2])
+        with ck1:
+            arret_travail = st.checkbox(
+                "Arrêt de travail",
+                value=lv("s_arret_travail","") == "Oui",
+                key="ls_arret",
+            )
+        with ck2:
+            reveil_nuit = st.checkbox(
+                "Se réveille la nuit à cause de la douleur",
+                value=lv("s_reveil_nuit","") == "Oui",
+                key="ls_reveil",
+            )
+
+        si1,si2,si3 = st.columns(3)
+        with si1: impact_avd  = st.text_area("Impact AVD", value=lv("s_impact_avd",""), height=80, key="ls_avd")
+        with si2: impact_trav = st.text_area("Impact travail/loisirs", value=lv("s_impact_travail",""), height=80, key="ls_trav")
+        with si3: impact_somm = st.text_area("Notes sommeil", value=lv("s_impact_sommeil",""), height=80, key="ls_somm")
+        collected.update({
+            "s_motif_consultation":motif, "s_douleur_localisation":"|".join(localisation),
+            "s_eva_repos":eva_repos, "s_eva_mouvement":eva_mvt, "s_eva_nuit":eva_nuit,
+            "s_type_douleur":type_douleur,
+            "s_facteurs_aggravants":"|".join(aggravants), "s_facteurs_soulageants":"|".join(soulageants),
+            "s_debut_douleur":debut, "s_mode_debut":mode_debut, "s_duree_episode":duree_ep,
+            "s_episodes_anterieurs":episodes, "s_antecedents":atcd,
+            "s_traitements_en_cours":traitements,
+            "s_arret_travail": "Oui" if arret_travail else "Non",
+            "s_reveil_nuit":   "Oui" if reveil_nuit else "Non",
+            "s_impact_avd":impact_avd, "s_impact_travail":impact_trav, "s_impact_sommeil":impact_somm,
+        })
+
+    # ── DRAPEAUX ──────────────────────────────────────────────────────────────
+    with tab_flags:
+        st.markdown('<div class="section-title">🚩 Drapeaux rouges</div>', unsafe_allow_html=True)
+        st.markdown('<div class="danger-box">⚠️ Présence de drapeaux rouges → investigation médicale urgente.</div>', unsafe_allow_html=True)
+        dr_stored = lv_list("drapeaux_rouges_list")
+        dr_sel = []
+        cols_dr = st.columns(2)
+        for i,item in enumerate(DRAPEAUX_ROUGES):
+            with cols_dr[i%2]:
+                if st.checkbox(item, value=item in dr_stored, key=f"dr_{i}"): dr_sel.append(item)
+        if dr_sel:
+            st.markdown(f'<div class="danger-box">🔴 <b>{len(dr_sel)} drapeau(x) rouge(s) détecté(s)</b></div>', unsafe_allow_html=True)
+        dr_notes = st.text_area("Notes drapeaux rouges", value=lv("drapeaux_rouges_notes",""), height=60, key="dr_notes")
+        st.markdown("---")
+        st.markdown('<div class="section-title">🟡 Drapeaux jaunes</div>', unsafe_allow_html=True)
+        st.markdown('<div class="warn-box">Drapeaux jaunes → approche biopsychosociale.</div>', unsafe_allow_html=True)
+        dj_stored = lv_list("drapeaux_jaunes_list")
+        dj_sel = []
+        cols_dj = st.columns(2)
+        for i,item in enumerate(DRAPEAUX_JAUNES):
+            with cols_dj[i%2]:
+                if st.checkbox(item, value=item in dj_stored, key=f"dj_{i}"): dj_sel.append(item)
+        if dj_sel:
+            st.markdown(f'<div class="warn-box">🟡 <b>{len(dj_sel)} drapeau(x) jaune(s)</b></div>', unsafe_allow_html=True)
+        dj_notes = st.text_area("Notes drapeaux jaunes", value=lv("drapeaux_jaunes_notes",""), height=60, key="dj_notes")
+        collected.update({"drapeaux_rouges_list":"|".join(dr_sel),"drapeaux_rouges_notes":dr_notes,
+                          "drapeaux_jaunes_list":"|".join(dj_sel),"drapeaux_jaunes_notes":dj_notes})
+
+    # ── OBJECTIF ──────────────────────────────────────────────────────────────
+    with tab_o:
+        st.markdown('<div class="soap-label">O — Objectif</div>', unsafe_allow_html=True)
+        st.markdown("")
+        st.markdown('<div class="section-title">Posture & observation</div>', unsafe_allow_html=True)
+        posture_notes = st.text_area("Observation posturale", value=lv("o_posture_notes",""), height=80, key="lo_posture")
+
+        # ── Mobilité lombaire ─────────────────────────────────────────────────
+        st.markdown('<div class="section-title">Mobilité lombaire</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="info-box"><small>1/3 = très limité · 2/3 = modérément limité · '
+            '3/3 = amplitude complète (normale)</small></div>',
+            unsafe_allow_html=True,
+        )
+
+        MOB_OPTS = ["— Non renseigné —", "1/3", "2/3", "3/3"]
+
+        def mob_select(label, key):
+            stored = lv(key, "")
+            idx = MOB_OPTS.index(stored) if stored in MOB_OPTS else 0
+            chosen = st.selectbox(label, MOB_OPTS, index=idx, key=f"lo_{key}")
+            return "" if chosen == "— Non renseigné —" else chosen
+
+        mo1, mo2, mo3, mo4 = st.columns(4)
+        with mo1:
+            schober = st.number_input("Schober modifié (cm)", 0.0, 30.0,
+                lv_float_or_none("o_schober"), 0.5, key="lo_schober", help="0 = non mesuré")
+            flex_cm = st.number_input("Flexion doigt-sol (cm)", 0.0, 50.0,
+                lv_float_or_none("o_flexion_cm"), 0.5, key="lo_flex", help="0 = non mesuré")
+        with mo2:
+            ext_mob  = mob_select("Extension", "o_extension_mob")
+        with mo3:
+            lat_d_mob = mob_select("Latéroflexion Droite", "o_lat_droite_mob")
+            lat_g_mob = mob_select("Latéroflexion Gauche", "o_lat_gauche_mob")
+        with mo4:
+            rot_d_mob = mob_select("Rotation Droite", "o_rot_droite_mob")
+            rot_g_mob = mob_select("Rotation Gauche", "o_rot_gauche_mob")
+
+        # ── Tests cliniques ───────────────────────────────────────────────────
+        st.markdown('<div class="section-title">Tests cliniques</div>', unsafe_allow_html=True)
+        test_collected = {}
+
+        # Tous les tests sauf contrôle moteur (remplacé par Luomajoki)
+        TESTS_SANS_CM = {k: v for k, v in TESTS_CLINIQUES.items()
+                         if k != "Tests de contrôle moteur"}
+
+        for section_name, tests in TESTS_SANS_CM.items():
+            with st.expander(section_name):
+                tc1, tc2 = st.columns(2)
+                for i, test in enumerate(tests):
+                    skey = "lo_" + test.lower().replace(" ","_").replace("/","_").replace("(","").replace(")","")[:30]
+                    sv   = lv(f"o_{skey}", RESULTATS_TEST[0])
+                    idx  = RESULTATS_TEST.index(sv) if sv in RESULTATS_TEST else 0
+                    with (tc1 if i % 2 == 0 else tc2):
+                        chosen = st.selectbox(test, RESULTATS_TEST, index=idx, key=f"test_{skey}")
+                        test_collected[f"o_{skey}"] = chosen if chosen != "—" else ""
+
+        # ── Tests de Luomajoki ────────────────────────────────────────────────
+        with st.expander("Tests de Luomajoki — Contrôle du mouvement lombaire"):
+            st.markdown(
+                '<div class="info-box"><small>'
+                '<b>Batterie de 6 tests de contrôle du mouvement lombaire</b> (Luomajoki et al., 2007). '
+                'Résultat : ✅ Réussi (contrôle correct) · ❌ Échoué (perte de contrôle lombaire). '
+                'Score total sur 6 — un score ≥ 3 échecs est cliniquement significatif.'
+                '</small></div>',
+                unsafe_allow_html=True,
+            )
+            LUOM_TESTS = [
+                ("luom_waiters_bow",
+                 "1. Waiters Bow (hip hinge)",
+                 "Le patient se penche en avant en fléchissant les hanches sans flexion lombaire. "
+                 "Échec si flexion ou extension lombaire compensatoire."),
+                ("luom_pelvic_tilt",
+                 "2. Pelvic Tilt (debout)",
+                 "Le patient effectue une antéversion et rétroversion pelviennes. "
+                 "Échec si mouvement lombaire au lieu du mouvement pelvien pur."),
+                ("luom_knee_lift",
+                 "3. Knee Lift (debout)",
+                 "Le patient lève le genou jusqu'à 90° en unipodal. "
+                 "Échec si inclinaison lombaire ou rotation du bassin."),
+                ("luom_one_leg_stance",
+                 "4. One-Leg Stance (station unipodale)",
+                 "Le patient maintient l'équilibre sur un pied pendant 10 secondes. "
+                 "Échec si oscillation lombaire ou chute du bassin > 2 cm."),
+                ("luom_sitting_knee_ext",
+                 "5. Sitting Knee Extension (ASLR assis)",
+                 "Le patient étend le genou en position assise. "
+                 "Échec si flexion lombaire compensatoire."),
+                ("luom_prone_knee_bend",
+                 "6. Prone Knee Bend (décubitus ventral)",
+                 "Le patient fléchit le genou à 90° en décubitus ventral. "
+                 "Échec si antéversion pelvienne ou extension lombaire compensatoire."),
+            ]
+
+            LUOM_OPTS = ["— Non testé —", "✅ Réussi", "❌ Échoué"]
+            luom_scores = []
+            lc1, lc2 = st.columns(2)
+            for i, (lkey, lname, ldesc) in enumerate(LUOM_TESTS):
+                stored_luom = lv(f"o_{lkey}", "")
+                idx_luom    = LUOM_OPTS.index(stored_luom) if stored_luom in LUOM_OPTS else 0
+                with (lc1 if i % 2 == 0 else lc2):
+                    st.markdown(f"**{lname}**")
+                    st.markdown(f"<small style='color:#666'>{ldesc}</small>",
+                                unsafe_allow_html=True)
+                    chosen_luom = st.radio(
+                        label=lname, options=LUOM_OPTS, index=idx_luom,
+                        horizontal=True, key=f"luom_{lkey}",
+                        label_visibility="collapsed",
+                    )
+                    test_collected[f"o_{lkey}"] = chosen_luom if chosen_luom != "— Non testé —" else ""
+                    if chosen_luom == "❌ Échoué":
+                        luom_scores.append(1)
+
+            # Score total Luomajoki
+            n_echecs = len(luom_scores)
+            if n_echecs > 0:
+                color_luom = "#d32f2f" if n_echecs >= 3 else "#f57c00" if n_echecs >= 1 else "#388e3c"
+                st.markdown(
+                    f'<div class="score-box" style="background:{color_luom};font-size:1rem;margin-top:0.5rem;">'
+                    f'{n_echecs} / 6 tests échoués'
+                    f'{"  — Dysfonction de contrôle moteur significative" if n_echecs >= 3 else ""}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+            test_collected["o_luomajoki_score"] = n_echecs if n_echecs > 0 else ""
+
+        tests_notes = st.text_area("Notes complémentaires (objectif)",
+            value=lv("o_tests_notes",""), height=80, key="lo_notes")
+
+        collected.update({
+            "o_posture_notes":  posture_notes,
+            "o_schober":        schober or "",
+            "o_flexion_cm":     flex_cm or "",
+            "o_extension_mob":  ext_mob,
+            "o_lat_droite_mob": lat_d_mob,
+            "o_lat_gauche_mob": lat_g_mob,
+            "o_rot_droite_mob": rot_d_mob,
+            "o_rot_gauche_mob": rot_g_mob,
+            "o_tests_notes":    tests_notes,
+            **test_collected,
+        })
+
+    # ── DIAGNOSTICS ───────────────────────────────────────────────────────────
+    with tab_diag:
+        st.markdown('<div class="section-title">🩺 Raisonnement clinique</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="info-box">Notez ici votre raisonnement clinique : hypothèses, '
+            'diagnostics différentiels, éléments qui orientent ou excluent certains diagnostics.</div>',
+            unsafe_allow_html=True,
+        )
+        diag_notes = st.text_area("Raisonnement clinique",
+            value=lv("diag_notes",""), height=300, key="ld_notes",
+            placeholder="Ex : Arguments en faveur d'un syndrome facettaire : extension plus douloureuse que flexion, "
+                        "soulagement en décharge... Hypothèse myofasciale écartée car..."
+        )
+        collected.update({"diag_notes": diag_notes})
+
+    # ── APPRÉCIATION ──────────────────────────────────────────────────────────
+    with tab_pronostic:
+        st.markdown('<div class="soap-label">A — Pronostic</div>', unsafe_allow_html=True)
+        st.markdown("")
+        st.markdown('<div class="info-box">Pronostic et synthèse clinique : facteurs favorables, défavorables, objectifs à long terme.</div>', unsafe_allow_html=True)
+        appreciation = st.text_area("Appréciation clinique", value=lv("a_appreciation",""), height=200, key="la_appr", placeholder="Pronostic favorable / réservé / défavorable... Facteurs favorables : ... Facteurs défavorables : ...")
+        collected["a_appreciation"] = appreciation
+
+    # ── PLAN ──────────────────────────────────────────────────────────────────
+    with tab_p:
+        st.markdown('<div class="soap-label">P — Plan thérapeutique</div>', unsafe_allow_html=True)
+        st.markdown("")
+        pc1,pc2 = st.columns(2)
+        with pc1:
+            objectifs  = st.text_area("Objectifs thérapeutiques", value=lv("p_objectifs",""), height=100, key="lp_obj")
+            traitement = st.text_area("Modalités de traitement", value=lv("p_traitement",""), height=100, key="lp_trait")
+        with pc2:
+            frequence  = st.text_input("Fréquence des séances", value=lv("p_frequence",""), key="lp_freq")
+            duree_plan = st.text_input("Durée prévue", value=lv("p_duree",""), key="lp_duree")
+            education  = st.text_area("Éducation du patient", value=lv("p_education",""), height=80, key="lp_edu")
+            autogestion= st.text_area("Autogestion / exercices à domicile", value=lv("p_autogestion",""), height=80, key="lp_auto")
+        collected.update({"p_objectifs":objectifs,"p_traitement":traitement,
+                          "p_frequence":frequence,"p_duree":duree_plan,
+                          "p_education":education,"p_autogestion":autogestion})
+
+    # ── QUESTIONNAIRES ────────────────────────────────────────────────────────
+    with tab_q:
+        st.markdown('<div class="section-title">📊 Questionnaires</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="info-box">Le patient remplit les questionnaires directement ici. '
+            'Les scores sont calculés automatiquement.</div>',
+            unsafe_allow_html=True,
+        )
+
+        q_tab_odi, q_tab_tampa, q_tab_orebro = st.tabs([
+            "📊 Oswestry (ODI)", "😨 Tampa Scale", "🧠 Örebro",
+        ])
+
+        # ── ODI ──────────────────────────────────────────────────────────────
+        with q_tab_odi:
+            st.markdown("**Oswestry Disability Index** — Cochez UNE seule réponse par section.")
+            odi_answers = {}
+            for key, title, options in ODI_SECTIONS:
+                stored = lv_int(key, -1)
+                # -1 = non répondu
+                opts_with_empty = ["— Non répondu —"] + options
+                default_idx = stored + 1 if 0 <= stored <= 5 else 0
+                chosen = st.radio(
+                    title, opts_with_empty,
+                    index=default_idx,
+                    key=f"q_{key}",
+                )
+                if chosen != "— Non répondu —":
+                    odi_answers[key] = options.index(chosen)
+                    collected[key] = options.index(chosen)
+                else:
+                    collected[key] = ""
+
+            odi_result = compute_odi(odi_answers)
+            if odi_result["score"] is not None:
+                st.markdown("---")
+                st.markdown(
+                    f'<div class="score-box" style="background:{odi_result["color"]};">'
+                    f'ODI : {odi_result["score"]}% — {odi_result["interpretation"]}</div>',
+                    unsafe_allow_html=True,
+                )
+                collected.update({"odi_score": odi_result["score"],
+                                   "odi_interpretation": odi_result["interpretation"]})
+            else:
+                collected.update({"odi_score": "", "odi_interpretation": ""})
+
+        # ── TAMPA ─────────────────────────────────────────────────────────────
+        with q_tab_tampa:
+            st.markdown(
+                "**Tampa Scale for Kinesiophobia (TSK-17)** — "
+                "1 = Pas du tout d'accord · 2 = Plutôt pas d'accord · "
+                "3 = Plutôt d'accord · 4 = Tout à fait d'accord"
+            )
+            st.markdown(
+                '<div class="info-box"><small>(R) = item inversé pour le calcul du score</small></div>',
+                unsafe_allow_html=True,
+            )
+            tampa_answers = {}
+            for key, reversed_item, text in TAMPA_ITEMS:
+                num = int(key.split("_")[1])
+                stored = lv_int(key, 0)
+                r_label = " *(R)*" if reversed_item else ""
+                TAMPA_OPTS_EXTENDED = [0] + TAMPA_SCALE_VALUES
+                TAMPA_FMT = {0: "— Non répondu —", 1: TAMPA_SCALE[0], 2: TAMPA_SCALE[1], 3: TAMPA_SCALE[2], 4: TAMPA_SCALE[3]}
+                default_idx = stored if 1 <= stored <= 4 else 0
+                chosen_val = st.radio(
+                    f"{num}.{r_label} {text}",
+                    options=TAMPA_OPTS_EXTENDED,
+                    format_func=lambda x: TAMPA_FMT.get(x, "—"),
+                    index=default_idx,
+                    horizontal=True,
+                    key=f"q_{key}",
+                )
+                if chosen_val == 0:
+                    collected[key] = ""
+                else:
+                    tampa_answers[key] = chosen_val
+                    collected[key] = chosen_val
+
+            tampa_result = compute_tampa(tampa_answers)
+            if tampa_result["score"] is not None:
+                st.markdown("---")
+                st.markdown(
+                    f'<div class="score-box" style="background:{tampa_result["color"]};">'
+                    f'Tampa : {tampa_result["score"]}/68 — {tampa_result["interpretation"]}</div>',
+                    unsafe_allow_html=True,
+                )
+                collected.update({"tampa_score": tampa_result["score"],
+                                   "tampa_interpretation": tampa_result["interpretation"]})
+            else:
+                collected.update({"tampa_score": "", "tampa_interpretation": ""})
+
+        # ── ÖREBRO ────────────────────────────────────────────────────────────
+        with q_tab_orebro:
+            st.markdown(
+                "**Örebro Musculoskeletal Pain Questionnaire** — "
+                "Entourez le chiffre qui correspond le mieux à votre situation."
+            )
+            orebro_answers = {}
+            for key, question, hint in OREBRO_ITEMS:
+                num = int(key.split("_")[1])
+                stored = lv_int(key, -1)
+                default_idx = stored if 0 <= stored <= 10 else 0
+                st.markdown(f"**{num}. {question}**")
+                st.markdown(f"<small style='color:#888'>{hint}</small>", unsafe_allow_html=True)
+                val = st.slider(
+                    label=f"orebro_{num}",
+                    min_value=0, max_value=10,
+                    value=default_idx,
+                    key=f"q_{key}",
+                    label_visibility="collapsed",
+                )
+                orebro_answers[key] = val
+                collected[key] = val
+
+            orebro_result = compute_orebro(orebro_answers)
+            if orebro_result["score"] is not None:
+                st.markdown("---")
+                st.markdown(
+                    f'<div class="score-box" style="background:{orebro_result["color"]};">'
+                    f'Örebro : {orebro_result["score"]}/100 — {orebro_result["interpretation"]}</div>',
+                    unsafe_allow_html=True,
+                )
+                collected.update({"orebro_score": orebro_result["score"],
+                                   "orebro_interpretation": orebro_result["interpretation"]})
+            else:
+                collected.update({"orebro_score": "", "orebro_interpretation": ""})
+
+    # ── SAUVEGARDE ────────────────────────────────────────────────────────────
+    if save_top or st.button("💾 Sauvegarder le bilan", type="primary", key="lomb_save_bot"):
+        final_data = {**st.session_state.lomb_bilan_data,**collected,
+                      "patient_id":st.session_state.lomb_patient_id}
+        if st.session_state.lomb_bilan_id:
+            final_data["bilan_id"] = st.session_state.lomb_bilan_id
+        with st.spinner("Enregistrement…"):
+            new_id = save_bilan_lombalgie(final_data)
+        st.session_state.lomb_bilan_id   = new_id
+        final_data["bilan_id"]           = new_id
+        st.session_state.lomb_bilan_data = final_data
+        st.session_state["lomb_unsaved"] = False
+        st.success(f"✅ Bilan sauvegardé ! (ID : {new_id})")
+        st.balloons()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  ÉVOLUTION
+# ═══════════════════════════════════════════════════════════════════════════════
 
 def safe_n(val):
-    """Convertit en float. Retourne None si vide/absent, accepte 0 comme valeur valide."""
-    if val is None or str(val).strip() in ("", "—", "None"):
-        return None
     try:
-        return float(val)
+        v = float(val)
+        return v if v != 0 else None
     except (TypeError, ValueError):
         return None
 
 
-def val_s(val, suffix=""):
-    v = safe_n(val)
-    if v is None: return "—"
-    return f"{int(v)}{suffix}" if v == int(v) else f"{v}{suffix}"
-
-
-# ─── Styles ───────────────────────────────────────────────────────────────────
-
-
-def fig_to_img(fig, width_cm=17, height_cm=7):
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor="white")
-    plt.close(fig)
-    buf.seek(0)
-    return Image(buf, width=width_cm*cm, height=height_cm*cm)
-
-
-def short_labels(labels):
-    return [l.split("–")[0].strip() for l in labels]
-
-
-# ─── Graphiques ───────────────────────────────────────────────────────────────
-
-def chart_eva(bilans_df, labels):
-    xlbls = short_labels(labels)
-    x = range(len(xlbls))
-    fig, ax = plt.subplots(figsize=(10, 4))
-    for key, label, color, marker in [
-        ("s_eva_repos",    "EVA Repos",     "#388e3c", "o"),
-        ("s_eva_mouvement","EVA Mouvement", "#f57c00", "s"),
-        ("s_eva_nuit",     "EVA Nuit",      "#7b1fa2", "^"),
-    ]:
-        vals = [safe_n(r.get(key)) for _, r in bilans_df.iterrows()]
-        xp = [i for i,v in enumerate(vals) if v is not None]
-        yp = [v for v in vals if v is not None]
-        if xp:
-            ax.plot(xp, yp, f"{marker}-", color=color, linewidth=2.5,
-                    markersize=8, label=label)
-            for xi,yi in zip(xp,yp):
-                ax.annotate(str(int(yi)), (xi,yi), textcoords="offset points",
-                            xytext=(0,8), ha="center", fontsize=8, color=color, fontweight="bold")
-    ax.axhline(3, linestyle="--", color="#388e3c", linewidth=1, alpha=0.6, label="3 légère")
-    ax.axhline(6, linestyle="--", color="#f57c00", linewidth=1, alpha=0.6, label="6 modérée")
-    ax.set_xticks(list(x)); ax.set_xticklabels(xlbls, rotation=15, ha="right", fontsize=9)
-    ax.set_ylim(0, 11); ax.set_ylabel("EVA /10")
-    ax.set_title("Évolution EVA", fontsize=11, fontweight="bold", color="#2e5a1c")
-    ax.legend(fontsize=8, framealpha=0.8); ax.spines[["top","right"]].set_visible(False)
-    ax.set_facecolor("white"); fig.tight_layout()
-    return fig_to_img(fig, 17, 6)
-
-
-def chart_questionnaires(bilans_df, labels):
-    xlbls = short_labels(labels)
-    x = list(range(len(xlbls)))
-    fig, axes = plt.subplots(1, 3, figsize=(14, 4))
-    configs = [
-        ("odi_score",   "ODI (%)",     "#1a3c5e", [(20,"#388e3c"),(40,"#8bc34a"),(60,"#f57c00"),(80,"#e64a19")], 100),
-        ("tampa_score", "Tampa (/68)", "#f57c00", [(37,"#388e3c"),(44,"#f57c00")], 68),
-        ("orebro_score","Örebro",      "#7b1fa2", [(50,"#388e3c"),(74,"#f57c00")], 100),
-    ]
-    for ax, (key, title, color, thrs, ymax) in zip(axes, configs):
-        vals = [safe_n(r.get(key)) for _, r in bilans_df.iterrows()]
-        xp = [i for i,v in enumerate(vals) if v is not None]
-        yp = [v for v in vals if v is not None]
-        bars = ax.bar(xp, yp, color=color, width=0.5, zorder=3)
-        for bar, v in zip(bars, yp):
-            ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+1,
-                    str(int(v)), ha="center", fontsize=9, fontweight="bold")
-        for thr, tc in thrs:
-            ax.axhline(thr, linestyle="--", color=tc, linewidth=1.2, alpha=0.7)
-        ax.set_xticks(x); ax.set_xticklabels(xlbls, rotation=15, ha="right", fontsize=8)
-        ax.set_ylim(0, ymax + 10); ax.set_title(title, fontsize=9, fontweight="bold", color="#2e5a1c")
-        ax.spines[["top","right"]].set_visible(False)
-        ax.set_facecolor("white"); ax.grid(axis="y", alpha=0.3)
-    fig.tight_layout()
-    return fig_to_img(fig, 17, 5.5)
-
-
-def chart_luomajoki(bilans_df, labels):
-    xlbls = short_labels(labels)
-    vals  = [safe_n(r.get("o_luomajoki_score")) for _, r in bilans_df.iterrows()]
-    if not any(vals):
-        return None
-    fig, ax = plt.subplots(figsize=(10, 3.5))
-    bar_cols = ["#d32f2f" if v and v>=3 else "#f57c00" if v and v>=1 else "#388e3c" for v in vals]
-    bars = ax.bar(range(len(xlbls)), [v or 0 for v in vals], color=bar_cols, width=0.5)
-    for bar, v in zip(bars, vals):
-        if v:
-            ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.1,
-                    f"{int(v)}/6", ha="center", fontsize=9, fontweight="bold")
-    ax.axhline(3, linestyle="--", color="#d32f2f", linewidth=1.5, label="Seuil significatif (≥3)")
-    ax.set_xticks(range(len(xlbls))); ax.set_xticklabels(xlbls, rotation=15, ha="right", fontsize=9)
-    ax.set_ylim(0, 7); ax.set_ylabel("Échecs /6")
-    ax.set_title("Tests de Luomajoki", fontsize=11, fontweight="bold", color="#2e5a1c")
-    ax.legend(fontsize=8); ax.spines[["top","right"]].set_visible(False)
-    ax.set_facecolor("white"); ax.grid(axis="y", alpha=0.3); fig.tight_layout()
-    return fig_to_img(fig, 17, 5.5)
-
-
-def chart_mobilite(bilans_df, labels):
-    xlbls = short_labels(labels)
-    MOB_NUM = {"1/3": 1, "2/3": 2, "3/3": 3}
-    mob_keys = [
-        ("o_extension_mob",  "Extension"),
-        ("o_lat_droite_mob", "Latérofl. D"),
-        ("o_lat_gauche_mob", "Latérofl. G"),
-        ("o_rot_droite_mob", "Rotation D"),
-        ("o_rot_gauche_mob", "Rotation G"),
-    ]
-    colors_mob = ["#1a3c5e","#f57c00","#388e3c","#7b1fa2","#d32f2f"]
-    n = len(bilans_df)
-    x = np.arange(len(mob_keys))
-    width = 0.7 / max(n, 1)
-
-    fig, ax = plt.subplots(figsize=(12, 4))
-    for j, (_, row) in enumerate(bilans_df.iterrows()):
-        vals = [MOB_NUM.get(row.get(key,""), 0) for key, _ in mob_keys]
-        offset = (j - (n-1)/2) * width
-        bars = ax.bar(x + offset, vals, width=width*0.9,
-                      color=colors_mob[j % len(colors_mob)],
-                      label=xlbls[j], zorder=3)
-        for bar, v, (key, klabel) in zip(bars, vals, mob_keys):
-            txt = row.get(key,"") or ""
-            if txt:
-                ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.05,
-                        txt, ha="center", fontsize=7, fontweight="bold")
-
-    ax.set_xticks(x); ax.set_xticklabels([kl for _, kl in mob_keys], fontsize=9)
-    ax.set_yticks([1,2,3]); ax.set_yticklabels(["1/3","2/3","3/3"])
-    ax.set_ylim(0, 4); ax.set_title("Mobilité lombaire", fontsize=11, fontweight="bold", color="#2e5a1c")
-    ax.legend(fontsize=8, framealpha=0.8); ax.spines[["top","right"]].set_visible(False)
-    ax.set_facecolor("white"); ax.grid(axis="y", alpha=0.3); fig.tight_layout()
-    return fig_to_img(fig, 17, 5.5)
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  GÉNÉRATEUR PRINCIPAL
-# ═══════════════════════════════════════════════════════════════════════════════
-
-# ─── Questionnaires — données et scoring ────────────────────────────────────
-
-# ─── Palette 36.9 Bilans ──────────────────────────────────────────────────────
-TERRA       = _colors.HexColor("#C4603A")
-TERRA_LIGHT = _colors.HexColor("#FAEEE9")
-BLEU        = _colors.HexColor("#2B57A7")
-BLEU_LIGHT  = _colors.HexColor("#E8EEF9")
-GRIS        = _colors.HexColor("#F4F4F4")
-GRIS_BORD   = _colors.HexColor("#DEDEDE")
-GRIS_TEXTE  = _colors.HexColor("#555555")
-NOIR        = _colors.HexColor("#1A1A1A")
-BLANC       = _colors.white
-VERT        = _colors.HexColor("#388e3c")
-ORANGE      = _colors.HexColor("#f57c00")
-ROUGE       = _colors.HexColor("#d32f2f")
-JAUNE       = _colors.HexColor("#fbc02d")
-
-# Aliases ancienne palette
-BLEU_FONCE  = BLEU
-BLEU_CLAIR  = BLEU_LIGHT
-GRIS_CLAIR  = GRIS
-
-USEFUL_W = _A4[0] - 3*_cm
-MARGIN   = 1.5*_cm
-HEADER_H = 1.6*_cm
-W        = USEFUL_W
-
-def _find_logo():
-    candidates = [
-        _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "assets", "logo_369.png"),
-        _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "assets", "logo_369.png"),
-        "assets/logo_369.png",
-        "/mount/src/36.9-bilans/assets/logo_369.png",
-    ]
-    for c in candidates:
-        if _os.path.exists(c):
-            return c
-    return None
-
-def get_logo(width=3.2*_cm, height=1.1*_cm):
-    p = _find_logo()
-    if p:
-        return _Image(p, width=width, height=height, kind="proportional")
-    return None
-
-def make_header_footer(report_title, patient_name=""):
-    from datetime import date as _date
-    def _draw(canvas, doc):
-        canvas.saveState()
-        w, h = _A4
-
-        # Fond blanc header (transparent — pas de fond coloré)
-        # Trait terracotta en haut de page
-                # Logo à gauche
-        logo_p = _find_logo()
-        if logo_p:
-            try:
-                canvas.drawImage(logo_p, MARGIN, h - 1.4*_cm,
-                    width=2.6*_cm, height=1.0*_cm,
-                    preserveAspectRatio=True, mask="auto")
-            except Exception:
-                pass
-
-        # Titre rapport (centre, discret)
-        canvas.setFillColor(GRIS_TEXTE)
-        canvas.setFont("Helvetica", 8)
-        canvas.drawCentredString(w/2, h - 1.1*_cm, report_title)
-
-        # Patient (droite, en bleu)
-        if patient_name:
-            canvas.setFillColor(BLEU)
-            canvas.setFont("Helvetica-Bold", 8)
-            canvas.drawRightString(w - MARGIN, h - 1.1*_cm, patient_name)
-
-        # Ligne séparatrice fine
-        canvas.setStrokeColor(GRIS_BORD)
-        canvas.setLineWidth(0.5)
-        canvas.line(MARGIN, h - 1.5*_cm, w - MARGIN, h - 1.5*_cm)
-
-        # Pied de page
-        canvas.setStrokeColor(GRIS_BORD)
-        canvas.setLineWidth(0.5)
-        canvas.line(MARGIN, 0.9*_cm, w - MARGIN, 0.9*_cm)
-        canvas.setFillColor(GRIS_TEXTE)
-        canvas.setFont("Helvetica", 7)
-        canvas.drawString(MARGIN, 0.35*_cm, "Document confidentiel — Usage médical exclusif")
-        canvas.drawCentredString(w/2, 0.35*_cm, "36.9 Bilans")
-        canvas.drawRightString(w - MARGIN, 0.35*_cm,
-            f"Page {doc.page}  ·  {_date.today().strftime('%d/%m/%Y')}")
-        canvas.restoreState()
-    return _draw
-
-def section_band(title, color=None):
-    """Titre sobre : bleu gras + filet bleu bas."""
-    row = [[Paragraph(f"<b>{title}</b>",
-        ParagraphStyle("lsb", fontSize=11, fontName="Helvetica-Bold",
-                       textColor=BLEU_FONCE, leading=15))]]
-    tbl = Table(row, colWidths=[USEFUL_W if "USEFUL_W" in dir() else W])
-    tbl.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0),(-1,-1), BLANC),
-        ("LINEBELOW",     (0,0),(-1,-1), 1.2, BLEU_FONCE),
-        ("TOPPADDING",    (0,0),(-1,-1), 8),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 4),
-        ("LEFTPADDING",   (0,0),(-1,-1), 0),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 0),
-    ]))
-    return tbl
-
-def make_table(data, col_widths=None, header=True, accent=None):
-    if accent is None: accent = BLEU
-    t = _Table(data, colWidths=col_widths, repeatRows=1 if header else 0)
-    cmds = [
-        ("FONTNAME",      (0,0),(-1,-1), "Helvetica"),
-        ("FONTSIZE",      (0,0),(-1,-1), 8),
-        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
-        ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
-        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
-        ("TOPPADDING",    (0,0),(-1,-1), 5),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 5),
-        ("LEFTPADDING",   (0,0),(-1,-1), 7),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 7),
-    ]
-    if header:
-        cmds += [
-            ("BACKGROUND",   (0,0),(-1,0), accent),
-            ("TEXTCOLOR", (0,0),(-1,0), BLEU),
-            ("LINEBELOW",(0,0),(-1,0), 1.0, BLEU),
-            ("FONTNAME",     (0,0),(-1,0), "Helvetica-Bold"),
-            ("FONTSIZE",     (0,0),(-1,0), 8),
-            ("TOPPADDING",   (0,0),(-1,0), 7),
-            ("BOTTOMPADDING",(0,0),(-1,0), 7),
-        ]
-    t.setStyle(_TableStyle(cmds))
-    return t
-
-def make_cover(story, title, subtitle, patient_info, bilans_df, labels, styles):
-    import pandas as _pd
-    from datetime import date as _date
-    from reportlab.platypus import Spacer, PageBreak
-    # Bandeau titre bleu
-    band_data = [[_Para(f"<font color='white'><b>{title}</b></font>",
-        _PS("ct369", fontSize=22, fontName="Helvetica-Bold",
-            textColor=BLANC, alignment=_TA_CENTER))]]
-    band = _Table(band_data, colWidths=[USEFUL_W])
-    band.setStyle(_TableStyle([("BACKGROUND",(0,0),(-1,-1),BLEU),
-        ("TOPPADDING",(0,0),(-1,-1),20),("BOTTOMPADDING",(0,0),(-1,-1),20)]))
-    story.append(Spacer(1, 0.8*_cm))
-    story.append(band)
-    # Sous-bande terracotta
-    sub_data = [[_Para(f"<font color='white'>{subtitle}</font>",
-        _PS("cs369", fontSize=11, fontName="Helvetica",
-            textColor=BLANC, alignment=_TA_CENTER))]]
-    sub = _Table(sub_data, colWidths=[USEFUL_W])
-    sub.setStyle(_TableStyle([("BACKGROUND",(0,0),(-1,-1),TERRA),
-        ("TOPPADDING",(0,0),(-1,-1),8),("BOTTOMPADDING",(0,0),(-1,-1),8)]))
-    story.append(sub)
-    story.append(Spacer(1, 0.6*_cm))
-    # Logo centré
-    logo = get_logo(width=5*_cm, height=2*_cm)
-    if logo:
-        lt = _Table([[logo]], colWidths=[USEFUL_W])
-        lt.setStyle(_TableStyle([("ALIGN",(0,0),(-1,-1),"CENTER")]))
-        story.append(lt)
-        story.append(Spacer(1, 0.5*_cm))
-    # Infos patient
-    n = len(bilans_df)
-    pat = [
-        ["Patient",           f"{patient_info.get('nom','')} {patient_info.get('prenom','')}"],
-        ["Date de naissance", str(patient_info.get("date_naissance","—"))],
-        ["Sexe",              patient_info.get("sexe","—")],
-        ["Profession",        patient_info.get("profession","—") or "—"],
-        ["Nombre de bilans",  str(n)],
-        ["Généré le",         _date.today().strftime("%d/%m/%Y")],
-    ]
-    pt = _Table(pat, colWidths=[4.5*_cm, USEFUL_W-4.5*_cm])
-    pt.setStyle(_TableStyle([
-        ("FONTNAME",(0,0),(0,-1),"Helvetica-Bold"),
-        ("FONTNAME",(1,0),(1,-1),"Helvetica"),
-        ("FONTSIZE",(0,0),(-1,-1),9),
-        ("TEXTCOLOR",(0,0),(0,-1),BLEU),
-        ("ROWBACKGROUNDS",(0,0),(-1,-1),[BLANC,BLEU_LIGHT]),
-        ("LINEBELOW",(0,0),(-1,-1),0.3,GRIS_BORD),
-        ("TOPPADDING",(0,0),(-1,-1),6),
-        ("BOTTOMPADDING",(0,0),(-1,-1),6),
-        ("LEFTPADDING",(0,0),(-1,-1),10),
-    ]))
-    story.append(pt)
-    story.append(Spacer(1, 0.6*_cm))
-    # Tableau bilans
-    story.append(_Para("Bilans inclus dans ce rapport",
-        _PS("subs369b", fontSize=10, fontName="Helvetica-Bold",
-            textColor=TERRA, spaceBefore=8, spaceAfter=4)))
-    bil = [["#","Date","Type","Praticien"]]
-    for i,(_, row) in enumerate(bilans_df.iterrows()):
-        d = row["date_bilan"]
-        ds = d.strftime("%d/%m/%Y") if _pd.notna(d) else "—"
-        bil.append([str(i+1), ds, row.get("type_bilan","—") or "—",
-                    row.get("praticien","—") or "—"])
-    story.append(make_table(bil, col_widths=[1.2*_cm,3.2*_cm,5*_cm,USEFUL_W-9.4*_cm]))
-
-
-
-GRIS_CLAIR = GRIS
-BLEU_CLAIR = BLEU_LIGHT
-BLEU_FONCE = BLEU
-BLEU_CLAIR = BLEU_LIGHT
-W = USEFUL_W
-CHECKBOX = "☐"
-
-def section_header(title, subtitle=""):
-    tbl = Table([[Paragraph(title, ParagraphStyle("th", fontSize=13,
-        fontName="Helvetica-Bold", textColor=BLANC))]], colWidths=[W])
-    tbl.setStyle(TableStyle([
-        ("BACKGROUND",(0,0),(-1,-1),BLEU),
-        ("TOPPADDING",(0,0),(-1,-1),7),
-        ("BOTTOMPADDING",(0,0),(-1,-1),7),
-        ("LEFTPADDING",(0,0),(-1,-1),10),
-    ]))
-    items = [tbl]
-    if subtitle:
-        items.append(Paragraph(subtitle, ParagraphStyle("ts", fontSize=8,
-            fontName="Helvetica-Oblique", textColor=colors.HexColor("#555"), spaceAfter=4)))
-    return items
-
-
-def radio_v(num, question, options, styles):
-    q_text = f"{num}. {question}" if question else str(num)
-    items = [Paragraph(q_text, styles["question"])]
-    rows = [[Paragraph(f"{CHECKBOX}  {lbl}", styles["option"])] for lbl in options]
-    tbl = Table(rows, colWidths=[W])
-    tbl.setStyle(TableStyle([
-        ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
-        ("LEFTPADDING",(0,0),(-1,-1),20),
-        ("ROWBACKGROUNDS",(0,0),(-1,-1),[BLANC, GRIS_CLAIR]),
-        ("GRID",(0,0),(-1,-1),0.3,GRIS_BORD),
-    ]))
-    items.append(tbl)
-    from reportlab.platypus import KeepTogether as _KT
-    return _KT(items)
-
-def score_footer(label, max_score, guide):
-    rows = [[f"Score : _______ / {max_score}", ""]]
-    tbl = Table(rows, colWidths=[W/2, W/2])
-    tbl.setStyle(TableStyle([
-        ("FONTNAME",(0,0),(0,0),"Helvetica-Bold"),
-        ("FONTSIZE",(0,0),(-1,-1),9),
-        ("TEXTCOLOR",(0,0),(0,0),BLEU),
-        ("BACKGROUND",(0,0),(-1,-1),BLEU_CLAIR),
-        ("BOX",(0,0),(-1,-1),1,BLEU),
-        ("TOPPADDING",(0,0),(-1,-1),6),
-        ("BOTTOMPADDING",(0,0),(-1,-1),6),
-        ("LEFTPADDING",(0,0),(-1,-1),8),
-    ]))
-    return [tbl, Paragraph(guide, ParagraphStyle("ig", fontSize=7,
-        fontName="Helvetica", textColor=colors.HexColor("#666"), spaceBefore=3))]
-
-def build_odi(story, styles):
-    story += section_header("Oswestry Disability Index (ODI)",
-        "Fairbank & Pynsent, 2000 — Version française — 10 sections, score 0–100%")
-    story.append(Spacer(1, 0.3*cm))
-    story.append(Paragraph(
-        "Cochez UNE SEULE case par section — celle qui décrit le mieux votre situation aujourd'hui.",
-        styles["intro"]))
-    sections = [
-        ("1. Intensité de la douleur", [
-            "Pas de douleur actuellement",
-            "La douleur est très légère",
-            "La douleur est modérée",
-            "La douleur est assez sévère",
-            "La douleur est très sévère",
-            "La douleur est la pire imaginable",
-        ]),
-        ("2. Soins personnels (se laver, s'habiller)", [
-            "Je me prends en charge normalement sans douleur supplémentaire",
-            "Je me prends en charge normalement mais c'est très douloureux",
-            "Se prendre en charge est douloureux — je suis lent(e) et prudent(e)",
-            "J'ai besoin d'aide mais j'arrive à gérer la plupart de mes soins",
-            "J'ai besoin d'aide chaque jour pour la plupart de mes soins",
-            "Je ne m'habille pas, me lave avec difficulté et reste au lit",
-        ]),
-        ("3. Soulever des charges", [
-            "Je peux soulever des charges lourdes sans douleur",
-            "Je peux soulever des charges lourdes mais avec douleur",
-            "La douleur m'empêche de soulever des charges lourdes du sol",
-            "La douleur m'empêche de soulever des charges lourdes — je peux soulever du léger si bien placé",
-            "Je peux soulever des charges très légères uniquement",
-            "Je ne peux rien soulever ni porter",
-        ]),
-        ("4. Marche", [
-            "La douleur ne m'empêche pas de marcher",
-            "La douleur m'empêche de marcher plus d'un kilomètre",
-            "La douleur m'empêche de marcher plus de 500 mètres",
-            "La douleur m'empêche de marcher plus de 100 mètres",
-            "Je ne marche qu'avec une canne ou des béquilles",
-            "Je suis au lit et dois me traîner pour aller aux toilettes",
-        ]),
-        ("5. Position assise", [
-            "Je peux rester assis(e) aussi longtemps que je veux sans douleur",
-            "Je peux rester assis(e) aussi longtemps que je veux avec légère douleur",
-            "La douleur m'empêche de rester assis(e) plus d'une heure",
-            "La douleur m'empêche de rester assis(e) plus de 30 minutes",
-            "La douleur m'empêche de rester assis(e) plus de 10 minutes",
-            "La douleur m'empêche totalement de m'asseoir",
-        ]),
-        ("6. Position debout", [
-            "Je peux rester debout aussi longtemps que je veux sans douleur",
-            "Je peux rester debout aussi longtemps que je veux mais avec douleur",
-            "La douleur m'empêche de rester debout plus d'une heure",
-            "La douleur m'empêche de rester debout plus de 30 minutes",
-            "La douleur m'empêche de rester debout plus de 10 minutes",
-            "La douleur m'empêche totalement de rester debout",
-        ]),
-        ("7. Sommeil", [
-            "Mon sommeil n'est jamais perturbé par la douleur",
-            "Mon sommeil est parfois perturbé",
-            "Je dors moins de 6 heures à cause de la douleur",
-            "Je dors moins de 4 heures à cause de la douleur",
-            "Je dors moins de 2 heures à cause de la douleur",
-            "La douleur m'empêche totalement de dormir",
-        ]),
-        ("8. Vie sexuelle (si applicable)", [
-            "Ma vie sexuelle est normale, sans douleur",
-            "Ma vie sexuelle est normale mais douloureuse",
-            "Ma vie sexuelle est presque normale mais très douloureuse",
-            "Ma vie sexuelle est sévèrement limitée par la douleur",
-            "Ma vie sexuelle est presque absente",
-            "La douleur empêche toute vie sexuelle",
-        ]),
-        ("9. Vie sociale", [
-            "Ma vie sociale est normale sans douleur supplémentaire",
-            "Ma vie sociale est normale mais augmente ma douleur",
-            "La douleur n'affecte pas les activités légères mais limite les activités énergiques",
-            "La douleur a limité ma vie sociale — je sors moins souvent",
-            "La douleur a limité ma vie sociale à ma maison",
-            "Je n'ai pas de vie sociale à cause de la douleur",
-        ]),
-        ("10. Voyages / transports", [
-            "Je peux voyager n'importe où sans douleur",
-            "Je peux voyager n'importe où mais avec douleur",
-            "La douleur est sévère mais je gère les trajets > 2 heures",
-            "La douleur me limite à des trajets < 1 heure",
-            "La douleur me limite à des trajets courts < 30 minutes",
-            "La douleur m'empêche de voyager sauf pour des soins médicaux",
-        ]),
-    ]
-    for title, options in sections:
-        story.append(radio_v(title, "", options, styles))
-        story.append(Spacer(1, 0.1*cm))
-    story.append(Spacer(1, 0.4*cm))
-    story += score_footer("ODI", 100,
-        "0–20% : incapacité minimale  ·  21–40% : modérée  ·  41–60% : sévère  ·  61–80% : très sévère  ·  >80% : grabataire")
-
-def build_tampa(story, styles):
-    story += section_header("Tampa Scale for Kinesiophobia (TSK-17)",
-        "Miller et al., 1991 — Version française — Score 17–68")
-    story.append(Spacer(1, 0.3*cm))
-    story.append(Paragraph(
-        "Indiquez dans quelle mesure vous êtes en accord avec chaque affirmation. "
-        "1 = Pas du tout d'accord  ·  2 = Plutôt pas d'accord  ·  3 = Plutôt d'accord  ·  4 = Tout à fait d'accord",
-        styles["intro"]))
-    scale = ["1 — Pas du tout d'accord","2 — Plutôt pas d'accord","3 — Plutôt d'accord","4 — Tout à fait d'accord"]
-    items_text = [
-        "J'ai peur de me blesser si je fais de l'exercice.",
-        "Si j'essayais de surmonter ma douleur, celle-ci augmenterait.",
-        "Mon corps me dit que quelque chose ne va pas vraiment.",
-        "Ma blessure a mis mon corps en danger toute ma vie.",
-        "Les gens ne prennent pas ma condition médicale assez au sérieux.",
-        "Ma blessure a mis mon corps en danger de façon permanente.",
-        "La douleur signifie toujours que j'ai subi une blessure.",
-        "Simplement parce que quelque chose aggrave ma douleur ne signifie pas qu'elle est dangereuse. (R)",
-        "J'ai peur de me blesser accidentellement.",
-        "Le plus sûr est de faire attention à ne pas faire de mouvements inutiles.",
-        "Je n'aurais pas autant de douleur si quelque chose de grave ne se passait pas.",
-        "Bien que ma condition soit douloureuse, je me sentirais mieux si j'étais plus actif(ve). (R)",
-        "La douleur me signale que je dois arrêter pour ne pas me blesser.",
-        "Ce n'est pas sûr pour quelqu'un avec ma condition d'être physiquement actif(ve).",
-        "Je risque trop facilement de me blesser.",
-        "Même si quelque chose me fait très mal, je ne pense pas que ce soit dangereux. (R)",
-        "Personne ne devrait faire d'exercice quand il souffre de douleur.",
-    ]
-    for i, txt in enumerate(items_text):
-        story.append(radio_v(str(i+1), txt, scale, styles))
-        story.append(Spacer(1, 0.1*cm))
-    story.append(Spacer(1, 0.4*cm))
-    story += score_footer("TSK-17", 68,
-        "≤ 37 : kinésiophobie faible  ·  38–44 : modérée  ·  > 44 : élevée  (R) = items inversés")
-
-def build_orebro(story, styles):
-    story += section_header("Örebro Musculoskeletal Pain Questionnaire",
-        "Linton & Hallden, 1998 — Dépistage du risque de chronicisation")
-    story.append(Spacer(1, 0.3*cm))
-    story.append(Paragraph(
-        "Ce questionnaire évalue les facteurs pouvant influencer l'évolution de votre douleur. "
-        "Pour les questions avec une échelle de 0 à 10, entourez le chiffre correspondant.",
-        styles["intro"]))
-
-    def scale_row(num, question):
-        story.append(Paragraph(f"{num}. {question}", styles["question"]))
-        nums = ["0","1","2","3","4","5","6","7","8","9","10"]
-        tbl = Table([nums], colWidths=[(W)/11]*11)
-        tbl.setStyle(TableStyle([
-            ("FONTNAME",(0,0),(-1,-1),"Helvetica"),
-            ("FONTSIZE",(0,0),(-1,-1),10),
-            ("ALIGN",(0,0),(-1,-1),"CENTER"),
-            ("GRID",(0,0),(-1,-1),0.5,GRIS_BORD),
-            ("ROWBACKGROUNDS",(0,0),(-1,-1),[GRIS_CLAIR]),
-            ("TOPPADDING",(0,0),(-1,-1),6),
-            ("BOTTOMPADDING",(0,0),(-1,-1),6),
-        ]))
-        story.append(tbl)
-        story.append(Spacer(1, 0.1*cm))
-
-    scale_row("1","Quelle est l'intensité de votre douleur en ce moment ? (0 = pas de douleur, 10 = insupportable)")
-    scale_row("2","Dans quelle mesure votre douleur est-elle permanente ? (0 = jamais, 10 = toujours)")
-    scale_row("3","La douleur perturbe-t-elle votre sommeil ? (0 = pas du tout, 10 = complètement)")
-    scale_row("4","Avez-vous peur que l'activité aggrave votre douleur ? (0 = pas du tout, 10 = extrêmement)")
-    scale_row("5","Pensez-vous que votre douleur va disparaître ? (0 = pas du tout, 10 = complètement)")
-    scale_row("6","Quelle confiance avez-vous dans le fait de retourner au travail dans 3 mois ? (0 = aucune, 10 = totale)")
-    scale_row("7","Dans quelle mesure pensez-vous pouvoir travailler malgré la douleur ? (0 = pas du tout, 10 = totalement)")
-
-    story.append(Paragraph("Pour les activités suivantes, dans quelle mesure la douleur affecte-t-elle votre capacité ? (0 = pas d'effet, 10 = incapable)", styles["intro"]))
-    activites = [
-        "8. Activités légères à la maison (cuisiner, ranger)",
-        "9. Activités lourdes (nettoyer, jardiner)",
-        "10. Activités sociales (conversations, visites)",
-        "11. Déplacements (transports, conduire)",
-        "12. Loisirs légers",
-        "13. Travail ou études",
-    ]
-    act_header = [["Activité"] + list(range(11))]
-    act_rows   = [[act] + [CHECKBOX]*11 for act in activites]
-    col_w = [7*cm] + [0.75*cm]*11
-    act_tbl = Table(act_header + act_rows, colWidths=col_w)
-    act_tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0,0),(-1,0), BLEU_LIGHT),
-        ("TEXTCOLOR",  (0,0),(-1,0), BLEU),
-        ("LINEBELOW",  (0,0),(-1,0), 1.0, BLEU),
-        ("FONTNAME",(0,0),(-1,-1),"Helvetica"),
-        ("FONTSIZE",(0,0),(-1,-1),7),
-        ("ALIGN",(1,0),(-1,-1),"CENTER"),
-        ("GRID",(0,0),(-1,-1),0.3,GRIS_BORD),
-        ("ROWBACKGROUNDS",(0,1),(-1,-1),[BLANC,GRIS_CLAIR]),
-        ("TOPPADDING",(0,0),(-1,-1),4),
-        ("BOTTOMPADDING",(0,0),(-1,-1),4),
-        ("LEFTPADDING",(0,0),(-1,-1),4),
-    ]))
-    story.append(act_tbl)
-    story.append(Spacer(1, 0.4*cm))
-    story += score_footer("Örebro", 100,
-        "≤ 50 : risque faible  ·  51–74 : risque moyen  ·  ≥ 75 : risque élevé de chronicisation")
-
-
-def build_drapeaux(story, styles):
-    """Fiche drapeaux rouges et jaunes imprimable."""
-    story.append(section_band("Drapeaux rouges & jaunes — Lombalgie"))
-    story.append(Spacer(1, 0.3*cm))
-    story.append(Paragraph(
-        "À compléter par le physiothérapeute lors de l'anamnèse. "
-        "Cochez les facteurs présents.",
-        styles["intro"]))
-    story.append(Spacer(1, 0.3*cm))
-
-    drapeaux_rouges = [
-        "Âge < 20 ans ou > 55 ans avec douleur nouvelle",
-        "Traumatisme violent récent",
-        "Douleur non mécanique (constante, nocturne, indépendante de la position)",
-        "Douleur thoracique associée",
-        "Antécédent de cancer",
-        "Usage prolongé de corticoïdes",
-        "Consommation de drogues IV / immunodépression",
-        "Perte de poids inexpliquée",
-        "Syndrome de la queue de cheval (troubles sphinctériens, anesthésie en selle)",
-        "Déficit neurologique progressif",
-        "Déformation structurale sévère",
-        "Fièvre / état général altéré",
-    ]
-
-    drapeaux_jaunes = [
-        "Croyances négatives sur la douleur (catastrophisme)",
-        "Peur du mouvement / kinésiophobie",
-        "Comportement d'évitement marqué",
-        "Dépression / anxiété associée",
-        "Faible soutien social ou familial",
-        "Insatisfaction au travail / conflit professionnel",
-        "Litige juridique ou compensation en cours",
-        "Attentes thérapeutiques irréalistes",
-        "Historique de douleur chronique",
-        "Hypervigilance corporelle",
-    ]
-
-    # Section Drapeaux Rouges
-    story.append(Paragraph(
-        "🔴 Drapeaux rouges — Pathologie grave sous-jacente (référer si présent)",
-        ParagraphStyle("dr_title", fontSize=11, fontName="Helvetica-Bold",
-                       textColor=ROUGE, spaceBefore=4, spaceAfter=6)))
-
-    rows_r = []
-    for item in drapeaux_rouges:
-        rows_r.append([
-            Checkbox(size=9),
-            Paragraph(item, ParagraphStyle(
-                "dr_item", fontSize=9, fontName="Helvetica",
-                textColor=NOIR, leading=13)),
-        ])
-    tbl_r = Table(rows_r, colWidths=[0.6*cm, USEFUL_W - 0.6*cm])
-    tbl_r.setStyle(TableStyle([
-        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
-        ("ROWBACKGROUNDS",(0,0),(-1,-1), [BLANC, _colors.HexColor("#FFF5F5")]),
-        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
-        ("TOPPADDING",    (0,0),(-1,-1), 5),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 5),
-        ("LEFTPADDING",   (0,0),(-1,-1), 6),
-    ]))
-    story.append(tbl_r)
-    story.append(Spacer(1, 0.5*cm))
-
-    # Section Drapeaux Jaunes
-    story.append(Paragraph(
-        "🟡 Drapeaux jaunes — Facteurs psychosociaux (chronicisation)",
-        ParagraphStyle("dj_title", fontSize=11, fontName="Helvetica-Bold",
-                       textColor=ORANGE, spaceBefore=4, spaceAfter=6)))
-
-    rows_j = []
-    for item in drapeaux_jaunes:
-        rows_j.append([
-            Checkbox(size=9),
-            Paragraph(item, ParagraphStyle(
-                "dj_item", fontSize=9, fontName="Helvetica",
-                textColor=NOIR, leading=13)),
-        ])
-    tbl_j = Table(rows_j, colWidths=[0.6*cm, USEFUL_W - 0.6*cm])
-    tbl_j.setStyle(TableStyle([
-        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
-        ("ROWBACKGROUNDS",(0,0),(-1,-1), [BLANC, _colors.HexColor("#FFFDF0")]),
-        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
-        ("TOPPADDING",    (0,0),(-1,-1), 5),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 5),
-        ("LEFTPADDING",   (0,0),(-1,-1), 6),
-    ]))
-    story.append(tbl_j)
-    story.append(Spacer(1, 0.4*cm))
-
-    # Zone notes
-    story.append(Paragraph("Notes cliniques :", ParagraphStyle(
-        "dr_notes", fontSize=9, fontName="Helvetica-Bold", textColor=NOIR)))
-    story.append(Spacer(1, 0.2*cm))
-    for _ in range(3):
-        story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS_BORD))
-        story.append(Spacer(1, 0.4*cm))
-
-
-def build_luomajoki(story, styles):
-    """Grille tests de Luomajoki imprimable."""
-    story.append(section_band("Tests de contrôle moteur — Luomajoki"))
-    story.append(Spacer(1, 0.3*cm))
-    story.append(Paragraph(
-        "Batterie de 6 tests évaluant le contrôle moteur lombaire. "
-        "Cochez le résultat pour chaque test. Seuil clinique : ≥ 3 échecs.",
-        styles["intro"]))
-    story.append(Spacer(1, 0.3*cm))
-
-    tests = [
-        ("1. Waiters Bow (hip hinge)",
-         "Le patient se penche en avant en fléchissant les hanches sans flexion lombaire. "
-         "Échec si flexion ou extension lombaire compensatoire."),
-        ("2. Pelvic Tilt (debout)",
-         "Le patient effectue une antéversion et rétroversion pelviennes. "
-         "Échec si mouvement lombaire au lieu du mouvement pelvien pur."),
-        ("3. Knee Lift (debout)",
-         "Le patient lève le genou jusqu'à 90° en unipodal. "
-         "Échec si inclinaison lombaire ou rotation du bassin."),
-        ("4. One-Leg Stance (station unipodale)",
-         "Le patient maintient l'équilibre sur un pied pendant 10 secondes. "
-         "Échec si oscillation lombaire ou chute du bassin > 2 cm."),
-        ("5. Sitting Knee Extension (ASLR assis)",
-         "Le patient étend le genou en position assise. "
-         "Échec si flexion lombaire compensatoire."),
-        ("6. Prone Knee Bend (décubitus ventral)",
-         "Le patient fléchit le genou à 90° en décubitus ventral. "
-         "Échec si antéversion pelvienne ou extension lombaire compensatoire."),
-    ]
-
-    header = [["Test", "Description", "Réussi", "Échoué", "Non testé"]]
-    rows = []
-    for name, desc in tests:
-        rows.append([
-            Paragraph(f"<b>{name}</b>", ParagraphStyle(
-                "lt_n", fontSize=8, fontName="Helvetica-Bold",
-                textColor=BLEU, leading=11)),
-            Paragraph(desc, ParagraphStyle(
-                "lt_d", fontSize=7.5, fontName="Helvetica",
-                textColor=GRIS_TEXTE, leading=10)),
-            Checkbox(size=9),
-            Checkbox(size=9),
-            Checkbox(size=9),
-        ])
-
-    col_w = [4*cm, USEFUL_W - 4*cm - 3*1.8*cm] + [1.8*cm]*3
-    tbl = Table(header + rows, colWidths=col_w, repeatRows=1)
-    tbl.setStyle(TableStyle([
-        ("FONTNAME",      (0,0),(-1,0),  "Helvetica-Bold"),
-        ("FONTSIZE",      (0,0),(-1,0),  8),
-        ("BACKGROUND", (0,0),(-1,0), BLEU_LIGHT),
-        ("TEXTCOLOR",  (0,0),(-1,0), BLEU),
-        ("LINEBELOW",  (0,0),(-1,0), 1.0, BLEU),
-        ("ALIGN",         (2,0),(-1,-1), "CENTER"),
-        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
-        ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
-        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
-        ("TOPPADDING",    (0,0),(-1,-1), 7),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 7),
-        ("LEFTPADDING",   (0,0),(-1,-1), 5),
-    ]))
-    story.append(tbl)
-    story.append(Spacer(1, 0.5*cm))
-
-    # Zone score
-    score_tbl = Table([[
-        Paragraph("Score total :", ParagraphStyle(
-            "sc_lbl", fontSize=10, fontName="Helvetica-Bold", textColor=NOIR)),
-        Paragraph("_____ / 6 échecs", ParagraphStyle(
-            "sc_val", fontSize=10, fontName="Helvetica", textColor=NOIR)),
-        Paragraph("≥ 3 échecs = dysfonction significative du contrôle moteur", ParagraphStyle(
-            "sc_note", fontSize=8, fontName="Helvetica-Oblique", textColor=GRIS_TEXTE)),
-    ]], colWidths=[3*cm, 4*cm, USEFUL_W-7*cm])
-    score_tbl.setStyle(TableStyle([
-        ("VALIGN",       (0,0),(-1,-1), "MIDDLE"),
-        ("BACKGROUND",   (0,0),(-1,-1), BLEU_LIGHT),
-        ("TOPPADDING",   (0,0),(-1,-1), 8),
-        ("BOTTOMPADDING",(0,0),(-1,-1), 8),
-        ("LEFTPADDING",  (0,0),(-1,-1), 10),
-    ]))
-    story.append(score_tbl)
-
-def _lomb_build_muscle(story, styles):
-    from utils.shv_pdf import build_muscle_testing
-    build_muscle_testing(story, styles)
-
-def _lomb_build_legpress(story, styles):
-    from utils.shv_pdf import build_leg_press
-    build_leg_press(story, styles)
-
-QUESTIONNAIRES_LOMB = {
-    "odi":        ("Oswestry Disability Index",   build_odi),
-    "tampa":      ("Tampa Scale (kinésiophobie)",  build_tampa),
-    "orebro":     ("Örebro",                      build_orebro),
-    "drapeaux":   ("Drapeaux rouges & jaunes",    build_drapeaux),
-    "luomajoki":  ("Tests de Luomajoki",          build_luomajoki),
-    "muscle":     ("Testing musculaire MI",        _lomb_build_muscle),
-    "leg_press":  ("1RM Leg Press",               _lomb_build_legpress),
-}
-
-
-# ─── Scoring questionnaires ─────────────────────────────────────────────────
-
-
-
-# ─── generate_pdf_lombalgie ─────────────────────────────────────────────────
-
-def generate_pdf_lombalgie(bilans_df, patient_info: dict) -> bytes:
-    import pandas as pd
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4,
-        leftMargin=1.5*cm, rightMargin=1.5*cm,
-        topMargin=2*cm, bottomMargin=1.8*cm,
-        title=f"Bilan Lombalgie – {patient_info.get('nom','')} {patient_info.get('prenom','')}")
-
-    styles = make_styles()
-    story  = []
-    hf = make_header_footer("36.9 Bilans", f"{patient_info.get('nom','')} {patient_info.get('prenom','')}" if patient_info else "")
-
+def render_evolution():
+    info          = st.session_state.lomb_patient_info
+    bilans_df_all = get_patient_bilans_lombalgie(st.session_state.lomb_patient_id)
+
+    # Appliquer la sélection (clé cohérente avec render_bilan_selection)
+    sel = st.session_state.get("lomb_selected_ids", None)
+    if sel and not bilans_df_all.empty:
+        filtered  = bilans_df_all[bilans_df_all["bilan_id"].isin(sel)]
+        bilans_df = filtered if not filtered.empty else bilans_df_all
+    else:
+        bilans_df = bilans_df_all
+
+    n_sel = len(bilans_df)
+    n_tot = len(bilans_df_all)
+
+    st.markdown(
+        f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} — Évolution Lombalgie</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("")
+
+    if n_sel < n_tot:
+        st.info(f"ℹ️ Affichage de {n_sel}/{n_tot} bilans sélectionnés.")
+
+    col_back, col_pdf, _ = st.columns([1, 1.5, 4])
+    with col_back:
+        if st.button("⬅️ Retour"):
+            st.session_state.lomb_mode = "bilan"
+            st.rerun()
+    with col_pdf:
+        if not bilans_df.empty:
+            with st.spinner("Génération du PDF…"):
+                pdf_bytes = generate_pdf_lombalgie(bilans_df, info)
+            st.download_button(
+                label=f"📄 Exporter en PDF ({n_sel} bilan{'s' if n_sel>1 else ''})",
+                data=pdf_bytes,
+                file_name=f"evolution_lombalgie_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
+                mime="application/pdf",
+                type="primary",
+            )
+
+    st.markdown("---")
+
+    if bilans_df.empty:
+        st.info("Aucun bilan disponible.")
+        return
+
+    # Trier par date
     bilans_df = bilans_df.copy()
     bilans_df["date_bilan"] = pd.to_datetime(bilans_df["date_bilan"], errors="coerce")
     bilans_df = bilans_df.sort_values("date_bilan").reset_index(drop=True)
-    n = len(bilans_df)
+    labels = [
+        f"{r['date_bilan'].strftime('%d/%m/%y')} – {r.get('type_bilan','')}"
+        for _, r in bilans_df.iterrows()
+    ]
 
-    def bilan_label(row):
-        d = row["date_bilan"]
-        ds = d.strftime("%d/%m/%Y") if pd.notna(d) else "—"
-        return f"{ds} — {row.get('type_bilan','')}"
+    tab_doul, tab_q, tab_mob, tab_luom, tab_soap = st.tabs([
+        "🩸 Douleur (EVA)", "📊 Questionnaires", "🦴 Mobilité",
+        "🏃 Luomajoki", "📋 SOAP synthèse",
+    ])
 
-    labels = [bilan_label(r) for _, r in bilans_df.iterrows()]
+    # ── EVA ──────────────────────────────────────────────────────────────────
+    with tab_doul:
+        st.markdown('<div class="section-title">🩸 Évolution des EVA</div>', unsafe_allow_html=True)
+        fig_eva = go.Figure()
+        for key, label, color in [
+            ("s_eva_repos",    "EVA Repos",     "#388e3c"),
+            ("s_eva_mouvement","EVA Mouvement", "#f57c00"),
+            ("s_eva_nuit",     "EVA Nuit",      "#7b1fa2"),
+        ]:
+            vals = [safe_n(r.get(key)) for _, r in bilans_df.iterrows()]
+            fig_eva.add_trace(go.Scatter(
+                x=labels, y=vals, mode="lines+markers+text",
+                name=label, line=dict(color=color, width=2.5),
+                marker=dict(size=9),
+                text=[str(int(v)) if v is not None else "" for v in vals],
+                textposition="top center",
+            ))
+        for y, col, lbl in [(3,"#388e3c","3 légère"),(6,"#f57c00","6 modérée")]:
+            fig_eva.add_hline(y=y, line_dash="dot", line_color=col,
+                              annotation_text=lbl, annotation_position="right")
+        fig_eva.update_layout(
+            yaxis=dict(range=[0,11], title="EVA /10"),
+            xaxis_tickangle=-20, height=380,
+            plot_bgcolor="white", legend=dict(orientation="h"),
+        )
+        st.plotly_chart(fig_eva, use_container_width=True)
+        df_eva = pd.DataFrame({
+            "Bilan": labels,
+            "EVA repos": [safe_n(r.get("s_eva_repos")) for _, r in bilans_df.iterrows()],
+            "EVA mouvement": [safe_n(r.get("s_eva_mouvement")) for _, r in bilans_df.iterrows()],
+            "EVA nuit": [safe_n(r.get("s_eva_nuit")) for _, r in bilans_df.iterrows()],
+            "Groupe": [r.get("groupe_clinique","—") for _, r in bilans_df.iterrows()],
+        })
+        st.dataframe(df_eva, use_container_width=True, hide_index=True)
 
-    # ── Page de garde moderne ───────────────────────────────────────────────────
-    make_cover(story,
-               title="Rapport d'évolution — Lombalgie",
-               subtitle="Bilan physiothérapeutique",
-               patient_info=patient_info,
-               bilans_df=bilans_df,
-               labels=labels,
-               styles=styles)
+    # ── QUESTIONNAIRES ────────────────────────────────────────────────────────
+    with tab_q:
+        st.markdown('<div class="section-title">📊 Évolution des questionnaires</div>',
+                    unsafe_allow_html=True)
+        fig_q = make_subplots(rows=1, cols=3,
+                              subplot_titles=["ODI (%)", "Tampa (/68)", "Örebro (/100)"])
+        q_configs = [
+            ("odi_score",    "#1a3c5e", [(20,"#388e3c"),(40,"#8bc34a"),(60,"#f57c00"),(80,"#e64a19")], 1),
+            ("tampa_score",  "#f57c00", [(37,"#388e3c"),(44,"#f57c00")], 2),
+            ("orebro_score", "#7b1fa2", [(50,"#388e3c"),(74,"#f57c00")], 3),
+        ]
+        for key, color, thresholds, col in q_configs:
+            vals = [safe_n(r.get(key)) for _, r in bilans_df.iterrows()]
+            fig_q.add_trace(go.Scatter(
+                x=labels, y=vals, mode="lines+markers+text",
+                line=dict(color=color, width=2.5), marker=dict(size=9),
+                text=[str(int(v)) if v is not None else "" for v in vals],
+                textposition="top center", showlegend=False,
+            ), row=1, col=col)
+            for thr, tc in thresholds:
+                fig_q.add_hline(y=thr, line_dash="dot", line_color=tc, row=1, col=col)
+        fig_q.update_xaxes(tickangle=-20)
+        fig_q.update_layout(height=380, plot_bgcolor="white", margin=dict(t=40,b=60))
+        st.plotly_chart(fig_q, use_container_width=True)
+        df_q = pd.DataFrame({
+            "Bilan": labels,
+            "ODI (%)": [safe_n(r.get("odi_score")) for _, r in bilans_df.iterrows()],
+            "Interprétation ODI": [r.get("odi_interpretation","—") for _, r in bilans_df.iterrows()],
+            "Tampa (/68)": [safe_n(r.get("tampa_score")) for _, r in bilans_df.iterrows()],
+            "Örebro (/100)": [safe_n(r.get("orebro_score")) for _, r in bilans_df.iterrows()],
+        })
+        st.dataframe(df_q, use_container_width=True, hide_index=True)
 
-    story.append(PageBreak())
+    # ── MOBILITÉ ──────────────────────────────────────────────────────────────
+    with tab_mob:
+        st.markdown('<div class="section-title">🦴 Évolution mobilité lombaire</div>',
+                    unsafe_allow_html=True)
+        mob_keys = [
+            ("o_extension_mob",  "Extension"),
+            ("o_lat_droite_mob", "Latéroflexion D"),
+            ("o_lat_gauche_mob", "Latéroflexion G"),
+            ("o_rot_droite_mob", "Rotation D"),
+            ("o_rot_gauche_mob", "Rotation G"),
+        ]
+        MOB_NUM = {"1/3": 1, "2/3": 2, "3/3": 3}
+        mob_table = [{"Bilan": lbl} for lbl in labels]
+        for key, klabel in mob_keys:
+            for i, (_, row) in enumerate(bilans_df.iterrows()):
+                mob_table[i][klabel] = row.get(key, "—") or "—"
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
-    def safe_n(val):
-        """Convertit en float. Retourne None si vide/absent, accepte 0 comme valeur valide."""
-        if val is None or str(val).strip() in ("", "—", "None"):
-            return None
-        try:
-            return float(val)
-        except (TypeError, ValueError):
-            return None
+        # Graphique barres groupées
+        fig_mob = go.Figure()
+        colors_mob = ["#1a3c5e","#f57c00","#388e3c","#7b1fa2","#d32f2f"]
+        for (key, klabel), color in zip(mob_keys, colors_mob):
+            vals = [MOB_NUM.get(r.get(key,""), None) for _, r in bilans_df.iterrows()]
+            fig_mob.add_trace(go.Bar(
+                name=klabel, x=labels, y=vals,
+                marker_color=color,
+                text=[r.get(key,"—") or "—" for _, r in bilans_df.iterrows()],
+                textposition="outside",
+            ))
+        fig_mob.update_layout(
+            barmode="group", yaxis=dict(range=[0,4], tickvals=[1,2,3],
+            ticktext=["1/3","2/3","3/3"], title="Amplitude"),
+            xaxis_tickangle=-20, height=380, plot_bgcolor="white",
+            legend=dict(orientation="h"),
+        )
+        st.plotly_chart(fig_mob, use_container_width=True)
 
-    def val_s(val, suffix=""):
-        v = safe_n(val)
-        if v is None: return "—"
-        return f"{int(v)}{suffix}" if v == int(v) else f"{v}{suffix}"
+        # Schober
+        schober_vals = [safe_n(r.get("o_schober")) for _, r in bilans_df.iterrows()]
+        if any(schober_vals):
+            fig_sch = go.Figure()
+            fig_sch.add_trace(go.Scatter(
+                x=labels, y=schober_vals, mode="lines+markers+text",
+                line=dict(color="#1a3c5e", width=2.5), marker=dict(size=9),
+                text=[str(v) if v else "" for v in schober_vals],
+                textposition="top center",
+            ))
+            fig_sch.add_hline(y=5, line_dash="dot", line_color="#388e3c",
+                              annotation_text="5 cm (normal)", annotation_position="right")
+            fig_sch.update_layout(title="Schober modifié (cm)", yaxis_title="cm",
+                                  height=280, plot_bgcolor="white", xaxis_tickangle=-20)
+            st.plotly_chart(fig_sch, use_container_width=True)
 
-    def has_data(key):
-        """True si au moins un bilan a une valeur numérique non vide (0 inclus)."""
-        return any(safe_n(r.get(key)) is not None for _, r in bilans_df.iterrows())
+        st.dataframe(pd.DataFrame(mob_table), use_container_width=True, hide_index=True)
 
-    def has_data_str(key):
-        return any(str(r.get(key,"") or "").strip() not in ("","—","None")
-                   for _, r in bilans_df.iterrows())
+    # ── LUOMAJOKI ─────────────────────────────────────────────────────────────
+    with tab_luom:
+        st.markdown('<div class="section-title">🏃 Évolution tests de Luomajoki</div>',
+                    unsafe_allow_html=True)
+        luom_vals = [safe_n(r.get("o_luomajoki_score")) for _, r in bilans_df.iterrows()]
+        if any(luom_vals):
+            fig_luom = go.Figure()
+            fig_luom.add_trace(go.Bar(
+                x=labels, y=luom_vals,
+                marker_color=["#d32f2f" if v and v>=3 else "#f57c00" if v and v>=1
+                              else "#388e3c" for v in luom_vals],
+                text=[f"{int(v)}/6" if v is not None else "—" for v in luom_vals],
+                textposition="outside",
+            ))
+            fig_luom.add_hline(y=3, line_dash="dot", line_color="#d32f2f",
+                               annotation_text="Seuil 3 (significatif)", annotation_position="right")
+            fig_luom.update_layout(
+                yaxis=dict(range=[0,7], title="Nombre d'échecs /6"),
+                height=320, plot_bgcolor="white", xaxis_tickangle=-20,
+            )
+            st.plotly_chart(fig_luom, use_container_width=True)
+        else:
+            st.info("Aucun test de Luomajoki enregistré.")
 
-    def sep(rows):
-        if rows and rows[-1] != [""] + [""]*n:
-            rows.append([""] + [""]*n)
+        LUOM_NOMS = ["Waiters Bow","Pelvic Tilt","Knee Lift",
+                     "One-Leg Stance","Sitting Knee Ext.","Prone Knee Bend"]
+        LUOM_KEYS = ["o_luom_waiters_bow","o_luom_pelvic_tilt","o_luom_knee_lift",
+                     "o_luom_one_leg_stance","o_luom_sitting_knee_ext","o_luom_prone_knee_bend"]
+        luom_table = [{"Bilan": lbl} for lbl in labels]
+        for nom, key in zip(LUOM_NOMS, LUOM_KEYS):
+            for i, (_, row) in enumerate(bilans_df.iterrows()):
+                luom_table[i][nom] = row.get(key,"—") or "—"
+        luom_table_with_score = [{**row, "Score /6": bilans_df.iloc[i].get("o_luomajoki_score","—")}
+                                  for i, row in enumerate(luom_table)]
+        st.dataframe(pd.DataFrame(luom_table_with_score), use_container_width=True, hide_index=True)
 
-    # ── Tableau de synthèse ───────────────────────────────────────────────────
-    story.append(section_band("Synthèse des scores"))
-    story.append(Spacer(1, 0.2*cm))
-
-    col_w = [6*cm] + [(W - 6*cm)/n]*n
-    synth_header = [["Indicateur"] + [f"B{i+1}" for i in range(n)]]
-    synth_rows = []
-
-    def add_row(label, key, suffix=""):
-        if has_data(key) or has_data_str(key):
-            synth_rows.append([label] + [val_s(r.get(key), suffix) for _, r in bilans_df.iterrows()])
-
-    def add_row_str(label, key):
-        if has_data_str(key):
-            synth_rows.append([label] + [str(r.get(key,"—") or "—") for _, r in bilans_df.iterrows()])
-
-    add_row("EVA repos (/10)",      "s_eva_repos")
-    add_row("EVA mouvement (/10)",  "s_eva_mouvement")
-    add_row("EVA nuit (/10)",       "s_eva_nuit")
-    add_row_str("Groupe clinique",  "groupe_clinique")
-    sep(synth_rows)
-    add_row("ODI (%)",              "odi_score", "%")
-    add_row("Tampa (/68)",          "tampa_score")
-    add_row("Örebro",               "orebro_score")
-    sep(synth_rows)
-    add_row("Luomajoki (/6 échecs)","o_luomajoki_score")
-    add_row("Schober (cm)",         "o_schober", " cm")
-    for lbl, key in [("Extension","o_extension_mob"),("Latérofl. D","o_lat_droite_mob"),
-                     ("Latérofl. G","o_lat_gauche_mob"),("Rotation D","o_rot_droite_mob"),
-                     ("Rotation G","o_rot_gauche_mob")]:
-        if has_data_str(key):
-            synth_rows.append([lbl] + [str(r.get(key,"—") or "—") for _, r in bilans_df.iterrows()])
-    sep(synth_rows)
-    if has_data_str("s_arret_travail"):
-        synth_rows.append(["Arrêt travail"] + [r.get("s_arret_travail","—") or "—" for _, r in bilans_df.iterrows()])
-    if has_data_str("s_reveil_nuit"):
-        synth_rows.append(["Réveil nocturne"] + [r.get("s_reveil_nuit","—") or "—" for _, r in bilans_df.iterrows()])
-    dr_counts = [len([x for x in str(r.get("drapeaux_rouges_list","")).split("|") if x]) for _, r in bilans_df.iterrows()]
-    dj_counts = [len([x for x in str(r.get("drapeaux_jaunes_list","")).split("|") if x]) for _, r in bilans_df.iterrows()]
-    if any(c > 0 for c in dr_counts):
-        synth_rows.append(["Drapeaux rouges"] + [str(c) for c in dr_counts])
-    if any(c > 0 for c in dj_counts):
-        synth_rows.append(["Drapeaux jaunes"] + [str(c) for c in dj_counts])
-
-    while synth_rows and synth_rows[-1] == [""] + [""]*n:
-        synth_rows.pop()
-
-    if synth_rows:
-        story.append(make_table(synth_header + synth_rows, col_widths=col_w))
-        story.append(Spacer(1, 0.3*cm))
-        legend = []
-        if has_data("odi_score"):    legend.append("ODI : 0–20% minimal · 21–40% modéré · 41–60% sévère · >60% très sévère")
-        if has_data("tampa_score"):  legend.append("Tampa : ≤37 faible · 38–44 modéré · >44 élevé")
-        if has_data("orebro_score"): legend.append("Örebro : ≤50 faible · 51–74 moyen · ≥75 élevé")
-        if has_data("o_luomajoki_score"): legend.append("Luomajoki : ≥3 échecs = dysfonction significative")
-        if legend:
-            story.append(Paragraph("  |  ".join(legend),
-                ParagraphStyle("lg", fontSize=7, fontName="Helvetica", textColor=GRIS_TEXTE)))
-    story.append(PageBreak())
-
-    # ── Graphiques ────────────────────────────────────────────────────────────
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    import numpy as np
-
-    def fig_to_img(fig, w=16, h=6):
-        buf2 = io.BytesIO()
-        fig.savefig(buf2, format="png", dpi=150, bbox_inches="tight", facecolor="white")
-        plt.close(fig)
-        buf2.seek(0)
-        return Image(buf2, width=w*cm, height=h*cm)
-
-    xlbls = [l.split("—")[0].strip() for l in labels]
-    x = list(range(n))
-    charts_added = False
-
-    # EVA
-    if has_data("s_eva_repos") or has_data("s_eva_mouvement") or has_data("s_eva_nuit"):
-        if not charts_added:
-            story.append(section_band("Graphiques d'évolution"))
-            story.append(Spacer(1, 0.3*cm))
-            charts_added = True
-        story.append(Paragraph("EVA — Douleur", make_styles()["subsection"]))
-        try:
-            fig, ax = plt.subplots(figsize=(12, 4))
-            for key, label, color, marker in [
-                ("s_eva_repos",    "Repos",     "#2B57A7", "o"),
-                ("s_eva_mouvement","Mouvement", "#C4603A", "s"),
-                ("s_eva_nuit",     "Nuit",      "#7b1fa2", "^"),
-            ]:
-                vals = [safe_n(r.get(key)) for _, r in bilans_df.iterrows()]
-                xp = [i for i,v in enumerate(vals) if v is not None]
-                yp = [v for v in vals if v is not None]
-                if xp:
-                    ax.plot(xp, yp, f"{marker}-", color=color, lw=2.5, ms=9, label=label)
-                    for xi,yi in zip(xp,yp):
-                        ax.annotate(str(int(yi)),(xi,yi),textcoords="offset points",
-                                    xytext=(0,8),ha="center",fontsize=9,fontweight="bold",color=color)
-            ax.axhline(3,linestyle="--",color="#388e3c",lw=1,alpha=0.7,label="3 légère")
-            ax.axhline(6,linestyle="--",color="#f57c00",lw=1,alpha=0.7,label="6 modérée")
-            ax.set_xticks(x); ax.set_xticklabels(xlbls, rotation=15, ha="right", fontsize=9)
-            ax.set_ylim(0,11); ax.set_ylabel("EVA /10")
-            ax.set_title("Évolution EVA", fontsize=11, fontweight="bold", color="#2B57A7")
-            ax.legend(fontsize=8, framealpha=0.8)
-            ax.spines[["top","right"]].set_visible(False)
-            ax.set_facecolor("white"); fig.tight_layout()
-            story.append(fig_to_img(fig, 16, 5.5))
-        except Exception: pass
-        story.append(Spacer(1, 0.5*cm))
-
-    # Questionnaires
-    if has_data("odi_score") or has_data("tampa_score") or has_data("orebro_score"):
-        if not charts_added:
-            story.append(section_band("Graphiques d'évolution"))
-            story.append(Spacer(1, 0.3*cm))
-            charts_added = True
-        story.append(Paragraph("Questionnaires fonctionnels", make_styles()["subsection"]))
-        try:
-            configs = [
-                ("odi_score","ODI (%)","#2B57A7",[(20,"#388e3c"),(40,"#8bc34a"),(60,"#f57c00"),(80,"#e64a19")],100),
-                ("tampa_score","Tampa (/68)","#C4603A",[(37,"#388e3c"),(44,"#f57c00")],68),
-                ("orebro_score","Örebro","#7b1fa2",[(50,"#388e3c"),(74,"#f57c00")],100),
-            ]
-            fig2, axes = plt.subplots(1, 3, figsize=(14, 4))
-            for ax2, (key, title, color, thrs, ymax) in zip(axes, configs):
-                vals = [safe_n(r.get(key)) for _, r in bilans_df.iterrows()]
-                xp = [i for i,v in enumerate(vals) if v is not None]
-                yp = [v for v in vals if v is not None]
-                bars = ax2.bar(xp, yp, color=color, width=0.45, zorder=3)
-                for bar, v in zip(bars, yp):
-                    ax2.text(bar.get_x()+bar.get_width()/2, bar.get_height()+1,
-                             str(int(v)), ha="center", fontsize=9, fontweight="bold")
-                for thr, tc in thrs:
-                    ax2.axhline(thr, linestyle="--", color=tc, lw=1.2, alpha=0.7)
-                ax2.set_xticks(x); ax2.set_xticklabels(xlbls, rotation=15, ha="right", fontsize=8)
-                ax2.set_ylim(0, ymax+10); ax2.set_title(title, fontsize=9, fontweight="bold", color="#2B57A7")
-                ax2.spines[["top","right"]].set_visible(False)
-                ax2.set_facecolor("white"); ax2.grid(axis="y", alpha=0.3)
-            fig2.tight_layout()
-            story.append(fig_to_img(fig2, 16, 5.5))
-        except Exception: pass
-        story.append(Spacer(1, 0.5*cm))
-
-    # Luomajoki
-    if has_data("o_luomajoki_score"):
-        if not charts_added:
-            story.append(section_band("Graphiques d'évolution"))
-            story.append(Spacer(1, 0.3*cm))
-            charts_added = True
-        story.append(Paragraph("Tests de Luomajoki", make_styles()["subsection"]))
-        try:
-            vals = [safe_n(r.get("o_luomajoki_score")) for _, r in bilans_df.iterrows()]
-            fig3, ax3 = plt.subplots(figsize=(10, 3.5))
-            bar_cols = ["#d32f2f" if v and v>=3 else "#f57c00" if v and v>=1 else "#388e3c" for v in vals]
-            bars3 = ax3.bar(x, [v or 0 for v in vals], color=bar_cols, width=0.45)
-            for bar, v in zip(bars3, vals):
-                if v: ax3.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.1,
-                               f"{int(v)}/6", ha="center", fontsize=9, fontweight="bold")
-            ax3.axhline(3, linestyle="--", color="#d32f2f", lw=1.5, label="Seuil significatif (≥3)")
-            ax3.set_xticks(x); ax3.set_xticklabels(xlbls, rotation=15, ha="right", fontsize=9)
-            ax3.set_ylim(0,7); ax3.set_ylabel("Échecs /6")
-            ax3.set_title("Tests de Luomajoki", fontsize=11, fontweight="bold", color="#2B57A7")
-            ax3.legend(fontsize=8); ax3.spines[["top","right"]].set_visible(False)
-            ax3.set_facecolor("white"); ax3.grid(axis="y", alpha=0.3); fig3.tight_layout()
-            story.append(fig_to_img(fig3, 16, 5))
-        except Exception: pass
-
-    if charts_added:
-        story.append(PageBreak())
-
-    # ── Détail bilan par bilan ────────────────────────────────────────────────
-    story.append(section_band("Détail des bilans"))
-    sty = make_styles()
-
-    for i, (_, row) in enumerate(bilans_df.iterrows()):
-        story.append(Spacer(1, 0.3*cm))
-        story.append(Paragraph(f"Bilan {i+1} — {labels[i]}", sty["subsection"]))
-
-        groupe = row.get("groupe_clinique","—") or "—"
-        if groupe != "—":
-            story.append(Paragraph(f"Groupe clinique : {groupe}", sty["normal"]))
-
-        if row.get("notes_generales"):
-            story.append(Paragraph(str(row["notes_generales"]), sty["note"]))
-
-        # Subjectif
-        s_rows = [["Paramètre","Valeur"]]
-        for lbl, key in [("Motif","s_motif_consultation"),("Localisation","s_douleur_localisation"),
-                          ("Type douleur","s_type_douleur"),("EVA repos","s_eva_repos"),
-                          ("EVA mouvement","s_eva_mouvement"),("EVA nuit","s_eva_nuit"),
-                          ("Arrêt travail","s_arret_travail"),("Réveil nocturne","s_reveil_nuit"),
-                          ("Antécédents","s_antecedents"),("Traitements","s_traitements_en_cours")]:
-            v = str(row.get(key,"") or "—").replace("|"," · ")
-            if v and v != "—": s_rows.append([lbl, v])
-        if len(s_rows) > 1:
-            story.append(Paragraph("Subjectif", sty["bold"]))
-            story.append(make_table(s_rows, col_widths=[4.5*cm, W-4.5*cm]))
-
-        # Objectif scores
-        o_rows = [["Test","Score","Interprétation"]]
-        for lbl, sk, ik in [("ODI","odi_score","odi_interpretation"),
-                             ("Tampa","tampa_score","tampa_interpretation"),
-                             ("Örebro","orebro_score","orebro_interpretation")]:
-            if safe_n(row.get(sk)):
-                o_rows.append([lbl, val_s(row.get(sk)), str(row.get(ik,"—") or "—")])
-        if safe_n(row.get("o_luomajoki_score")):
-            sig = "Significatif" if (safe_n(row.get("o_luomajoki_score")) or 0) >= 3 else "Non significatif"
-            o_rows.append(["Luomajoki", f"{val_s(row.get('o_luomajoki_score'))}/6 échecs", sig])
-        if len(o_rows) > 1:
-            story.append(Paragraph("Objectif — Scores", sty["bold"]))
-            story.append(make_table(o_rows, col_widths=[3*cm, 3*cm, W-6*cm]))
-
-        # Appréciation / Plan
-        if row.get("a_appreciation"):
-            story.append(Paragraph("Pronostic", sty["bold"]))
-            story.append(Paragraph(str(row["a_appreciation"]), sty["note"]))
-        if row.get("p_objectifs") or row.get("p_traitement"):
-            p_rows = [["Paramètre","Contenu"]]
-            for lbl, key in [("Objectifs","p_objectifs"),("Traitement","p_traitement"),
-                              ("Fréquence","p_frequence"),("Durée","p_duree")]:
-                if row.get(key): p_rows.append([lbl, str(row[key])])
-            if len(p_rows) > 1:
-                story.append(Paragraph("Plan", sty["bold"]))
-                story.append(make_table(p_rows, col_widths=[3.5*cm, W-3.5*cm]))
-
-        # Drapeaux
-        dr = [x for x in str(row.get("drapeaux_rouges_list","")).split("|") if x]
-        dj = [x for x in str(row.get("drapeaux_jaunes_list","")).split("|") if x]
-        if dr or dj:
-            f_rows = [["Type","Facteurs"]]
-            if dr: f_rows.append(["🔴 Rouges", " · ".join(dr)])
-            if dj: f_rows.append(["🟡 Jaunes",  " · ".join(dj)])
-            story.append(Paragraph("Drapeaux", sty["bold"]))
-            story.append(make_table(f_rows, col_widths=[3*cm, W-3*cm]))
-
-        if i < n - 1:
-            story.append(PageBreak())
-
-    doc.build(story, onFirstPage=hf, onLaterPages=hf)
-    return buffer.getvalue()
+    # ── SOAP SYNTHÈSE ─────────────────────────────────────────────────────────
+    with tab_soap:
+        st.markdown('<div class="section-title">📋 Synthèse SOAP par bilan</div>',
+                    unsafe_allow_html=True)
+        for lbl, (_, row) in zip(labels, bilans_df.iterrows()):
+            with st.expander(f"📄 {lbl} — Groupe {row.get('groupe_clinique','—') or '—'}"):
+                col_s, col_a = st.columns(2)
+                with col_s:
+                    st.markdown("**🟦 Subjectif**")
+                    st.markdown(f"Motif : {row.get('s_motif_consultation','—') or '—'}")
+                    st.markdown(f"Localisation : {str(row.get('s_douleur_localisation','')).replace('|',' · ') or '—'}")
+                    st.markdown(f"Type douleur : {row.get('s_type_douleur','—') or '—'}")
+                    st.markdown(f"EVA repos/mvt/nuit : {row.get('s_eva_repos','—')} / {row.get('s_eva_mouvement','—')} / {row.get('s_eva_nuit','—')}")
+                    arret = row.get('s_arret_travail','—') or '—'
+                    reveil = row.get('s_reveil_nuit','—') or '—'
+                    st.markdown(f"Arrêt travail : **{arret}** | Réveil nocturne : **{reveil}**")
+                with col_a:
+                    st.markdown("**💡 Appréciation**")
+                    st.markdown(row.get('a_appreciation','—') or '—')
+                col_o, col_p = st.columns(2)
+                with col_o:
+                    st.markdown("**🔬 Objectif (scores)**")
+                    st.markdown(f"ODI : {row.get('odi_score','—') or '—'}%")
+                    st.markdown(f"Tampa : {row.get('tampa_score','—') or '—'}/68")
+                    st.markdown(f"Örebro : {row.get('orebro_score','—') or '—'}")
+                    st.markdown(f"Luomajoki : {row.get('o_luomajoki_score','—') or '—'}/6 échecs")
+                with col_p:
+                    st.markdown("**📋 Plan**")
+                    st.markdown(row.get('p_objectifs','—') or '—')
 
 
-# ─── generate_questionnaires_lombalgie_pdf ───────────────────────────────────
-
-def generate_questionnaires_lombalgie_pdf(selected, patient_info=None):
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4,
-        leftMargin=1.5*cm, rightMargin=1.5*cm, topMargin=2*cm, bottomMargin=1.8*cm)
-    styles = make_styles()
-    story  = []
-    hf = make_header_footer("36.9 Bilans — Questionnaires", f"{patient_info.get('nom','')} {patient_info.get('prenom','')}" if patient_info else "")
-
-    story.append(Spacer(1, 2*cm))
-    story.append(Paragraph("Questionnaires — Bilan Lombalgie",
-        ParagraphStyle("gt", fontSize=22, fontName="Helvetica-Bold",
-                       textColor=BLEU, alignment=TA_CENTER, spaceAfter=6)))
-    if patient_info:
-        story.append(Paragraph(
-            f"Patient : {patient_info.get('nom','')} {patient_info.get('prenom','')}",
-            ParagraphStyle("gs", fontSize=12, fontName="Helvetica",
-                           textColor=colors.HexColor("#555"), alignment=TA_CENTER)))
-    story.append(Spacer(1, 0.3*cm))
-    story.append(HRFlowable(width="100%", thickness=2, color=BLEU))
-    story.append(Spacer(1, 0.4*cm))
-    for key in selected:
-        if key in QUESTIONNAIRES_LOMB:
-            story.append(Paragraph(f"  ▸  {QUESTIONNAIRES_LOMB[key][0]}",
-                ParagraphStyle("li", fontSize=10, fontName="Helvetica",
-                               textColor=NOIR, spaceAfter=3)))
-    story.append(PageBreak())
-
-    for i, key in enumerate(selected):
-        if key not in QUESTIONNAIRES_LOMB: continue
-        QUESTIONNAIRES_LOMB[key][1](story, styles)
-        if i < len(selected)-1: story.append(PageBreak())
-
-    doc.build(story, onFirstPage=hf, onLaterPages=hf)
-    return buffer.getvalue()
-"""
-Questionnaires complets pour saisie in-app — Lombalgie
-ODI, Tampa Scale (TSK-17), Örebro
-Avec calcul automatique des scores.
-"""
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  OSWESTRY DISABILITY INDEX (ODI) — 10 sections, score 0–5 par section
-# ═══════════════════════════════════════════════════════════════════════════════
-
-ODI_SECTIONS = [
-    ("odi_s1", "1. Intensité de la douleur", [
-        "Pas de douleur actuellement",
-        "La douleur est très légère actuellement",
-        "La douleur est modérée actuellement",
-        "La douleur est assez sévère actuellement",
-        "La douleur est très sévère actuellement",
-        "La douleur est la pire imaginable actuellement",
-    ]),
-    ("odi_s2", "2. Soins personnels (se laver, s'habiller…)", [
-        "Je me prends en charge normalement sans douleur supplémentaire",
-        "Je me prends en charge normalement mais c'est très douloureux",
-        "Se prendre en charge est douloureux — je suis lent(e) et prudent(e)",
-        "J'ai besoin d'aide mais j'arrive à gérer la plupart de mes soins",
-        "J'ai besoin d'aide chaque jour pour la plupart de mes soins",
-        "Je ne m'habille pas, me lave avec difficulté et reste au lit",
-    ]),
-    ("odi_s3", "3. Soulever des charges", [
-        "Je peux soulever des charges lourdes sans douleur",
-        "Je peux soulever des charges lourdes mais avec douleur supplémentaire",
-        "La douleur m'empêche de soulever des charges lourdes du sol",
-        "La douleur m'empêche de soulever des charges lourdes (je peux soulever du léger si bien placé)",
-        "Je peux soulever des charges très légères uniquement",
-        "Je ne peux rien soulever ni porter",
-    ]),
-    ("odi_s4", "4. Marche", [
-        "La douleur ne m'empêche pas de marcher quelle que soit la distance",
-        "La douleur m'empêche de marcher plus d'un kilomètre",
-        "La douleur m'empêche de marcher plus de 500 mètres",
-        "La douleur m'empêche de marcher plus de 100 mètres",
-        "Je ne marche qu'avec une canne ou des béquilles",
-        "Je suis au lit la plupart du temps et dois me traîner pour aller aux toilettes",
-    ]),
-    ("odi_s5", "5. Position assise", [
-        "Je peux rester assis(e) aussi longtemps que je veux sans douleur",
-        "Je peux rester assis(e) aussi longtemps que je veux avec légère douleur",
-        "La douleur m'empêche de rester assis(e) plus d'une heure",
-        "La douleur m'empêche de rester assis(e) plus de 30 minutes",
-        "La douleur m'empêche de rester assis(e) plus de 10 minutes",
-        "La douleur m'empêche totalement de m'asseoir",
-    ]),
-    ("odi_s6", "6. Position debout", [
-        "Je peux rester debout aussi longtemps que je veux sans douleur",
-        "Je peux rester debout aussi longtemps que je veux mais avec douleur",
-        "La douleur m'empêche de rester debout plus d'une heure",
-        "La douleur m'empêche de rester debout plus de 30 minutes",
-        "La douleur m'empêche de rester debout plus de 10 minutes",
-        "La douleur m'empêche totalement de rester debout",
-    ]),
-    ("odi_s7", "7. Sommeil", [
-        "Mon sommeil n'est jamais perturbé par la douleur",
-        "Mon sommeil est parfois perturbé par la douleur",
-        "Je dors moins de 6 heures à cause de la douleur",
-        "Je dors moins de 4 heures à cause de la douleur",
-        "Je dors moins de 2 heures à cause de la douleur",
-        "La douleur m'empêche totalement de dormir",
-    ]),
-    ("odi_s8", "8. Vie sexuelle (si applicable)", [
-        "Ma vie sexuelle est normale sans douleur supplémentaire",
-        "Ma vie sexuelle est normale mais provoque une douleur supplémentaire",
-        "Ma vie sexuelle est presque normale mais est très douloureuse",
-        "Ma vie sexuelle est sévèrement limitée par la douleur",
-        "Ma vie sexuelle est presque absente en raison de la douleur",
-        "La douleur empêche toute vie sexuelle",
-    ]),
-    ("odi_s9", "9. Vie sociale", [
-        "Ma vie sociale est normale sans douleur supplémentaire",
-        "Ma vie sociale est normale mais augmente le degré de douleur",
-        "La douleur n'affecte pas les activités légères mais limite les activités énergiques",
-        "La douleur a limité ma vie sociale — je sors moins souvent",
-        "La douleur a limité ma vie sociale à ma maison",
-        "Je n'ai pas de vie sociale à cause de la douleur",
-    ]),
-    ("odi_s10", "10. Voyages / transports", [
-        "Je peux voyager n'importe où sans douleur supplémentaire",
-        "Je peux voyager n'importe où mais avec douleur",
-        "La douleur est sévère mais je gère les trajets de plus de 2 heures",
-        "La douleur me restreint à des trajets de moins d'une heure",
-        "La douleur me restreint à des trajets courts de moins de 30 minutes",
-        "La douleur m'empêche de voyager sauf pour des soins médicaux",
-    ]),
-]
-
-ODI_KEYS = [s[0] for s in ODI_SECTIONS]
-
-
-# ─── Scoring questionnaires (in-app) ────────────────────────────────────────
-
-ODI_SECTIONS = [
-    ("odi_s1", "1. Intensité de la douleur", [
-        "Pas de douleur actuellement",
-        "La douleur est très légère actuellement",
-        "La douleur est modérée actuellement",
-        "La douleur est assez sévère actuellement",
-        "La douleur est très sévère actuellement",
-        "La douleur est la pire imaginable actuellement",
-    ]),
-    ("odi_s2", "2. Soins personnels (se laver, s'habiller…)", [
-        "Je me prends en charge normalement sans douleur supplémentaire",
-        "Je me prends en charge normalement mais c'est très douloureux",
-        "Se prendre en charge est douloureux — je suis lent(e) et prudent(e)",
-        "J'ai besoin d'aide mais j'arrive à gérer la plupart de mes soins",
-        "J'ai besoin d'aide chaque jour pour la plupart de mes soins",
-        "Je ne m'habille pas, me lave avec difficulté et reste au lit",
-    ]),
-    ("odi_s3", "3. Soulever des charges", [
-        "Je peux soulever des charges lourdes sans douleur",
-        "Je peux soulever des charges lourdes mais avec douleur supplémentaire",
-        "La douleur m'empêche de soulever des charges lourdes du sol",
-        "La douleur m'empêche de soulever des charges lourdes (je peux soulever du léger si bien placé)",
-        "Je peux soulever des charges très légères uniquement",
-        "Je ne peux rien soulever ni porter",
-    ]),
-    ("odi_s4", "4. Marche", [
-        "La douleur ne m'empêche pas de marcher quelle que soit la distance",
-        "La douleur m'empêche de marcher plus d'un kilomètre",
-        "La douleur m'empêche de marcher plus de 500 mètres",
-        "La douleur m'empêche de marcher plus de 100 mètres",
-        "Je ne marche qu'avec une canne ou des béquilles",
-        "Je suis au lit la plupart du temps et dois me traîner pour aller aux toilettes",
-    ]),
-    ("odi_s5", "5. Position assise", [
-        "Je peux rester assis(e) aussi longtemps que je veux sans douleur",
-        "Je peux rester assis(e) aussi longtemps que je veux avec légère douleur",
-        "La douleur m'empêche de rester assis(e) plus d'une heure",
-        "La douleur m'empêche de rester assis(e) plus de 30 minutes",
-        "La douleur m'empêche de rester assis(e) plus de 10 minutes",
-        "La douleur m'empêche totalement de m'asseoir",
-    ]),
-    ("odi_s6", "6. Position debout", [
-        "Je peux rester debout aussi longtemps que je veux sans douleur",
-        "Je peux rester debout aussi longtemps que je veux mais avec douleur",
-        "La douleur m'empêche de rester debout plus d'une heure",
-        "La douleur m'empêche de rester debout plus de 30 minutes",
-        "La douleur m'empêche de rester debout plus de 10 minutes",
-        "La douleur m'empêche totalement de rester debout",
-    ]),
-    ("odi_s7", "7. Sommeil", [
-        "Mon sommeil n'est jamais perturbé par la douleur",
-        "Mon sommeil est parfois perturbé par la douleur",
-        "Je dors moins de 6 heures à cause de la douleur",
-        "Je dors moins de 4 heures à cause de la douleur",
-        "Je dors moins de 2 heures à cause de la douleur",
-        "La douleur m'empêche totalement de dormir",
-    ]),
-    ("odi_s8", "8. Vie sexuelle (si applicable)", [
-        "Ma vie sexuelle est normale sans douleur supplémentaire",
-        "Ma vie sexuelle est normale mais provoque une douleur supplémentaire",
-        "Ma vie sexuelle est presque normale mais est très douloureuse",
-        "Ma vie sexuelle est sévèrement limitée par la douleur",
-        "Ma vie sexuelle est presque absente en raison de la douleur",
-        "La douleur empêche toute vie sexuelle",
-    ]),
-    ("odi_s9", "9. Vie sociale", [
-        "Ma vie sociale est normale sans douleur supplémentaire",
-        "Ma vie sociale est normale mais augmente le degré de douleur",
-        "La douleur n'affecte pas les activités légères mais limite les activités énergiques",
-        "La douleur a limité ma vie sociale — je sors moins souvent",
-        "La douleur a limité ma vie sociale à ma maison",
-        "Je n'ai pas de vie sociale à cause de la douleur",
-    ]),
-    ("odi_s10", "10. Voyages / transports", [
-        "Je peux voyager n'importe où sans douleur supplémentaire",
-        "Je peux voyager n'importe où mais avec douleur",
-        "La douleur est sévère mais je gère les trajets de plus de 2 heures",
-        "La douleur me restreint à des trajets de moins d'une heure",
-        "La douleur me restreint à des trajets courts de moins de 30 minutes",
-        "La douleur m'empêche de voyager sauf pour des soins médicaux",
-    ]),
-]
-
-ODI_KEYS = [s[0] for s in ODI_SECTIONS]
-
-
-def compute_odi(answers: dict) -> dict:
-    """answers = {"odi_s1": 2, "odi_s2": 0, ...} (0–5 par section)"""
-    scores = []
-    for key, _, _ in ODI_SECTIONS:
-        v = answers.get(key)
-        if v is not None:
-            scores.append(int(v))
-    if not scores:
-        return {"score": None, "interpretation": "", "color": "#888"}
-    total = sum(scores)
-    max_possible = len(scores) * 5
-    pct = round(total / max_possible * 100)
-    if pct <= 20:
-        interp, color = "Incapacité minimale (0–20%)", "#388e3c"
-    elif pct <= 40:
-        interp, color = "Incapacité modérée (21–40%)", "#8bc34a"
-    elif pct <= 60:
-        interp, color = "Incapacité sévère (41–60%)", "#f57c00"
-    elif pct <= 80:
-        interp, color = "Incapacité très sévère (61–80%)", "#e64a19"
-    else:
-        interp, color = "Grabataire / exagération (>80%)", "#d32f2f"
-    return {"score": pct, "interpretation": interp, "color": color, "raw": total}
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  TAMPA SCALE FOR KINESIOPHOBIA (TSK-17) — 17 items, score 1–4
-# ═══════════════════════════════════════════════════════════════════════════════
-
-TAMPA_SCALE = ["1 — Pas du tout d'accord", "2 — Plutôt pas d'accord",
-               "3 — Plutôt d'accord", "4 — Tout à fait d'accord"]
-TAMPA_SCALE_VALUES = [1, 2, 3, 4]
-
-# Items inversés (R) : scores inversés pour le calcul (1→4, 2→3, 3→2, 4→1)
-TAMPA_REVERSED = {8, 12, 16}  # indices 1-based
-
-TAMPA_ITEMS = [
-    ("tampa_1",  False, "J'ai peur de me blesser si je fais de l'exercice."),
-    ("tampa_2",  False, "Si j'essayais de surmonter ma douleur, celle-ci augmenterait."),
-    ("tampa_3",  False, "Mon corps me dit que quelque chose ne va pas vraiment."),
-    ("tampa_4",  False, "Ma blessure a mis mon corps en danger toute ma vie."),
-    ("tampa_5",  False, "Les gens ne prennent pas ma condition médicale assez au sérieux."),
-    ("tampa_6",  False, "Ma blessure a mis mon corps en danger de façon permanente."),
-    ("tampa_7",  False, "La douleur signifie toujours que j'ai subi une blessure corporelle."),
-    ("tampa_8",  True,  "Simplement parce que quelque chose aggrave ma douleur ne signifie pas qu'elle est dangereuse."),
-    ("tampa_9",  False, "J'ai peur de me blesser accidentellement."),
-    ("tampa_10", False, "Le plus sûr est de faire attention à ne pas faire de mouvements inutiles."),
-    ("tampa_11", False, "Je n'aurais pas autant de douleur si quelque chose de potentiellement grave ne se passait pas."),
-    ("tampa_12", True,  "Bien que ma condition soit douloureuse, je me sentirais mieux si j'étais plus actif(ve)."),
-    ("tampa_13", False, "La douleur me signale que je dois arrêter ce que je fais pour ne pas me blesser."),
-    ("tampa_14", False, "Ce n'est pas vraiment sûr pour quelqu'un avec ma condition d'être physiquement actif(ve)."),
-    ("tampa_15", False, "Je risque trop facilement de me blesser."),
-    ("tampa_16", True,  "Même si quelque chose me fait très mal, je ne pense pas que ce soit dangereux."),
-    ("tampa_17", False, "Personne ne devrait faire de l'exercice physique quand il souffre de douleur."),
-]
-
-TAMPA_KEYS = [t[0] for t in TAMPA_ITEMS]
-
-
-def compute_tampa(answers: dict) -> dict:
-    """answers = {"tampa_1": 3, "tampa_2": 1, ...} (1–4)"""
-    total = 0
-    count = 0
-    for i, (key, reversed_item, _) in enumerate(TAMPA_ITEMS):
-        v = answers.get(key)
-        if v is not None:
-            score = int(v)
-            if reversed_item:
-                score = 5 - score  # inversion : 1→4, 2→3, 3→2, 4→1
-            total += score
-            count += 1
-    if count == 0:
-        return {"score": None, "interpretation": "", "color": "#888"}
-    if count < 17:
-        # Extrapolation si items manquants
-        total = round(total / count * 17)
-    if total <= 37:
-        interp, color = "Kinésiophobie faible (≤ 37)", "#388e3c"
-    elif total <= 44:
-        interp, color = "Kinésiophobie modérée (38–44)", "#f57c00"
-    else:
-        interp, color = "Kinésiophobie élevée (> 44)", "#d32f2f"
-    return {"score": total, "interpretation": interp, "color": color}
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  ÖREBRO — items sur échelle 0–10
-# ═══════════════════════════════════════════════════════════════════════════════
-
-OREBRO_ITEMS = [
-    ("orebro_1",
-     "Quelle est l'intensité de votre douleur en ce moment ?",
-     "0 = pas de douleur  ·  10 = douleur insupportable"),
-    ("orebro_2",
-     "Dans quelle mesure votre douleur est-elle présente en permanence pendant vos heures d'éveil ?",
-     "0 = jamais  ·  10 = toujours"),
-    ("orebro_3",
-     "Dans quelle mesure la douleur perturbe-t-elle votre sommeil ?",
-     "0 = pas du tout  ·  10 = complètement"),
-    ("orebro_4",
-     "Dans quelle mesure avez-vous peur que l'activité physique aggrave votre douleur ?",
-     "0 = pas du tout  ·  10 = extrêmement"),
-    ("orebro_5",
-     "Dans quelle mesure pensez-vous que votre douleur disparaîtra ?",
-     "0 = pas du tout  ·  10 = complètement"),
-    ("orebro_6",
-     "Quelle confiance avez-vous dans le fait de retourner au travail dans les 3 prochains mois ?",
-     "0 = aucune confiance  ·  10 = très confiant(e)"),
-    ("orebro_7",
-     "Dans quelle mesure pensez-vous que vous pouvez effectuer un travail malgré la douleur ?",
-     "0 = pas du tout  ·  10 = totalement"),
-    ("orebro_8",
-     "Activités légères à la maison (cuisiner, ranger) — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
-     "0 = pas d'effet  ·  10 = incapable de faire"),
-    ("orebro_9",
-     "Activités lourdes à la maison (nettoyer, jardiner) — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
-     "0 = pas d'effet  ·  10 = incapable de faire"),
-    ("orebro_10",
-     "Activités sociales (conversations, visites) — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
-     "0 = pas d'effet  ·  10 = incapable de faire"),
-    ("orebro_11",
-     "Déplacements (transports en commun, conduire) — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
-     "0 = pas d'effet  ·  10 = incapable de faire"),
-    ("orebro_12",
-     "Loisirs légers — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
-     "0 = pas d'effet  ·  10 = incapable de faire"),
-    ("orebro_13",
-     "Travail ou études — dans quelle mesure la douleur affecte-t-elle votre capacité ?",
-     "0 = pas d'effet  ·  10 = incapable de faire"),
-]
-
-# Items à inverser pour le scoring (5, 6, 7 : plus = mieux → on inverse)
-OREBRO_INBLEUED = {"orebro_5", "orebro_6", "orebro_7"}
-
-OREBRO_KEYS = [o[0] for o in OREBRO_ITEMS]
-
-
-def compute_orebro(answers: dict) -> dict:
-    """answers = {"orebro_1": 6, "orebro_2": 4, ...} (0–10)"""
-    total = 0
-    count = 0
-    for key, _, _ in OREBRO_ITEMS:
-        v = answers.get(key)
-        if v is not None:
-            score = int(v)
-            if key in OREBRO_INBLEUED:
-                score = 10 - score
-            total += score
-            count += 1
-    if count == 0:
-        return {"score": None, "interpretation": "", "color": "#888"}
-    # Normalisation sur 100
-    pct = round(total / (count * 10) * 100)
-    if pct <= 50:
-        interp, color = "Risque faible de chronicisation (≤ 50)", "#388e3c"
-    elif pct <= 74:
-        interp, color = "Risque moyen de chronicisation (51–74)", "#f57c00"
-    else:
-        interp, color = "Risque élevé de chronicisation (≥ 75)", "#d32f2f"
-    return {"score": pct, "interpretation": interp, "color": color, "raw": total}
+# ── ROUTEUR ───────────────────────────────────────────────────────────────────
+mode = st.session_state.lomb_mode
+if mode == "accueil":
+    render_accueil()
+elif mode == "bilan":
+    if not st.session_state.lomb_patient_info:
+        st.session_state.lomb_mode = "accueil"; st.rerun()
+    render_bilan_selection()
+elif mode == "formulaire":
+    if not st.session_state.lomb_patient_info:
+        st.session_state.lomb_mode = "accueil"; st.rerun()
+    render_formulaire()
+elif mode == "evolution":
+    if not st.session_state.lomb_patient_info:
+        st.session_state.lomb_mode = "accueil"; st.rerun()
+    render_evolution()
+else:
+    st.session_state.lomb_mode = "accueil"; st.rerun()
