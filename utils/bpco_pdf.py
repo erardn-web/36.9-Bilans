@@ -94,6 +94,123 @@ def _val(v,suffix=""):
     return f"{int(n)}{suffix}" if n==int(n) else f"{n}{suffix}"
 
 
+
+def build_muscle(story, styles, with_legpress=True):
+    """Fiche testing musculaire MI imprimable."""
+    from utils.muscle_data import MUSCLE_GROUPS, MMT_SCALE
+    story.append(_section("Testing musculaire — Membres inférieurs"))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "Échelle MRC 0–5 : 0 = aucune contraction · 1 = contraction sans mouvement · "
+        "2 = mouvement sans gravité · 3 = contre gravité · 4 = contre résistance partielle · "
+        "5 = normal",
+        ParagraphStyle("mmt_leg", fontSize=8, fontName="Helvetica-Oblique",
+                       textColor=GRIS_TEXTE, spaceAfter=6)))
+    story.append(Spacer(1, 0.2*cm))
+
+    from reportlab.platypus import Flowable as _F
+    class Checkbox(_F):
+        def __init__(self, size=8):
+            _F.__init__(self); self.size=size; self.width=size+4; self.height=size
+        def draw(self):
+            self.canv.setStrokeColor(_colors.HexColor("#333")); self.canv.setLineWidth(0.7)
+            self.canv.rect(1,0,self.size,self.size,fill=0,stroke=1)
+
+    def score_box():
+        return Table([[Checkbox(8)] + [
+            Paragraph(str(s), ParagraphStyle("sc", fontSize=7, fontName="Helvetica",
+                      textColor=NOIR, alignment=1)) for s,_ in MMT_SCALE]],
+            colWidths=[0.5*cm] + [1.0*cm]*6)
+
+    header = [["Groupe musculaire", "Innervation",
+               "Droit (0–5)", "", "Gauche (0–5)", ""]]
+    rows = []
+    for key, label, innervation in MUSCLE_GROUPS:
+        row = [
+            Paragraph(f"<b>{label}</b>", ParagraphStyle(
+                "ml", fontSize=8, fontName="Helvetica-Bold", textColor=BLEU, leading=11)),
+            Paragraph(innervation, ParagraphStyle(
+                "mi", fontSize=7, fontName="Helvetica", textColor=GRIS_TEXTE, leading=10)),
+            Paragraph("D : ______", ParagraphStyle(
+                "ms", fontSize=9, fontName="Helvetica", textColor=NOIR)),
+            Paragraph("", ParagraphStyle("_", fontSize=7)),
+            Paragraph("G : ______", ParagraphStyle(
+                "ms2", fontSize=9, fontName="Helvetica", textColor=NOIR)),
+            Paragraph("", ParagraphStyle("_2", fontSize=7)),
+        ]
+        rows.append(row)
+
+    col_w = [4.5*cm, 3*cm, 1.5*cm, 2.5*cm, 1.5*cm, W-13*cm]
+    tbl = Table(header + rows, colWidths=col_w, repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("FONTNAME",      (0,0),(-1,0),  "Helvetica-Bold"),
+        ("FONTSIZE",      (0,0),(-1,0),  8),
+        ("BACKGROUND",    (0,0),(-1,0),  BLEU),
+        ("TEXTCOLOR",     (0,0),(-1,0),  BLANC),
+        ("ALIGN",         (2,0),(-1,-1), "CENTER"),
+        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 7),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 7),
+        ("LEFTPADDING",   (0,0),(-1,-1), 5),
+        ("SPAN",          (2,0),(3,0)),
+        ("SPAN",          (4,0),(5,0)),
+    ]))
+    story.append(tbl)
+    story.append(Spacer(1, 0.4*cm))
+
+    # Score total
+    score_tbl = Table([[
+        Paragraph("Score total MMT :", ParagraphStyle(
+            "st_l", fontSize=10, fontName="Helvetica-Bold", textColor=NOIR)),
+        Paragraph("_______ / 80", ParagraphStyle(
+            "st_v", fontSize=10, fontName="Helvetica", textColor=NOIR)),
+        Paragraph("(0–40 sévère · 40–60 modéré · 60–80 normal)", ParagraphStyle(
+            "st_n", fontSize=8, fontName="Helvetica-Oblique", textColor=GRIS_TEXTE)),
+    ]], colWidths=[4*cm, 3*cm, W-7*cm])
+    score_tbl.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0),(-1,-1), BLEU_LIGHT),
+        ("TOPPADDING",    (0,0),(-1,-1), 8),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 8),
+        ("LEFTPADDING",   (0,0),(-1,-1), 10),
+        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+    ]))
+    story.append(score_tbl)
+
+    if with_legpress:
+        story.append(Spacer(1, 0.6*cm))
+        story.append(Paragraph("🏋️ 1RM Leg Press",
+            ParagraphStyle("lp_t", fontSize=11, fontName="Helvetica-Bold",
+                           textColor=TERRA, spaceBefore=4, spaceAfter=6)))
+        lp_rows = [
+            ["Charge 1RM (kg)", "_______ kg",
+             "Protocole", "______________________"],
+            ["Notes", "", "", ""],
+        ]
+        lp_tbl = Table(lp_rows, colWidths=[3*cm, 4*cm, 3*cm, W-10*cm])
+        lp_tbl.setStyle(TableStyle([
+            ("FONTNAME",      (0,0),(0,-1), "Helvetica-Bold"),
+            ("FONTNAME",      (2,0),(2,-1), "Helvetica-Bold"),
+            ("FONTSIZE",      (0,0),(-1,-1), 9),
+            ("ROWBACKGROUNDS",(0,0),(-1,-1), [BLANC, GRIS]),
+            ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+            ("TOPPADDING",    (0,0),(-1,-1), 7),
+            ("BOTTOMPADDING", (0,0),(-1,-1), 7),
+            ("LEFTPADDING",   (0,0),(-1,-1), 6),
+            ("SPAN",          (1,1),(3,1)),
+        ]))
+        story.append(lp_tbl)
+
+    story.append(Spacer(1, 0.4*cm))
+    story.append(Paragraph("Observations :", ParagraphStyle(
+        "obs", fontSize=9, fontName="Helvetica-Bold", textColor=NOIR)))
+    story.append(Spacer(1, 0.2*cm))
+    for _ in range(3):
+        story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS_BORD))
+        story.append(Spacer(1, 0.4*cm))
+
+
 def generate_pdf_bpco(bilans_df, patient_info: dict) -> bytes:
     import pandas as pd
     import matplotlib; matplotlib.use("Agg")
@@ -215,3 +332,80 @@ def generate_pdf_bpco(bilans_df, patient_info: dict) -> bytes:
 
     doc.build(story,onFirstPage=hf,onLaterPages=hf)
     return buf.getvalue()
+
+
+# ─── Questionnaire imprimable Testing MI + Leg Press ─────────────────────────
+from utils.muscle_pdf import build_muscle_testing as _build_mt_bp
+from reportlab.platypus import Paragraph as _Para2
+from reportlab.lib.styles import ParagraphStyle as _PS2
+
+def _bp_section_band(title):
+    row=[[_Para2(f"<font color='#C4603A'>▌</font>&nbsp;&nbsp;<b>{title}</b>",
+        _PS2("bp_sh2",fontSize=10,fontName="Helvetica-Bold",textColor=BLANC,leading=14))]]
+    t=_Table(row,colWidths=[W])
+    t.setStyle(_TableStyle([("BACKGROUND",(0,0),(-1,-1),BLEU),
+        ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),("LEFTPADDING",(0,0),(-1,-1),10)]))
+    return t
+
+def build_muscle_bp(story,styles):
+    """Fiche testing MI + Leg Press — BPCO."""
+    _build_mt_bp(story,styles,W,_bp_section_band,include_leg_press=True)
+
+QUESTIONNAIRES_BPCO = {
+    "muscle": ("Testing musculaire MI + Leg Press", build_muscle_bp),
+}
+
+def generate_questionnaires_bpco_pdf(selected, patient_info=None) -> bytes:
+    buf=io.BytesIO()
+    doc=SimpleDocTemplate(buf,pagesize=A4,
+        leftMargin=MARGIN,rightMargin=MARGIN,topMargin=2.2*cm,bottomMargin=1.8*cm)
+    hf=_make_hf(f"{patient_info.get('nom','')} {patient_info.get('prenom','')}" if patient_info else "")
+    from utils.bpco_pdf import _styles
+    styles=_styles()
+    story=[]
+    for i,key in enumerate(selected):
+        if key in QUESTIONNAIRES_BPCO:
+            QUESTIONNAIRES_BPCO[key][1](story,styles)
+            if i<len(selected)-1:
+                from reportlab.platypus import PageBreak
+                story.append(PageBreak())
+    if not story: return b""
+    doc.build(story,onFirstPage=hf,onLaterPages=hf)
+    return buf.getvalue()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Fiches imprimables
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _build_muscle_testing(story, styles):
+    """Délègue à shv_pdf.build_muscle_testing."""
+    import sys, os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from utils.shv_pdf import build_muscle_testing
+    build_muscle_testing(story, styles)
+
+def _build_leg_press(story, styles):
+    from utils.shv_pdf import build_leg_press
+    build_leg_press(story, styles)
+
+QUESTIONNAIRES_PRINT = {
+    "muscle":    ("Testing musculaire MI",  _build_muscle_testing),
+    "leg_press": ("1RM Leg Press",          _build_leg_press),
+}
+
+def generate_questionnaires_pdf(selected, patient_info=None):
+    """Génère un PDF avec les fiches imprimables sélectionnées."""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+        leftMargin=MARGIN, rightMargin=MARGIN, topMargin=2.2*cm, bottomMargin=1.8*cm)
+    styles = _styles()
+    story  = []
+    hf     = _make_hf(f"{patient_info.get('nom','')} {patient_info.get('prenom','')}" if patient_info else "")
+    for i, key in enumerate(selected):
+        if key not in QUESTIONNAIRES_PRINT: continue
+        QUESTIONNAIRES_PRINT[key][1](story, styles)
+        if i < len(selected)-1: story.append(PageBreak())
+    if not story: story.append(Paragraph("Aucun questionnaire sélectionné.", _styles()["normal"]))
+    doc.build(story, onFirstPage=hf, onLaterPages=hf)
+    return buffer.getvalue()
