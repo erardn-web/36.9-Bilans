@@ -228,13 +228,18 @@ def save_analyse(patient_id: str, module: str, text: str):
     for i, row in enumerate(rows[1:], start=2):
         if row and len(row) > col_pid and row[col_pid] == patient_id:
             cell = chr(65 + col_ana) + str(i)
-            ws.update(cell, text)
+            ws.update([[str(text)]], cell)  # gspread requires list of lists
             return
 
 
 def clear_analyse(patient_id: str, module: str):
-    """Efface l'analyse IA (appelé après chaque sauvegarde de bilan)."""
-    save_analyse(patient_id, module, "")
+    """Marque l'analyse comme périmée dans session_state uniquement.
+    Évite les appels API supplémentaires à chaque sauvegarde de bilan."""
+    import streamlit as st
+    session_key = f"analyse_text_{module}_{patient_id}"
+    if session_key in st.session_state:
+        del st.session_state[session_key]
+    st.session_state[f"analyse_stale_{module}_{patient_id}"] = True
 
 # ─── Patients ────────────────────────────────────────────────────────────────
 
