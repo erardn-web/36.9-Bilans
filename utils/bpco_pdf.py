@@ -18,7 +18,7 @@ GRIS_TEXTE=colors.HexColor("#555555"); BLANC=colors.white
 NOIR=colors.HexColor("#1A1A1A"); BLEU_LIGHT=colors.HexColor("#E8EEF9")
 VERT=colors.HexColor("#388e3c"); ORANGE=colors.HexColor("#f57c00"); ROUGE=colors.HexColor("#d32f2f")
 
-W=A4[0]-3*cm; MARGIN=1.5*cm
+W=A4[0]-3*cm; USEFUL_W=W; MARGIN=1.5*cm
 
 LOGO_PATH=os.path.join(os.path.dirname(os.path.dirname(__file__)),"assets","logo_369.png")
 
@@ -62,7 +62,28 @@ def _styles():
             textColor=TERRA,spaceBefore=8,spaceAfter=4),
         "normal": ParagraphStyle("bp_n",fontSize=9,fontName="Helvetica",textColor=NOIR,spaceAfter=2),
         "small": ParagraphStyle("bp_sm",fontSize=7.5,fontName="Helvetica",textColor=GRIS_TEXTE),
+        "intro":    ParagraphStyle("bp_intro",fontSize=9,fontName="Helvetica-Oblique",
+            textColor=colors.HexColor("#444"),spaceAfter=6,leftIndent=4),
+        "question": ParagraphStyle("bp_question",fontSize=10,fontName="Helvetica-Bold",
+            textColor=NOIR,spaceBefore=8,spaceAfter=3,leftIndent=4),
+        "option":   ParagraphStyle("bp_option",fontSize=9,fontName="Helvetica",
+            textColor=NOIR,spaceAfter=2,leftIndent=20),
     }
+
+
+# ─── Checkbox (case à cocher) ─────────────────────────────────────────────────
+from reportlab.platypus import Flowable as _FBP
+
+class Checkbox(_FBP):
+    def __init__(self, size=8):
+        _FBP.__init__(self); self.size=size; self.width=size+4; self.height=size
+    def draw(self):
+        self.canv.setStrokeColor(colors.HexColor("#333")); self.canv.setLineWidth(0.7)
+        self.canv.rect(1,0,self.size,self.size,fill=0,stroke=1)
+
+# Alias pour les builders partagés
+def section_band(title):
+    return _section(title)
 
 def _section(title):
     row=[[Paragraph(f"<font color='#C4603A'>▌</font>&nbsp;&nbsp;<b>{title}</b>",
@@ -108,13 +129,7 @@ def build_muscle(story, styles, with_legpress=True):
                        textColor=GRIS_TEXTE, spaceAfter=6)))
     story.append(Spacer(1, 0.2*cm))
 
-    from reportlab.platypus import Flowable as _F
-    class Checkbox(_F):
-        def __init__(self, size=8):
-            _F.__init__(self); self.size=size; self.width=size+4; self.height=size
-        def draw(self):
-            self.canv.setStrokeColor(_colors.HexColor("#333")); self.canv.setLineWidth(0.7)
-            self.canv.rect(1,0,self.size,self.size,fill=0,stroke=1)
+
 
     def score_box():
         return Table([[Checkbox(8)] + [
@@ -368,9 +383,188 @@ def _build_leg_press(story, styles):
     from utils.shv_pdf import build_leg_press
     build_leg_press(story, styles)
 
+
+def build_mmrc(story, styles):
+    """Échelle mMRC imprimable."""
+    from utils.bpco_data import MMRC_GRADES
+    story.append(section_band("Échelle mMRC — Dyspnée"))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "Cochez le grade qui décrit le mieux votre essoufflement au quotidien.",
+        styles["intro"]))
+    story.append(Spacer(1, 0.2*cm))
+    rows = []
+    for grade, desc in MMRC_GRADES:
+        rows.append([
+            Checkbox(size=10),
+            Paragraph(f"<b>Grade {grade}</b>",
+                ParagraphStyle("mg", fontSize=10, fontName="Helvetica-Bold",
+                    textColor=BLEU, leading=14)),
+            Paragraph(desc, ParagraphStyle("md2", fontSize=9, fontName="Helvetica",
+                textColor=NOIR, leading=13)),
+        ])
+    tbl = Table(rows, colWidths=[0.7*cm, 2.5*cm, USEFUL_W-3.2*cm])
+    tbl.setStyle(TableStyle([
+        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+        ("ROWBACKGROUNDS",(0,0),(-1,-1), [BLANC, GRIS]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 7),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 7),
+        ("LEFTPADDING",   (0,0),(-1,-1), 6),
+    ]))
+    story.append(tbl)
+    story.append(Spacer(1, 0.5*cm))
+    story.append(Paragraph(
+        "Grade sélectionné : _____   Date : _____________   Initiales : _____",
+        ParagraphStyle("mmrc_fill", fontSize=9, fontName="Helvetica", textColor=GRIS_TEXTE)))
+
+
+def build_cat(story, styles):
+    """CAT — COPD Assessment Test imprimable."""
+    from utils.bpco_data import CAT_ITEMS
+    story.append(section_band("CAT — COPD Assessment Test"))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "Pour chaque item, entourez le chiffre (0 à 5) qui décrit le mieux votre situation.",
+        styles["intro"]))
+    story.append(Spacer(1, 0.3*cm))
+
+    # Header
+    header = [[
+        Paragraph("<b>Pôle gauche (0)</b>", ParagraphStyle("ch1",fontSize=8,fontName="Helvetica-Bold",textColor=BLANC)),
+        Paragraph("<b>0    1    2    3    4    5</b>",
+            ParagraphStyle("ch2",fontSize=8,fontName="Helvetica-Bold",textColor=BLANC,alignment=1)),
+        Paragraph("<b>Pôle droit (5)</b>", ParagraphStyle("ch3",fontSize=8,fontName="Helvetica-Bold",textColor=BLANC)),
+    ]]
+    rows = []
+    for key, left, right in CAT_ITEMS:
+        num = int(key.split("_")[1])
+        rows.append([
+            Paragraph(f"<b>{num}.</b> {left}",
+                ParagraphStyle("cl",fontSize=8,fontName="Helvetica",textColor=NOIR,leading=11)),
+            Paragraph("◯    ◯    ◯    ◯    ◯    ◯",
+                ParagraphStyle("cc",fontSize=10,fontName="Helvetica",textColor=GRIS_TEXTE,alignment=1)),
+            Paragraph(right, ParagraphStyle("cr",fontSize=8,fontName="Helvetica",textColor=NOIR,leading=11)),
+        ])
+    col_w = [(USEFUL_W-2.5*cm)/2, 2.5*cm, (USEFUL_W-2.5*cm)/2]
+    tbl = Table(header + rows, colWidths=col_w, repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0),(-1,0),  BLEU),
+        ("TEXTCOLOR",     (0,0),(-1,0),  BLANC),
+        ("FONTSIZE",      (0,0),(-1,-1), 8),
+        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("LINEAFTER",     (0,0),(1,-1),  0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 7),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 7),
+        ("LEFTPADDING",   (0,0),(-1,-1), 6),
+    ]))
+    story.append(tbl)
+    story.append(Spacer(1, 0.4*cm))
+    story.append(Paragraph(
+        "Score total : _____ / 40   "
+        "Seuils : 0–10 faible · 11–20 modéré · 21–30 sévère · 31–40 très sévère",
+        ParagraphStyle("cat_sc",fontSize=8,fontName="Helvetica-Oblique",textColor=GRIS_TEXTE)))
+
+
+def build_6mwt_fiche(story, styles):
+    """Fiche protocole 6MWT imprimable."""
+    story.append(section_band("Test de marche de 6 minutes — 6MWT"))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "Protocole ATS 2002 — Couloir plat de 30 m, marqueurs tous les 3 m. "
+        "Consigne : marcher le plus loin possible en 6 minutes.",
+        styles["intro"]))
+    story.append(Spacer(1, 0.3*cm))
+
+    mesures = [
+        ["Paramètre", "Avant le test", "Après le test", "Valeur minimale"],
+        ["SpO₂ (%)", "", "", ""],
+        ["FC (bpm)", "", "", ""],
+        ["Dyspnée (Borg 0–10)", "", "", ""],
+        ["Fatigue membres inf. (Borg 0–10)", "", "", ""],
+    ]
+    tbl = Table(mesures, colWidths=[5.5*cm, 3*cm, 3*cm, 3*cm])
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0),(-1,0),  BLEU),
+        ("TEXTCOLOR",     (0,0),(-1,0),  BLANC),
+        ("FONTNAME",      (0,0),(-1,0),  "Helvetica-Bold"),
+        ("FONTSIZE",      (0,0),(-1,-1), 8),
+        ("ALIGN",         (1,0),(-1,-1), "CENTER"),
+        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("LINEAFTER",     (0,0),(2,-1),  0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 8),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 8),
+        ("LEFTPADDING",   (0,0),(-1,-1), 6),
+    ]))
+    story.append(tbl)
+    story.append(Spacer(1, 0.4*cm))
+
+    result_rows = [
+        ["Distance parcourue (m)", ""],
+        ["Aide technique utilisée", ""],
+        ["Incidents / arrêts", ""],
+        ["Raison(s) d'arrêt", ""],
+    ]
+    tbl2 = Table(result_rows, colWidths=[5.5*cm, USEFUL_W-5.5*cm])
+    tbl2.setStyle(TableStyle([
+        ("FONTNAME",      (0,0),(0,-1), "Helvetica-Bold"),
+        ("FONTSIZE",      (0,0),(-1,-1), 9),
+        ("TEXTCOLOR",     (0,0),(0,-1), BLEU),
+        ("ROWBACKGROUNDS",(0,0),(-1,-1), [BLANC, GRIS]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 8),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 8),
+        ("LEFTPADDING",   (0,0),(-1,-1), 8),
+    ]))
+    story.append(tbl2)
+
+
+def build_sts_fiche(story, styles):
+    """Fiche STS 1 minute imprimable."""
+    story.append(section_band("STS — Sit to Stand 1 minute"))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "Chaise standard sans appui-bras, hauteur ~46 cm. "
+        "Compter le nombre de levers complets en 1 minute. "
+        "Le patient peut utiliser ses bras si nécessaire (noter si cas).",
+        styles["intro"]))
+    story.append(Spacer(1, 0.3*cm))
+
+    rows = [
+        ["Nombre de répétitions / minute", ""],
+        ["Utilisation des bras", "Oui   /   Non"],
+        ["Incidents / observations", ""],
+    ]
+    tbl = Table(rows, colWidths=[6*cm, USEFUL_W-6*cm])
+    tbl.setStyle(TableStyle([
+        ("FONTNAME",      (0,0),(0,-1), "Helvetica-Bold"),
+        ("FONTSIZE",      (0,0),(-1,-1), 9),
+        ("TEXTCOLOR",     (0,0),(0,-1), BLEU),
+        ("ROWBACKGROUNDS",(0,0),(-1,-1), [BLANC, GRIS]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 10),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 10),
+        ("LEFTPADDING",   (0,0),(-1,-1), 8),
+    ]))
+    story.append(tbl)
+    story.append(Spacer(1, 0.4*cm))
+    story.append(Paragraph(
+        "Normes orientatives BPCO : < 15 rép/min = capacité très limitée · "
+        "15–19 = limitée · 20–24 = modérée · ≥ 25 = bonne",
+        ParagraphStyle("sts_n",fontSize=8,fontName="Helvetica-Oblique",textColor=GRIS_TEXTE)))
+
+
 QUESTIONNAIRES_PRINT = {
     "muscle":    ("Testing musculaire MI",  _build_muscle_testing),
     "leg_press": ("1RM Leg Press",          _build_leg_press),
+    "mmrc":      ("Échelle mMRC",           build_mmrc),
+    "cat":       ("CAT — COPD Assessment",  build_cat),
+    "6mwt":      ("Fiche 6MWT",             build_6mwt_fiche),
+    "sts":       ("STS 1 minute",           build_sts_fiche),
 }
 
 def generate_questionnaires_pdf(selected, patient_info=None):
