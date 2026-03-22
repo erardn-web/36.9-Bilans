@@ -66,9 +66,11 @@ st.markdown("""
 
 # ─── Helper: select_box avec valeur par défaut ────────────────────────────────
 def sb(label, options, default=None, key=None):
-    """Selectbox retournant le score (int) de l'option choisie."""
-    labels = [o[1] for o in options]
-    scores = [o[0] for o in options]
+    """Selectbox retournant le score (int) de l'option choisie.
+    Affiche '— Non renseigné —' si aucune valeur stockée."""
+    labels = ["— Non renseigné —"] + [o[1] for o in options]
+    scores = [None]               + [o[0] for o in options]
+    # Si valeur stockée → trouver son index, sinon rester sur 0 (non renseigné)
     idx = 0
     if default is not None and default in scores:
         idx = scores.index(default)
@@ -494,10 +496,11 @@ def load_val_or_none(key):
 
 
 def tab_label(base_label, keys):
-    """Ajoute ✅ si au moins une clé est renseignée dans le bilan en cours."""
+    """Ajoute ✅ si au moins une clé est renseignée (valeur non vide, non None)."""
     bd = st.session_state.bilan_data
     filled = any(
-        str(bd.get(k, "")).strip() not in ("", "0", "0.0", "None")
+        str(bd.get(k, "")).strip() not in ("", "0", "0.0", "None", "nan")
+        and bd.get(k) is not None
         for k in keys
     )
     return f"{base_label} ✅" if filled else base_label
@@ -755,7 +758,7 @@ def render_formulaire():
 
         # Stocker
         for k, v in sf_ans.items():
-            collected[f"sf12_{k}"] = v
+            collected[f"sf12_{k}"] = v if v is not None else ""
         for dim_key, dim_val in sf_scores.items():
             collected[f"sf12_{dim_key}"] = dim_val if dim_val is not None else ""
 
