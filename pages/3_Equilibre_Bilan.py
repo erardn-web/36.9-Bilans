@@ -86,10 +86,22 @@ def render_accueil():
                 <span style="font-size:1.1rem;font-weight:700;color:#2B57A7;">
                 🖨️ Questionnaires à imprimer (vierges)</span></div>""",
                 unsafe_allow_html=True)
-            ep1, ep2 = st.columns(2)
-            with ep1: pr_musc = st.checkbox("💪 Testing musculaire", value=True, key="eq_acc_musc")
-            with ep2: pr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="eq_acc_lp")
-            sel_eq = (["muscle"] if pr_musc else []) + (["leg_press"] if pr_lp else [])
+            ep1, ep2, ep3, ep4 = st.columns(4)
+            with ep1: pr_tin  = st.checkbox("🧍 Tinetti",      value=True, key="eq_acc_tin")
+            with ep2: pr_berg = st.checkbox("⚖️ Berg",          value=True, key="eq_acc_berg")
+            with ep3: pr_tug  = st.checkbox("⏱️ TUG",           value=True, key="eq_acc_tug")
+            with ep4: pr_sts  = st.checkbox("🪑 STS",           value=True, key="eq_acc_sts")
+            ep5, ep6, _ = st.columns([1, 1, 2])
+            with ep5: pr_musc = st.checkbox("💪 Testing MI",   value=True, key="eq_acc_musc")
+            with ep6: pr_lp   = st.checkbox("🏋️ 1RM Leg Press",value=True, key="eq_acc_lp")
+            sel_eq = (
+                (["tinetti"] if pr_tin  else []) +
+                (["berg"]    if pr_berg else []) +
+                (["tug"]     if pr_tug  else []) +
+                (["sts"]     if pr_sts  else []) +
+                (["muscle"]  if pr_musc else []) +
+                (["leg_press"] if pr_lp else [])
+            )
             ga, gb, _ = st.columns([1.5, 1, 4])
             with ga:
                 if sel_eq:
@@ -215,10 +227,22 @@ def render_bilan_selection():
                 <span style="font-size:1.1rem;font-weight:700;color:#2B57A7;">
                 🖨️ Sélectionner les questionnaires à imprimer</span></div>""",
                 unsafe_allow_html=True)
-            ep1, ep2 = st.columns(2)
-            with ep1: pr_musc = st.checkbox("💪 Testing musculaire", value=True, key="eq_pr_musc")
-            with ep2: pr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="eq_pr_lp")
-            sel_eq = (["muscle"] if pr_musc else []) + (["leg_press"] if pr_lp else [])
+            ep1, ep2, ep3, ep4 = st.columns(4)
+            with ep1: pr_tin  = st.checkbox("🧍 Tinetti",      value=True, key="eq_pr_tin")
+            with ep2: pr_berg = st.checkbox("⚖️ Berg",          value=True, key="eq_pr_berg")
+            with ep3: pr_tug  = st.checkbox("⏱️ TUG",           value=True, key="eq_pr_tug")
+            with ep4: pr_sts  = st.checkbox("🪑 STS",           value=True, key="eq_pr_sts")
+            ep5, ep6, _ = st.columns([1, 1, 2])
+            with ep5: pr_musc = st.checkbox("💪 Testing MI",   value=True, key="eq_pr_musc")
+            with ep6: pr_lp   = st.checkbox("🏋️ 1RM Leg Press",value=True, key="eq_pr_lp")
+            sel_eq = (
+                (["tinetti"] if pr_tin  else []) +
+                (["berg"]    if pr_berg else []) +
+                (["tug"]     if pr_tug  else []) +
+                (["sts"]     if pr_sts  else []) +
+                (["muscle"]  if pr_musc else []) +
+                (["leg_press"] if pr_lp else [])
+            )
             ga, gb, _ = st.columns([1.5, 1, 4])
             with ga:
                 if sel_eq:
