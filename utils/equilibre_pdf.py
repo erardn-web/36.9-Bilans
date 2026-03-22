@@ -375,7 +375,6 @@ def generate_pdf_equilibre(bilans_df, patient_info: dict) -> bytes:
 
 
 # ─── Questionnaire imprimable Testing MI + Leg Press ─────────────────────────
-from utils.muscle_pdf import build_muscle_testing as _build_mt_eq
 
 def _eq_section_band(title):
     row = [[_Para(f"<font color='#C4603A'>▌</font>&nbsp;&nbsp;<b>{title}</b>",
