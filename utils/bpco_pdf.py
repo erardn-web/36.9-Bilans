@@ -285,7 +285,25 @@ def generate_pdf_bpco(bilans_df, patient_info: dict, analyse_text: str = "") -> 
     for i,(_,row) in enumerate(bilans_df.iterrows()):
         d=row["date_bilan"]; ds=d.strftime("%d/%m/%Y") if pd.notna(d) else "—"
         bil.append([str(i+1),ds,row.get("type_bilan","—") or "—",row.get("praticien","—") or "—"])
-    story.append(_tbl(bil,col_widths=[1.2*cm,3.2*cm,5*cm,W-9.4*cm])); story.append(PageBreak())
+    story.append(_tbl(bil,col_widths=[1.2*cm,3.2*cm,5*cm,W-9.4*cm]))
+
+    # ── Synthèse IA ───────────────────────────────────────────────────────────
+    if analyse_text and str(analyse_text).strip():
+        story.append(Spacer(1, 0.5*cm))
+        story.append(_section("Synthèse physiothérapeutique"))
+        story.append(Spacer(1, 0.3*cm))
+        for para in str(analyse_text).strip().split("\n\n"):
+            para = para.strip()
+            if para:
+                story.append(Paragraph(para,
+                    ParagraphStyle("ai_bp", fontSize=9.5, fontName="Helvetica",
+                        textColor=NOIR, leading=14, spaceAfter=8)))
+        story.append(Paragraph(
+            f"Synthèse générée par IA le {date.today().strftime('%d/%m/%Y')} — À valider par le thérapeute.",
+            ParagraphStyle("ai_bp_foot", fontSize=7.5, fontName="Helvetica-Oblique",
+                textColor=GRIS_TEXTE)))
+
+    story.append(PageBreak())
 
     # Synthèse
     story.append(_section("Synthèse des scores")); story.append(Spacer(1,0.3*cm))
@@ -354,28 +372,6 @@ def generate_pdf_bpco(bilans_df, patient_info: dict, analyse_text: str = "") -> 
         if i<n-1: story.append(PageBreak())
 
 
-    # ── Synthèse IA ──────────────────────────────────────────────────────────
-    if analyse_text and str(analyse_text).strip():
-        story.append(PageBreak())
-        story.append(section_band("Synthèse de l'évolution — BPCO"))
-        story.append(Spacer(1, 0.4*cm))
-        story.append(Paragraph(
-            "<b>Synthèse physiothérapeutique de l'évolution</b>",
-            ParagraphStyle("ai_head", fontSize=10, fontName="Helvetica-Bold",
-                textColor=BLEU, spaceAfter=6)))
-        # Découper en paragraphes
-        for para in str(analyse_text).strip().split("\n\n"):
-            para = para.strip()
-            if para:
-                story.append(Paragraph(para,
-                    ParagraphStyle("ai_body", fontSize=9.5, fontName="Helvetica",
-                        textColor=NOIR, leading=14, spaceAfter=8)))
-        story.append(Spacer(1, 0.3*cm))
-        story.append(Paragraph(
-            f"Généré automatiquement par IA le {date.today().strftime('%d/%m/%Y')} — "
-            "À valider par le thérapeute.",
-            ParagraphStyle("ai_foot", fontSize=7.5, fontName="Helvetica-Oblique",
-                textColor=GRIS_TEXTE)))
 
     doc.build(story,onFirstPage=hf,onLaterPages=hf)
     return buf.getvalue()
