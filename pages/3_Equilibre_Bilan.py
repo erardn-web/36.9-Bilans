@@ -304,10 +304,10 @@ def render_formulaire():
     st.markdown("---")
     collected = {}
 
-    tab_gen, tab_tinetti, tab_sts, tab_unip, tab_tug, tab_berg, tab_sppb, tab_muscle = st.tabs([
+    tab_gen, tab_tinetti, tab_sts, tab_unip, tab_tug, tab_berg, tab_sppb, tab_musc, tab_lp = st.tabs([
         "📝 Général", "🧍 Tinetti", "🪑 STS 1 min",
         "🦵 Unipodal", "⏱️ TUG", "⚖️ Berg", "📊 SPPB",
-        "💪 Musculaire", "🏋️ 1RM Leg Press", "💪 Testing MI",
+        "💪 Musculaire", "🏋️ 1RM Leg Press",
     ])
 
     # ── GÉNÉRAL ───────────────────────────────────────────────────────────────
@@ -555,12 +555,6 @@ def render_formulaire():
             "sppb_score": sppb_r["score"] if sppb_r["score"] is not None else "",
             "sppb_interpretation": sppb_r["interpretation"],
         })
-
-    # ── TESTING MUSCULAIRE ────────────────────────────────────────────────────
-    with tab_muscle:
-        from utils.muscle_tab import render_muscle_tab
-        muscle_data = render_muscle_tab(lv, prefix="eq", with_legpress=True)
-        collected.update(muscle_data)
 
     # ── TESTING MUSCULAIRE ───────────────────────────────────────────────────
     with tab_musc:
