@@ -417,7 +417,7 @@ def render_formulaire():
                 index=["Bilan initial","Bilan intermédiaire","Bilan final"].index(
                     lv("type_bilan","Bilan initial")) if lv("type_bilan") else 0)
         with g2:
-            praticien = st.text_input("Praticien", value=lv("praticien",""))
+            praticien = st.text_input("Praticien", value=lv("praticien",""), key="eq_prat")
             notes = st.text_area("Notes générales", value=lv("notes_generales",""), height=80)
         collected.update({"date_bilan": str(bilan_date), "type_bilan": bilan_type,
                           "praticien": praticien, "notes_generales": notes})
