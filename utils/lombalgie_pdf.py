@@ -1081,12 +1081,22 @@ def build_luomajoki(story, styles):
     ]))
     story.append(score_tbl)
 
+def _lomb_build_muscle(story, styles):
+    from utils.shv_pdf import build_muscle_testing
+    build_muscle_testing(story, styles)
+
+def _lomb_build_legpress(story, styles):
+    from utils.shv_pdf import build_leg_press
+    build_leg_press(story, styles)
+
 QUESTIONNAIRES_LOMB = {
     "odi":        ("Oswestry Disability Index",   build_odi),
     "tampa":      ("Tampa Scale (kinésiophobie)",  build_tampa),
     "orebro":     ("Örebro",                      build_orebro),
     "drapeaux":   ("Drapeaux rouges & jaunes",    build_drapeaux),
     "luomajoki":  ("Tests de Luomajoki",          build_luomajoki),
+    "muscle":     ("Testing musculaire MI",        _lomb_build_muscle),
+    "leg_press":  ("1RM Leg Press",               _lomb_build_legpress),
 }
 
 
