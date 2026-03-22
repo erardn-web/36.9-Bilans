@@ -71,7 +71,7 @@ def render_accueil():
                 unsafe_allow_html=True)
             bp1, bp2 = st.columns(2)
             with bp1: bpr_musc = st.checkbox("💪 Testing musculaire", value=True, key="bp_acc_musc")
-            with bp2: bpr_lp   = st.checkbox(tab_label_local("🏋️ 1RM Leg Press", ["lp_1rm_estime"]),     value=True, key="bp_acc_lp")
+            with bp2: bpr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="bp_acc_lp")
             sel_bp = (["muscle"] if bpr_musc else []) + (["leg_press"] if bpr_lp else [])
             ga, gb, _ = st.columns([1.5, 1, 4])
             with ga:
@@ -176,7 +176,7 @@ def render_bilan_selection():
                 unsafe_allow_html=True)
             bp1, bp2 = st.columns(2)
             with bp1: bpr_musc = st.checkbox("💪 Testing musculaire", value=True, key="bp_pr_musc")
-            with bp2: bpr_lp   = st.checkbox(tab_label_local("🏋️ 1RM Leg Press", ["lp_1rm_estime"]),     value=True, key="bp_pr_lp")
+            with bp2: bpr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="bp_pr_lp")
             sel_bp = (["muscle"] if bpr_musc else []) + (["leg_press"] if bpr_lp else [])
             ga, gb, _ = st.columns([1.5, 1, 4])
             with ga:
@@ -246,15 +246,6 @@ def render_bilan_selection():
 
 # ─── Formulaire ───────────────────────────────────────────────────────────────
 
-def tab_label_local(base_label, keys, bilan_key="bp_bilan_data"):
-    """Ajoute ✅ si au moins une clé est renseignée."""
-    bd = st.session_state.get(bilan_key, {})
-    filled = any(
-        str(bd.get(k, "")).strip() not in ("", "0", "0.0", "None", "nan")
-        and bd.get(k) is not None
-        for k in keys
-    )
-    return f"{base_label} ✅" if filled else base_label
 
 
 def highlight_filled_tabs(tab_definitions: list):
@@ -321,8 +312,8 @@ def render_formulaire():
     ])
 
     tab_gen,tab_spiro,tab_mwt,tab_sts,tab_mmrc,tab_cat,tab_bode,tab_musc,tab_lp = st.tabs([
-        "📝 Général",tab_label_local("🌬️ Spirométrie", ["spiro_vems","spiro_vems_pct","spiro_gold"]),tab_label_local("🏃 6MWT", ["mwt_distance"]),tab_label_local("🪑 STS 1min", ["sts_1min_reps"]),
-        tab_label_local("😮‍💨 mMRC", ["mmrc_grade"]),tab_label_local("📋 CAT", ["cat_score"]),tab_label_local("📊 BODE", ["bode_score"]),tab_label_local("💪 Testing", ["musc_hip_flex_d","musc_hip_flex_g","musc_knee_ext_d","musc_knee_ext_g"]),tab_label_local("🏋️ 1RM Leg Press", ["lp_1rm_estime"]),
+        "📝 Général","🌬️ Spirométrie","🏃 6MWT","🪑 STS 1min",
+        "😮‍💨 mMRC","📋 CAT","📊 BODE","💪 Testing","🏋️ 1RM Leg Press",
     ])
 
     # ── GÉNÉRAL ───────────────────────────────────────────────────────────────
