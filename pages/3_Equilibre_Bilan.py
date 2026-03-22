@@ -72,6 +72,40 @@ def lv_int_or_none(key):
 def render_accueil():
     st.markdown('<div class="page-title">🧘 Bilan Équilibre — Gériatrie</div>',
                 unsafe_allow_html=True)
+
+    # Bouton questionnaires vierges
+    col_print, _ = st.columns([2, 5])
+    with col_print:
+        if st.button("🖨️ Imprimer questionnaires", key="eq_print_accueil"):
+            st.session_state["eq_show_print_accueil"] = True
+
+    if st.session_state.get("eq_show_print_accueil", False):
+        with st.container():
+            st.markdown("""<div style="background:#E8EEF9;border:2px solid #2B57A7;
+                border-radius:10px;padding:1.2rem 1.5rem;margin-bottom:1rem;">
+                <span style="font-size:1.1rem;font-weight:700;color:#2B57A7;">
+                🖨️ Questionnaires à imprimer (vierges)</span></div>""",
+                unsafe_allow_html=True)
+            ep1, ep2 = st.columns(2)
+            with ep1: pr_musc = st.checkbox("💪 Testing musculaire", value=True, key="eq_acc_musc")
+            with ep2: pr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="eq_acc_lp")
+            sel_eq = (["muscle"] if pr_musc else []) + (["leg_press"] if pr_lp else [])
+            ga, gb, _ = st.columns([1.5, 1, 4])
+            with ga:
+                if sel_eq:
+                    from utils.equilibre_pdf import generate_questionnaires_pdf as _gqe
+                    with st.spinner("Génération…"):
+                        q_pdf = _gqe(sel_eq, None)
+                    st.download_button("📥 Télécharger", data=q_pdf,
+                        file_name=f"questionnaires_equilibre_vierges_{date.today()}.pdf",
+                        mime="application/pdf", type="primary", key="eq_acc_dl")
+                else:
+                    st.warning("Sélectionnez au moins un questionnaire.")
+            with gb:
+                if st.button("✖ Fermer", key="eq_acc_close"):
+                    st.session_state["eq_show_print_accueil"] = False; st.rerun()
+    st.markdown("---")
+
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("#### 🔍 Rechercher un patient")
@@ -108,7 +142,7 @@ def render_accueil():
             ddn    = st.date_input("Date de naissance *",
                                    min_value=date(1900,1,1), max_value=date.today())
             sexe   = st.selectbox("Sexe", ["Féminin","Masculin","Autre"])
-            sub    = st.form_submit_button("Créer", type="primary")
+            sub    = st.form_submit_button("➕ Créer", type="primary")
         if sub:
             if not nom or not prenom:
                 st.error("Nom et prénom obligatoires.")
@@ -154,7 +188,7 @@ def render_bilan_selection():
             st.rerun()
     with col_evol:
         if not bilans_df.empty:
-            if st.button("📈 Évolution", type="primary"):
+            if st.button("📈 Voir l'évolution", type="primary"):
                 st.session_state.eq_mode = "evolution"
                 st.rerun()
     with col_pdf:
@@ -222,7 +256,7 @@ def render_bilan_selection():
                         f"**{row.get('date_bilan','—')}** — {row.get('type_bilan','—')}"
                         f"  \n<small>`{bid}`</small>", unsafe_allow_html=True)
                 with c_open:
-                    if st.button("✏️", key=f"eqopen_{bid}", help="Ouvrir"):
+                    if st.button("✏️", key=f"eqopen_{bid}", help="Ouvrir ce bilan"):
                         st.session_state.eq_bilan_id   = bid
                         st.session_state.eq_bilan_data = row.to_dict()
                         st.session_state.eq_mode       = "formulaire"
@@ -252,7 +286,7 @@ def render_bilan_selection():
             bilan_date = st.date_input("Date", value=date.today())
             bilan_type = st.selectbox("Type", ["Bilan initial","Bilan intermédiaire","Bilan final"])
             praticien  = st.text_input("Praticien")
-            go = st.form_submit_button("Créer", type="primary")
+            go = st.form_submit_button("➕ Créer", type="primary")
         if go:
             st.session_state.eq_bilan_id   = None
             st.session_state.eq_bilan_data = {
@@ -292,12 +326,12 @@ def render_formulaire():
         st.warning("⚠️ **Modifications non sauvegardées.** Quitter sans sauvegarder ?")
         ca, cb, _ = st.columns([1.5, 1.5, 4])
         with ca:
-            if st.button("✅ Quitter", type="primary", key="eq_back_ok"):
+            if st.button("🚪 Quitter sans sauvegarder", type="primary", key="eq_back_ok"):
                 st.session_state["eq_confirm_back"] = False
                 st.session_state.eq_mode = "bilan"
                 st.rerun()
         with cb:
-            if st.button("✖ Continuer", key="eq_back_cancel"):
+            if st.button("✏️ Continuer l'édition", key="eq_back_cancel"):
                 st.session_state["eq_confirm_back"] = False
                 st.rerun()
 
