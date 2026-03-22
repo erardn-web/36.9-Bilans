@@ -65,6 +65,8 @@ def get_spreadsheet():
 PATIENTS_HEADERS = [
     "patient_id", "nom", "prenom", "date_naissance",
     "sexe", "profession", "date_creation",
+    # Analyses IA (une par module, remplacée à chaque nouveau bilan)
+    "analyse_shv", "analyse_lombalgie", "analyse_equilibre", "analyse_bpco",
 ]
 
 def get_shv_headers():
@@ -184,6 +186,56 @@ def _sync_headers(ws, expected_headers: list):
         pass
 
 
+
+# ─── Analyses IA par patient ──────────────────────────────────────────────────
+
+def load_analyse(patient_id: str, module: str) -> str:
+    """Charge l'analyse IA stockée pour un patient + module."""
+    key = f"analyse_{module}"
+    ss  = ensure_sheets()
+    ws  = ss.worksheet("Patients")
+    rows = ws.get_all_values()
+    if not rows: return ""
+    try:
+        headers = rows[0]
+        col_pid = headers.index("patient_id")
+        col_ana = headers.index(key) if key in headers else -1
+    except (ValueError, IndexError):
+        return ""
+    for row in rows[1:]:
+        if row and len(row) > col_pid and row[col_pid] == patient_id:
+            if col_ana >= 0 and col_ana < len(row):
+                return row[col_ana] or ""
+    return ""
+
+
+def save_analyse(patient_id: str, module: str, text: str):
+    """Sauvegarde l'analyse IA pour un patient + module."""
+    key = f"analyse_{module}"
+    ss  = ensure_sheets()
+    ws  = ss.worksheet("Patients")
+    rows = ws.get_all_values()
+    if not rows: return
+    headers = rows[0]
+    # Ensure column exists
+    if key not in headers:
+        headers.append(key)
+        ws.resize(cols=len(headers))
+        ws.update([headers], "A1")
+        rows[0] = headers
+    col_pid = headers.index("patient_id")
+    col_ana = headers.index(key)
+    for i, row in enumerate(rows[1:], start=2):
+        if row and len(row) > col_pid and row[col_pid] == patient_id:
+            cell = chr(65 + col_ana) + str(i)
+            ws.update(cell, text)
+            return
+
+
+def clear_analyse(patient_id: str, module: str):
+    """Efface l'analyse IA (appelé après chaque sauvegarde de bilan)."""
+    save_analyse(patient_id, module, "")
+
 # ─── Patients ────────────────────────────────────────────────────────────────
 
 def get_all_patients() -> pd.DataFrame:
@@ -219,6 +271,9 @@ def get_patient_bilans(patient_id: str) -> pd.DataFrame:
 def save_bilan(bilan_data: dict) -> str:
     ss = ensure_sheets()
     ws = ss.worksheet("Bilans_SHV")
+    # Invalider l'analyse IA existante
+    pid = bilan_data.get("patient_id","")
+    if pid: clear_analyse(pid, "shv")
     # Utiliser l'ordre RÉEL des colonnes de la feuille
     actual_headers = ws.row_values(1)
     bilan_id = bilan_data.get("bilan_id")
@@ -329,6 +384,8 @@ def save_bilan_lombalgie(bilan_data: dict) -> str:
     ss = ensure_lombalgie_sheet()
     ws = ss.worksheet("Bilans_Lombalgie")
     # Utiliser l'ordre RÉEL des colonnes de la feuille, pas l'ordre attendu
+    pid = bilan_data.get("patient_id",""); 
+    if pid: clear_analyse(pid, "lombalgie")
     actual_headers = ws.row_values(1)
     bilan_id = bilan_data.get("bilan_id")
 
@@ -409,6 +466,8 @@ def save_bilan_equilibre(bilan_data: dict) -> str:
     ss = ensure_equilibre_sheet()
     ws = ss.worksheet("Bilans_Equilibre")
     actual_headers = ws.row_values(1)
+    pid = bilan_data.get("patient_id",""); 
+    if pid: clear_analyse(pid, "equilibre")
     bilan_id = bilan_data.get("bilan_id")
     if bilan_id:
         all_values = ws.get_all_values()
@@ -464,6 +523,8 @@ def save_bilan_bpco(bilan_data: dict) -> str:
     ss = ensure_bpco_sheet()
     ws = ss.worksheet("Bilans_BPCO")
     actual_headers = ws.row_values(1)
+    pid = bilan_data.get("patient_id",""); 
+    if pid: clear_analyse(pid, "bpco")
     bilan_id = bilan_data.get("bilan_id")
     if bilan_id:
         all_values = ws.get_all_values()
