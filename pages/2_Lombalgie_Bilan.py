@@ -109,7 +109,7 @@ def _render_print_panel(patient_info, key_prefix):
     with p1: pr_odi   = st.checkbox("📊 Oswestry (ODI)",   value=True, key=f"{key_prefix}_odi")
     with p2: pr_tampa = st.checkbox("😨 Tampa Scale",       value=True, key=f"{key_prefix}_tampa")
     with p3: pr_oreb  = st.checkbox("🧠 Örebro",            value=True, key=f"{key_prefix}_orebro")
-    with p4: pr_drap  = st.checkbox("🚩 Drapeaux",          value=True, key=f"{key_prefix}_drap")
+    with p4: pr_drap  = st.checkbox(tab_label_lomb("🚩 Drapeaux", ["drapeaux_rouges_list","drapeaux_jaunes_list"]),          value=True, key=f"{key_prefix}_drap")
     with p5: pr_luom  = st.checkbox("🏃 Luomajoki",         value=True, key=f"{key_prefix}_luom")
     selected = (
         (["odi"]       if pr_odi   else []) +
@@ -335,6 +335,42 @@ def render_bilan_selection():
             st.session_state["lomb_unsaved"] = True
             st.rerun()
 
+
+def tab_label_lomb(base_label, keys):
+    """Ajoute ✅ si au moins une clé est renseignée dans le bilan en cours."""
+    bd = st.session_state.get("lomb_bilan_data", {})
+    filled = any(
+        str(bd.get(k, "")).strip() not in ("", "0", "0.0", "None", "nan")
+        and bd.get(k) is not None
+        for k in keys
+    )
+    return f"{base_label} ✅" if filled else base_label
+
+
+def highlight_filled_tabs(tab_definitions: list):
+    """Fond vert sur les onglets remplis via CSS nth-child."""
+    bd = st.session_state.get("lomb_bilan_data", {})
+    css_rules = []
+    for i, (label, keys) in enumerate(tab_definitions):
+        filled = any(
+            str(bd.get(k, "")).strip() not in ("", "0", "0.0", "None", "nan")
+            and bd.get(k) is not None
+            for k in keys
+        )
+        if filled:
+            n = i + 1
+            css_rules.append(
+                "[data-baseweb=\'tab-list\'] button:nth-child("
+                + str(n)
+                + ") {background-color:#d4edda !important;"
+                  "border-bottom:3px solid #388e3c !important;}"
+            )
+    if css_rules:
+        st.markdown(
+            "<style>" + " ".join(css_rules) + "</style>",
+            unsafe_allow_html=True
+        )
+
 def render_formulaire():
     info = st.session_state.lomb_patient_info
     bd   = st.session_state.lomb_bilan_data
@@ -372,13 +408,23 @@ def render_formulaire():
                 st.rerun()
     with col_save:
         save_top = st.button("💾 Sauvegarder", type="primary")
+    highlight_filled_tabs([
+        ("📝 Général",                []),
+        ("🟦 S – Subjectif",          ["s_motif_consultation","s_eva_repos"]),
+        ("🚩 Drapeaux",               ["drapeaux_rouges_list","drapeaux_jaunes_list"]),
+        ("🔬 O – Objectif",           ["o_schober","o_luomajoki_score"]),
+        ("🩺 Raisonnement clinique",  ["diag_principal","diag_diff_list"]),
+        ("🔮 A – Pronostic",          ["a_appreciation"]),
+        ("📋 P – Plan",               ["p_objectifs","p_traitement"]),
+        ("📊 Questionnaires",         ["odi_score","tampa_score","orebro_score"]),
+    ])
     st.markdown("---")
     collected = {}
 
     tab_gen, tab_s, tab_flags, tab_o, tab_diag, tab_pronostic, tab_p, tab_q = st.tabs([
-        "📝 Général", "🟦 S – Subjectif", "🚩 Drapeaux",
-        "🔬 O – Objectif", "🩺 Raisonnement clinique", "🔮 A – Pronostic",
-        "📋 P – Plan", "📊 Questionnaires",
+        "📝 Général", tab_label_lomb("🟦 S – Subjectif", ["s_motif_consultation","s_eva_repos","s_douleur_localisation"]), tab_label_lomb("🚩 Drapeaux", ["drapeaux_rouges_list","drapeaux_jaunes_list"]),
+        tab_label_lomb("🔬 O – Objectif", ["o_schober","o_luomajoki_score","o_posture_notes"]), tab_label_lomb("🩺 Raisonnement clinique", ["diag_principal","diag_diff_list"]), tab_label_lomb("🔮 A – Pronostic", ["a_appreciation"]),
+        tab_label_lomb("📋 P – Plan", ["p_objectifs","p_traitement"]), tab_label_lomb("📊 Questionnaires", ["odi_score","tampa_score","orebro_score"]),
     ])
 
     # ── GÉNÉRAL ──────────────────────────────────────────────────────────────
@@ -935,7 +981,7 @@ def render_evolution():
     ]
 
     tab_doul, tab_q, tab_mob, tab_luom, tab_soap = st.tabs([
-        "🩸 Douleur (EVA)", "📊 Questionnaires", "🦴 Mobilité",
+        "🩸 Douleur (EVA)", tab_label_lomb("📊 Questionnaires", ["odi_score","tampa_score","orebro_score"]), "🦴 Mobilité",
         "🏃 Luomajoki", "📋 SOAP synthèse",
     ])
 
