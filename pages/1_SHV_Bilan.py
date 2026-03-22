@@ -566,7 +566,8 @@ def render_formulaire():
         "💪 Musculaire",
     ])
 
-    collected = {}   # on accumulera toutes les valeurs ici
+    # Pré-remplir depuis les données existantes pour ne pas perdre les valeurs non visitées
+    collected = dict(st.session_state.bilan_data)
 
     # ═════════════════════════════════════════════════════════════════════════
     #  TAB 1 – GÉNÉRAL
