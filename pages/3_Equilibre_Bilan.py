@@ -715,7 +715,7 @@ def render_evolution():
         if not bilans_df.empty:
             from utils.equilibre_pdf import generate_pdf_equilibre
             with st.spinner("PDF…"):
-                pdf = generate_pdf_equilibre(bilans_df, info)
+                pdf = generate_pdf_equilibre(bilans_df, info, analyse_text=__import__("utils.db",fromlist=["load_analyse"]).load_analyse(st.session_state.eq_patient_id,"equilibre"))
             st.download_button(
                 f"📄 Exporter PDF ({n_sel})",
                 data=pdf,
@@ -786,6 +786,12 @@ def render_evolution():
                     st.metric("SPPB", f"{row.get('sppb_score','—')}/12")
                 if row.get("notes_generales"):
                     st.markdown(f"*{row['notes_generales']}*")
+
+    # ── ANALYSE IA ───────────────────────────────────────────────────────────
+    from utils.ai_analyse import render_analyse_section
+    render_analyse_section(bilans_df, info, "equilibre", st.session_state.eq_patient_id)
+
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  ROUTER
