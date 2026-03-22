@@ -237,7 +237,7 @@ def render_formulaire():
             if st.button("✖ Continuer",key="bp_back_cancel"):
                 st.session_state["bp_confirm_back"]=False; st.rerun()
     st.markdown("---")
-    collected={}
+    collected=dict(st.session_state.bp_bilan_data)
 
     tab_gen,tab_spiro,tab_mwt,tab_sts,tab_mmrc,tab_cat,tab_bode,tab_musc,tab_lp = st.tabs([
         "📝 Général","🌬️ Spirométrie","🏃 6MWT","🪑 STS 1min",
@@ -470,7 +470,7 @@ def render_formulaire():
         lp_collected = render_muscle_tab(
             lv_fn=lv,
             key_prefix="bp_lp",
-            show_leg_press=True,
+            leg_press_only=True,
             body_weight_key="poids",
             bilan_data=st.session_state.bp_bilan_data,
         )
