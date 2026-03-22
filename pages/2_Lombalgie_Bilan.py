@@ -952,7 +952,7 @@ def render_evolution():
     with col_pdf:
         if not bilans_df.empty:
             with st.spinner("Génération du PDF…"):
-                pdf_bytes = generate_pdf_lombalgie(bilans_df, info)
+                pdf_bytes = generate_pdf_lombalgie(bilans_df, info, analyse_text=__import__('utils.db',fromlist=['load_analyse']).load_analyse(st.session_state.lomb_patient_id,'lombalgie'))
             st.download_button(
                 label=f"📄 Exporter en PDF ({n_sel} bilan{'s' if n_sel>1 else ''})",
                 data=pdf_bytes,
@@ -1168,6 +1168,12 @@ def render_evolution():
                 with col_p:
                     st.markdown("**📋 Plan**")
                     st.markdown(row.get('p_objectifs','—') or '—')
+
+
+    # ── ANALYSE IA ───────────────────────────────────────────────────────────
+    from utils.ai_analyse import render_analyse_section
+    render_analyse_section(bilans_df, info, "lombalgie", st.session_state.lomb_patient_id)
+
 
 
 # ── ROUTEUR ───────────────────────────────────────────────────────────────────
