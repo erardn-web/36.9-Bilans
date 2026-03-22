@@ -350,7 +350,7 @@ def render_formulaire():
                 index=["Bilan initial","Bilan intermédiaire","Bilan final"].index(
                     lv("type_bilan","Bilan initial")) if lv("type_bilan") else 0)
         with g2:
-            prat=st.text_input("Praticien",value=lv("praticien",""))
+            prat=st.text_input("Praticien",value=lv("praticien",""),key="bp_prat")
             notes=st.text_area("Notes",value=lv("notes_generales",""),height=80)
         g3,g4=st.columns(2)
         with g3:
