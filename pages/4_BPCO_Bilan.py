@@ -239,9 +239,9 @@ def render_formulaire():
     st.markdown("---")
     collected={}
 
-    tab_gen,tab_spiro,tab_mwt,tab_sts,tab_mmrc,tab_cat,tab_bode,tab_muscle = st.tabs([
+    tab_gen,tab_spiro,tab_mwt,tab_sts,tab_mmrc,tab_cat,tab_bode,tab_musc,tab_lp = st.tabs([
         "📝 Général","🌬️ Spirométrie","🏃 6MWT","🪑 STS 1min",
-        "😮‍💨 mMRC","📋 CAT","📊 BODE","💪 Musculaire","🏋️ 1RM Leg Press","💪 Testing MI"
+        "😮‍💨 mMRC","📋 CAT","📊 BODE","💪 Musculaire","🏋️ 1RM Leg Press",
     ])
 
     # ── GÉNÉRAL ───────────────────────────────────────────────────────────────
@@ -456,11 +456,6 @@ def render_formulaire():
                         f'  <small>({bode_r["survival"]})</small></div>',unsafe_allow_html=True)
             collected.update({"bode_score":bode_r["score"],"bode_interpretation":bode_r["interpretation"]})
 
-    # ── TESTING MUSCULAIRE ────────────────────────────────────────────────────
-    with tab_muscle:
-        from utils.muscle_tab import render_muscle_tab
-        muscle_data = render_muscle_tab(lv, prefix="bp", with_legpress=True)
-        collected.update(muscle_data)
     # ── TESTING MUSCULAIRE ───────────────────────────────────────────────────
     with tab_musc:
         musc_collected = render_muscle_tab(
