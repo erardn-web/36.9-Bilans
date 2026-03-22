@@ -6,6 +6,8 @@ from utils.db import (
     get_all_patients, create_patient,
     get_patient_bilans_equilibre, save_bilan_equilibre, delete_bilan_equilibre,
 )
+from utils.muscle_widget import render_muscle_testing
+from utils.muscle_widget import render_muscle_tab
 from utils.equilibre_data import (
     TINETTI_EQUILIBRE, TINETTI_MARCHE, TINETTI_EQ_KEYS, TINETTI_MA_KEYS,
     compute_tinetti, TINETTI_EQ_MAX, TINETTI_MA_MAX,
@@ -142,7 +144,7 @@ def render_bilan_selection():
         f = df[df["bilan_id"].isin(sel)] if sel else df
         return f if not f.empty else df
 
-    col_back, col_evol, col_pdf, _ = st.columns([1, 1, 1.2, 3])
+    col_back, col_evol, col_pdf, col_print, _ = st.columns([1, 1, 1.2, 1.5, 2])
     with col_back:
         if st.button("⬅️ Changer de patient"):
             for k in ["eq_patient_id","eq_patient_info","eq_bilan_id"]:
@@ -167,6 +169,37 @@ def render_bilan_selection():
                 data=pdf,
                 file_name=f"equilibre_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
                 mime="application/pdf")
+
+    with col_print:
+        if st.button("🖨️ Imprimer questionnaires", key="eq_print_btn"):
+            st.session_state["eq_show_print"] = True
+
+    # ── Panneau impression ────────────────────────────────────────────────────
+    if st.session_state.get("eq_show_print", False):
+        with st.container():
+            st.markdown("""<div style="background:#E8EEF9;border:2px solid #2B57A7;
+                border-radius:10px;padding:1.2rem 1.5rem;margin-bottom:1rem;">
+                <span style="font-size:1.1rem;font-weight:700;color:#2B57A7;">
+                🖨️ Sélectionner les questionnaires à imprimer</span></div>""",
+                unsafe_allow_html=True)
+            ep1, ep2 = st.columns(2)
+            with ep1: pr_musc = st.checkbox("💪 Testing musculaire", value=True, key="eq_pr_musc")
+            with ep2: pr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="eq_pr_lp")
+            sel_eq = (["muscle"] if pr_musc else []) + (["leg_press"] if pr_lp else [])
+            ga, gb, _ = st.columns([1.5, 1, 4])
+            with ga:
+                if sel_eq:
+                    from utils.equilibre_pdf import generate_questionnaires_pdf as _gqe
+                    with st.spinner("Génération…"):
+                        q_pdf = _gqe(sel_eq, info)
+                    st.download_button("📥 Télécharger", data=q_pdf,
+                        file_name=f"questionnaires_eq_{info['nom']}_{date.today()}.pdf",
+                        mime="application/pdf", type="primary", key="eq_dl_q")
+                else:
+                    st.warning("Sélectionnez au moins un questionnaire.")
+            with gb:
+                if st.button("✖ Fermer", key="eq_close_print"):
+                    st.session_state["eq_show_print"] = False; st.rerun()
 
     st.markdown("---")
     col_left, col_right = st.columns(2)
@@ -272,9 +305,10 @@ def render_formulaire():
     st.markdown("---")
     collected = {}
 
-    tab_gen, tab_tinetti, tab_sts, tab_unip, tab_tug, tab_berg, tab_sppb = st.tabs([
+    tab_gen, tab_tinetti, tab_sts, tab_unip, tab_tug, tab_berg, tab_sppb, tab_muscle = st.tabs([
         "📝 Général", "🧍 Tinetti", "🪑 STS 1 min",
         "🦵 Unipodal", "⏱️ TUG", "⚖️ Berg", "📊 SPPB",
+        "💪 Musculaire", "🏋️ 1RM Leg Press", "💪 Testing MI",
     ])
 
     # ── GÉNÉRAL ───────────────────────────────────────────────────────────────
@@ -522,6 +556,34 @@ def render_formulaire():
             "sppb_score": sppb_r["score"] if sppb_r["score"] is not None else "",
             "sppb_interpretation": sppb_r["interpretation"],
         })
+
+    # ── TESTING MUSCULAIRE ────────────────────────────────────────────────────
+    with tab_muscle:
+        from utils.muscle_tab import render_muscle_tab
+        muscle_data = render_muscle_tab(lv, prefix="eq", with_legpress=True)
+        collected.update(muscle_data)
+
+    # ── TESTING MUSCULAIRE ───────────────────────────────────────────────────
+    with tab_musc:
+        musc_collected = render_muscle_tab(
+            lv_fn=lv,
+            key_prefix="eq",
+            show_leg_press=False,
+        )
+        collected.update(musc_collected)
+
+    # ── 1RM LEG PRESS ────────────────────────────────────────────────────────
+    with tab_lp:
+        lp_collected = render_muscle_tab(
+            lv_fn=lv,
+            key_prefix="eq_lp",
+            show_leg_press=True,
+        )
+        # Only keep leg press keys
+        for k in ["lp_charge_kg","lp_reps","lp_1rm_estime","lp_interpretation","lp_notes"]:
+            if k in lp_collected:
+                collected[k] = lp_collected[k]
+
 
     # ── SAUVEGARDE ────────────────────────────────────────────────────────────
     if save_top or st.button("💾 Sauvegarder le bilan", type="primary", key="eq_save_bot"):
