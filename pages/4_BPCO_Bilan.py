@@ -6,6 +6,8 @@ from utils.db import (
     get_all_patients, create_patient,
     get_patient_bilans_bpco, save_bilan_bpco, delete_bilan_bpco,
 )
+from utils.muscle_widget import render_muscle_testing
+from utils.muscle_widget import render_muscle_tab
 from utils.bpco_data import (
     MMRC_GRADES, CAT_ITEMS, CAT_KEYS, compute_cat,
     compute_bode, interpret_6mwt,
@@ -109,7 +111,7 @@ def render_bilan_selection():
         f=df[df["bilan_id"].isin(sel_ids)] if sel_ids else df
         return f if not f.empty else df
 
-    col_back,col_evol,col_pdf,_=st.columns([1,1,1.2,3])
+    col_back,col_evol,col_pdf,col_print,_=st.columns([1,1,1.2,1.5,2])
     with col_back:
         if st.button("⬅️ Changer de patient"):
             for k in ["bp_patient_id","bp_patient_info","bp_bilan_id"]: st.session_state[k]=None
@@ -128,6 +130,36 @@ def render_bilan_selection():
             st.download_button(f"📄 Exporter PDF ({len(sel_df)})",data=pdf,
                 file_name=f"bpco_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
                 mime="application/pdf")
+    with col_print:
+        if st.button("🖨️ Imprimer", key="bp_print_btn"):
+            st.session_state["bp_show_print"] = True
+
+    if st.session_state.get("bp_show_print", False):
+        with st.container():
+            st.markdown("""<div style="background:#E8EEF9;border:2px solid #2B57A7;
+                border-radius:10px;padding:1.2rem 1.5rem;margin-bottom:1rem;">
+                <span style="font-size:1.1rem;font-weight:700;color:#2B57A7;">
+                🖨️ Questionnaires à imprimer</span></div>""",
+                unsafe_allow_html=True)
+            bp1, bp2 = st.columns(2)
+            with bp1: bpr_musc = st.checkbox("💪 Testing musculaire", value=True, key="bp_pr_musc")
+            with bp2: bpr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="bp_pr_lp")
+            sel_bp = (["muscle"] if bpr_musc else []) + (["leg_press"] if bpr_lp else [])
+            ga, gb, _ = st.columns([1.5, 1, 4])
+            with ga:
+                if sel_bp:
+                    from utils.bpco_pdf import generate_questionnaires_pdf as _gqb
+                    with st.spinner("Génération…"):
+                        q_pdf = _gqb(sel_bp, info)
+                    st.download_button("📥 Télécharger", data=q_pdf,
+                        file_name=f"questionnaires_bpco_{info['nom']}_{date.today()}.pdf",
+                        mime="application/pdf", type="primary", key="bp_dl_q")
+                else:
+                    st.warning("Sélectionnez au moins un questionnaire.")
+            with gb:
+                if st.button("✖ Fermer", key="bp_close_print"):
+                    st.session_state["bp_show_print"] = False; st.rerun()
+
     st.markdown("---")
     col_left,col_right=st.columns(2)
     with col_left:
@@ -208,9 +240,9 @@ def render_formulaire():
     st.markdown("---")
     collected={}
 
-    tab_gen,tab_spiro,tab_mwt,tab_sts,tab_mmrc,tab_cat,tab_bode = st.tabs([
+    tab_gen,tab_spiro,tab_mwt,tab_sts,tab_mmrc,tab_cat,tab_bode,tab_muscle = st.tabs([
         "📝 Général","🌬️ Spirométrie","🏃 6MWT","🪑 STS 1min",
-        "😮‍💨 mMRC","📋 CAT","📊 BODE"
+        "😮‍💨 mMRC","📋 CAT","📊 BODE","💪 Musculaire","🏋️ 1RM Leg Press","💪 Testing MI"
     ])
 
     # ── GÉNÉRAL ───────────────────────────────────────────────────────────────
@@ -424,6 +456,34 @@ def render_formulaire():
                         f'BODE : {bode_r["score"]}/10 — {bode_r["interpretation"]}'
                         f'  <small>({bode_r["survival"]})</small></div>',unsafe_allow_html=True)
             collected.update({"bode_score":bode_r["score"],"bode_interpretation":bode_r["interpretation"]})
+
+    # ── TESTING MUSCULAIRE ────────────────────────────────────────────────────
+    with tab_muscle:
+        from utils.muscle_tab import render_muscle_tab
+        muscle_data = render_muscle_tab(lv, prefix="bp", with_legpress=True)
+        collected.update(muscle_data)
+    # ── TESTING MUSCULAIRE ───────────────────────────────────────────────────
+    with tab_musc:
+        musc_collected = render_muscle_tab(
+            lv_fn=lv,
+            key_prefix="bp",
+            show_leg_press=False,
+        )
+        collected.update(musc_collected)
+
+    # ── 1RM LEG PRESS ────────────────────────────────────────────────────────
+    with tab_lp:
+        lp_collected = render_muscle_tab(
+            lv_fn=lv,
+            key_prefix="bp_lp",
+            show_leg_press=True,
+            body_weight_key="poids",
+            bilan_data=st.session_state.bp_bilan_data,
+        )
+        for k in ["lp_charge_kg","lp_reps","lp_1rm_estime","lp_interpretation","lp_notes"]:
+            if k in lp_collected:
+                collected[k] = lp_collected[k]
+
 
     # ── SAUVEGARDE ────────────────────────────────────────────────────────────
     if save_top or st.button("💾 Sauvegarder le bilan",type="primary",key="bp_save_bot"):
