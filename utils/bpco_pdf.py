@@ -86,12 +86,19 @@ def section_band(title):
     return _section(title)
 
 def _section(title):
-    row=[[Paragraph(f"<font color='#C4603A'>▌</font>&nbsp;&nbsp;<b>{title}</b>",
-        ParagraphStyle("bp_sh",fontSize=10,fontName="Helvetica-Bold",textColor=BLANC,leading=14))]]
-    t=Table(row,colWidths=[W])
-    t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),BLEU),
-        ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),("LEFTPADDING",(0,0),(-1,-1),10)]))
-    return t
+    row = [[Paragraph(f"<b>{title}</b>",
+        ParagraphStyle("_sh", fontSize=11, fontName="Helvetica-Bold",
+                       textColor=BLEU, leading=15))]]
+    tbl = Table(row, colWidths=[W])
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0),(-1,-1), BLANC),
+        ("LINEBELOW",     (0,0),(-1,-1), 1.2, BLEU),
+        ("TOPPADDING",    (0,0),(-1,-1), 8),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 4),
+        ("LEFTPADDING",   (0,0),(-1,-1), 0),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 0),
+    ]))
+    return tbl
 
 def _tbl(data,col_widths=None,header=True):
     t=Table(data,colWidths=col_widths,repeatRows=1 if header else 0)
@@ -100,7 +107,7 @@ def _tbl(data,col_widths=None,header=True):
           ("LINEBELOW",(0,0),(-1,-1),0.3,GRIS_BORD),("TOPPADDING",(0,0),(-1,-1),5),
           ("BOTTOMPADDING",(0,0),(-1,-1),5),("LEFTPADDING",(0,0),(-1,-1),7)]
     if header:
-        cmds+=[("BACKGROUND",(0,0),(-1,0),BLEU),("TEXTCOLOR",(0,0),(-1,0),BLANC),
+        cmds+=[("BACKGROUND",(0,0),(-1,0),BLEU_LIGHT),("TEXTCOLOR",(0,0),(-1,0),BLEU),("LINEBELOW",(0,0),(-1,0),1.0,BLEU),
                ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),("FONTSIZE",(0,0),(-1,0),8),
                ("TOPPADDING",(0,0),(-1,0),7),("BOTTOMPADDING",(0,0),(-1,0),7)]
     t.setStyle(TableStyle(cmds)); return t
@@ -160,8 +167,9 @@ def build_muscle(story, styles, with_legpress=True):
     tbl.setStyle(TableStyle([
         ("FONTNAME",      (0,0),(-1,0),  "Helvetica-Bold"),
         ("FONTSIZE",      (0,0),(-1,0),  8),
-        ("BACKGROUND",    (0,0),(-1,0),  BLEU),
-        ("TEXTCOLOR",     (0,0),(-1,0),  BLANC),
+        ("BACKGROUND", (0,0),(-1,0), BLEU_LIGHT),
+        ("TEXTCOLOR",  (0,0),(-1,0), BLEU),
+        ("LINEBELOW",  (0,0),(-1,0), 1.0, BLEU),
         ("ALIGN",         (2,0),(-1,-1), "CENTER"),
         ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
         ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
@@ -449,8 +457,9 @@ def build_cat(story, styles):
     col_w = [(USEFUL_W-2.5*cm)/2, 2.5*cm, (USEFUL_W-2.5*cm)/2]
     tbl = Table(header + rows, colWidths=col_w, repeatRows=1)
     tbl.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0),(-1,0),  BLEU),
-        ("TEXTCOLOR",     (0,0),(-1,0),  BLANC),
+        ("BACKGROUND", (0,0),(-1,0), BLEU_LIGHT),
+        ("TEXTCOLOR",  (0,0),(-1,0), BLEU),
+        ("LINEBELOW",  (0,0),(-1,0), 1.0, BLEU),
         ("FONTSIZE",      (0,0),(-1,-1), 8),
         ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
         ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
@@ -487,8 +496,9 @@ def build_6mwt_fiche(story, styles):
     ]
     tbl = Table(mesures, colWidths=[5.5*cm, 3*cm, 3*cm, 3*cm])
     tbl.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0),(-1,0),  BLEU),
-        ("TEXTCOLOR",     (0,0),(-1,0),  BLANC),
+        ("BACKGROUND", (0,0),(-1,0), BLEU_LIGHT),
+        ("TEXTCOLOR",  (0,0),(-1,0), BLEU),
+        ("LINEBELOW",  (0,0),(-1,0), 1.0, BLEU),
         ("FONTNAME",      (0,0),(-1,0),  "Helvetica-Bold"),
         ("FONTSIZE",      (0,0),(-1,-1), 8),
         ("ALIGN",         (1,0),(-1,-1), "CENTER"),
