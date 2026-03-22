@@ -238,7 +238,7 @@ def build_muscle(story, styles, with_legpress=True):
         story.append(Spacer(1, 0.4*cm))
 
 
-def generate_pdf_equilibre(bilans_df, patient_info: dict) -> bytes:
+def generate_pdf_equilibre(bilans_df, patient_info: dict, analyse_text: str = "") -> bytes:
     import pandas as pd
     import matplotlib; matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -386,6 +386,30 @@ def generate_pdf_equilibre(bilans_df, patient_info: dict) -> bytes:
         if row.get("notes_generales"):
             story.append(Paragraph(f"Notes : {row['notes_generales']}", styles["normal"]))
         if i < n-1: story.append(PageBreak())
+
+
+    # ── Synthèse IA ──────────────────────────────────────────────────────────
+    if analyse_text and str(analyse_text).strip():
+        story.append(PageBreak())
+        story.append(section_band("Synthèse de l'évolution — Équilibre"))
+        story.append(Spacer(1, 0.4*cm))
+        story.append(Paragraph(
+            "<b>Synthèse physiothérapeutique de l'évolution</b>",
+            ParagraphStyle("ai_head", fontSize=10, fontName="Helvetica-Bold",
+                textColor=BLEU, spaceAfter=6)))
+        # Découper en paragraphes
+        for para in str(analyse_text).strip().split("\n\n"):
+            para = para.strip()
+            if para:
+                story.append(Paragraph(para,
+                    ParagraphStyle("ai_body", fontSize=9.5, fontName="Helvetica",
+                        textColor=NOIR, leading=14, spaceAfter=8)))
+        story.append(Spacer(1, 0.3*cm))
+        story.append(Paragraph(
+            f"Généré automatiquement par IA le {date.today().strftime('%d/%m/%Y')} — "
+            "À valider par le thérapeute.",
+            ParagraphStyle("ai_foot", fontSize=7.5, fontName="Helvetica-Oblique",
+                textColor=GRIS_TEXTE)))
 
     doc.build(story, onFirstPage=hf, onLaterPages=hf)
     return buf.getvalue()
