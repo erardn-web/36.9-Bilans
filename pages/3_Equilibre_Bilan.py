@@ -302,7 +302,7 @@ def render_formulaire():
                 st.rerun()
 
     st.markdown("---")
-    collected = {}
+    collected = dict(st.session_state.eq_bilan_data)
 
     tab_gen, tab_tinetti, tab_sts, tab_unip, tab_tug, tab_berg, tab_sppb, tab_musc, tab_lp = st.tabs([
         "📝 Général", "🧍 Tinetti", "🪑 STS 1 min",
@@ -570,7 +570,7 @@ def render_formulaire():
         lp_collected = render_muscle_tab(
             lv_fn=lv,
             key_prefix="eq_lp",
-            show_leg_press=True,
+            leg_press_only=True,
         )
         # Only keep leg press keys
         for k in ["lp_charge_kg","lp_reps","lp_1rm_estime","lp_interpretation","lp_notes"]:
