@@ -1396,7 +1396,7 @@ def render_evolution():
 
     # ── Onglets ──────────────────────────────────────────────────────────────
     tab_had, tab_bolt, tab_sf12, tab_hvt, tab_nij, \
-    tab_etco2_ev, tab_pattern_ev, tab_gazo_ev, tab_musc, tab_mrc_ev, tab_comorb2 = st.tabs([
+    tab_etco2_ev, tab_pattern_ev, tab_gazo_ev, tab_musc, tab_mrc_ev, tab_comorb2, tab_testing_ev = st.tabs([
         "😟 HAD", "⏱️ BOLT", "📊 SF-12", "🌬️ Test HV",
         "📋 Nijmegen", "📈 Capnographie", "🔬 Pattern respi.",
         "🧪 Gazométrie", "💪 Force musculaire", "🚶 MRC Dyspnée", "🏥 Comorbidités", "💪 Testing MI",
@@ -1799,6 +1799,26 @@ def render_evolution():
                 "Notes":         str(row.get("comorb_notes","") or ""),
             })
         st.dataframe(pd.DataFrame(comorb_table), use_container_width=True, hide_index=True)
+
+    # ── TESTING MUSCULAIRE ────────────────────────────────────────────────────
+    with tab_testing_ev:
+        st.markdown('<div class="section-title">💪 Évolution — Testing musculaire MI</div>',
+                    unsafe_allow_html=True)
+        from utils.muscle_data import MUSCLE_GROUPS, get_muscle_key
+        musc_ev_rows = []
+        for lbl, (_, row) in zip(labels, bilans_df.iterrows()):
+            r_data = {"Bilan": lbl}
+            for key_sfx, label_m, _ in MUSCLE_GROUPS:
+                for side in ["d","g"]:
+                    k = get_muscle_key(key_sfx, side)
+                    v = row.get(k, "")
+                    r_data[f"{label_m[:12]} {'D' if side=='d' else 'G'}"] = \
+                        str(int(float(v))) if str(v).strip() not in ("","None") else "—"
+            musc_ev_rows.append(r_data)
+        if musc_ev_rows:
+            st.dataframe(pd.DataFrame(musc_ev_rows), use_container_width=True, hide_index=True)
+        else:
+            st.info("Aucune donnée de testing musculaire.")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
