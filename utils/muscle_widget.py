@@ -11,16 +11,23 @@ from utils.muscle_data import (
 
 
 def render_muscle_tab(lv_fn, key_prefix: str, show_leg_press: bool = False,
+                      leg_press_only: bool = False,
                       body_weight_key: str = None, bilan_data: dict = None) -> dict:
     """
     Affiche l'onglet testing musculaire.
-    lv_fn       : fonction lv(key, default) pour charger les valeurs stockées
-    key_prefix  : préfixe unique pour les widgets Streamlit (ex: "shv", "eq", "bp")
-    show_leg_press : afficher le bloc 1RM Leg Press
+    lv_fn           : fonction lv(key, default) pour charger les valeurs stockées
+    key_prefix      : préfixe unique pour les widgets Streamlit (ex: "shv", "eq", "bp")
+    show_leg_press  : afficher le bloc 1RM Leg Press (après le testing)
+    leg_press_only  : afficher UNIQUEMENT le bloc 1RM (sans le testing musculaire)
     body_weight_key : clé pour récupérer le poids corporel (pour ratio 1RM)
     Retourne : dict avec toutes les valeurs à sauvegarder
     """
     collected = {}
+
+    if leg_press_only:
+        # N'afficher que le bloc 1RM Leg Press
+        collected.update(_render_leg_press(lv_fn, key_prefix, body_weight_key, bilan_data))
+        return collected
 
     st.markdown('<div class="section-title">Testing musculaire — Membres inférieurs</div>',
                 unsafe_allow_html=True)
@@ -87,61 +94,66 @@ def render_muscle_tab(lv_fn, key_prefix: str, show_leg_press: bool = False,
     # ── 1RM Leg Press (optionnel) ──────────────────────────────────────────────
     if show_leg_press:
         st.markdown("---")
-        st.markdown('<div class="section-title">1RM Leg Press (estimé)</div>',
-                    unsafe_allow_html=True)
+        collected.update(_render_leg_press(lv_fn, key_prefix, body_weight_key, bilan_data))
+
+    return collected
+
+
+
+def _render_leg_press(lv_fn, key_prefix, body_weight_key=None, bilan_data=None):
+    """Affiche uniquement le bloc 1RM Leg Press."""
+    collected = {}
+    st.markdown('<div class="section-title">1RM Leg Press (estimé)</div>',
+                unsafe_allow_html=True)
+    st.markdown(
+        '<div class="info-box">Entrez la charge et le nombre de répétitions réalisées. '
+        'Le 1RM est estimé via la formule de Brzycki (valide pour 1–10 répétitions) '
+        'ou Epley (> 10 rép.).</div>',
+        unsafe_allow_html=True)
+
+    lp1, lp2, lp3 = st.columns(3)
+    with lp1:
+        lp_charge = st.number_input(
+            "Charge utilisée (kg)", 0.0, 500.0,
+            value=_load_float(lv_fn, "lp_charge_kg"),
+            step=2.5, key=f"{key_prefix}_lp_charge",
+            help="0 = non réalisé")
+    with lp2:
+        lp_reps = st.number_input(
+            "Répétitions réalisées", 0, 30,
+            value=_load_int(lv_fn, "lp_reps"),
+            step=1, key=f"{key_prefix}_lp_reps",
+            help="0 = non réalisé")
+    with lp3:
+        bw = None
+        if bilan_data and body_weight_key:
+            try: bw = float(bilan_data.get(body_weight_key, 0)) or None
+            except: bw = None
+        if bw:
+            st.metric("Poids corporel", f"{bw} kg")
+
+    lp_1rm = None
+    lp_interp = ""
+    if lp_charge and lp_charge > 0 and lp_reps and lp_reps > 0:
+        lp_1rm = compute_1rm(lp_charge, int(lp_reps))
+        r_interp = interpret_leg_press(lp_1rm, bw)
+        lp_interp = r_interp["interpretation"]
         st.markdown(
-            '<div class="info-box">Entrez la charge et le nombre de répétitions réalisées. '
-            'Le 1RM est estimé via la formule de Brzycki (valide pour 1–10 répétitions) '
-            'ou Epley (> 10 rép.).</div>',
+            f'<div class="score-box" style="background:{r_interp["color"]};">'
+            f'1RM estimé : <b>{lp_1rm} kg</b> — {lp_interp}</div>',
             unsafe_allow_html=True)
 
-        lp1, lp2, lp3 = st.columns(3)
-        with lp1:
-            lp_charge = st.number_input(
-                "Charge utilisée (kg)", 0.0, 500.0,
-                value=_load_float(lv_fn, "lp_charge_kg"),
-                step=2.5, key=f"{key_prefix}_lp_charge",
-                help="0 = non réalisé")
-        with lp2:
-            lp_reps = st.number_input(
-                "Répétitions réalisées", 0, 30,
-                value=_load_int(lv_fn, "lp_reps"),
-                step=1, key=f"{key_prefix}_lp_reps",
-                help="0 = non réalisé")
-        with lp3:
-            # Poids corporel pour le ratio
-            bw = None
-            if bilan_data and body_weight_key:
-                try:
-                    bw = float(bilan_data.get(body_weight_key, 0)) or None
-                except:
-                    bw = None
-            if bw:
-                st.metric("Poids corporel", f"{bw} kg")
-
-        lp_1rm = None
-        lp_interp = ""
-        if lp_charge and lp_charge > 0 and lp_reps and lp_reps > 0:
-            lp_1rm = compute_1rm(lp_charge, int(lp_reps))
-            r_interp = interpret_leg_press(lp_1rm, bw)
-            lp_interp = r_interp["interpretation"]
-            st.markdown(
-                f'<div class="score-box" style="background:{r_interp["color"]};">'
-                f'1RM estimé : <b>{lp_1rm} kg</b> — {lp_interp}</div>',
-                unsafe_allow_html=True)
-
-        lp_notes = st.text_area("Notes Leg Press",
-                                value=lv_fn("lp_notes", ""),
-                                height=50,
-                                key=f"{key_prefix}_lp_notes")
-        collected.update({
-            "lp_charge_kg": lp_charge or "",
-            "lp_reps": lp_reps or "",
-            "lp_1rm_estime": lp_1rm or "",
-            "lp_interpretation": lp_interp,
-            "lp_notes": lp_notes,
-        })
-
+    lp_notes = st.text_area("Notes Leg Press",
+                            value=lv_fn("lp_notes", ""),
+                            height=50,
+                            key=f"{key_prefix}_lp_notes")
+    collected.update({
+        "lp_charge_kg": lp_charge or "",
+        "lp_reps": lp_reps or "",
+        "lp_1rm_estime": lp_1rm or "",
+        "lp_interpretation": lp_interp,
+        "lp_notes": lp_notes,
+    })
     return collected
 
 
