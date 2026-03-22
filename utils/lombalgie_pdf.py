@@ -142,10 +142,7 @@ def make_header_footer(report_title, patient_name=""):
 
         # Fond blanc header (transparent — pas de fond coloré)
         # Trait terracotta en haut de page
-        canvas.setFillColor(TERRA)
-        canvas.rect(0, h - 0.35*_cm, w, 0.35*_cm, fill=1, stroke=0)
-
-        # Logo à gauche
+                # Logo à gauche
         logo_p = _find_logo()
         if logo_p:
             try:
@@ -184,19 +181,19 @@ def make_header_footer(report_title, patient_name=""):
         canvas.restoreState()
     return _draw
 
-def section_band(title, accent=None):
-    if accent is None: accent = BLEU
-    row = [[_Para(
-        f"<font color='#C4603A'>▌</font>&nbsp;&nbsp;<b>{title}</b>",
-        _PS("sh369", fontSize=11, fontName="Helvetica-Bold", textColor=BLANC, leading=14)
-    )]]
-    tbl = _Table(row, colWidths=[USEFUL_W])
-    tbl.setStyle(_TableStyle([
-        ("BACKGROUND",    (0,0),(-1,-1), accent),
-        ("TOPPADDING",    (0,0),(-1,-1), 6),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 6),
-        ("LEFTPADDING",   (0,0),(-1,-1), 10),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 10),
+def section_band(title, color=None):
+    """Titre sobre : bleu gras + filet bleu bas."""
+    row = [[Paragraph(f"<b>{title}</b>",
+        ParagraphStyle("lsb", fontSize=11, fontName="Helvetica-Bold",
+                       textColor=BLEU_FONCE, leading=15))]]
+    tbl = Table(row, colWidths=[USEFUL_W if "USEFUL_W" in dir() else W])
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0),(-1,-1), BLANC),
+        ("LINEBELOW",     (0,0),(-1,-1), 1.2, BLEU_FONCE),
+        ("TOPPADDING",    (0,0),(-1,-1), 8),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 4),
+        ("LEFTPADDING",   (0,0),(-1,-1), 0),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 0),
     ]))
     return tbl
 
@@ -217,7 +214,8 @@ def make_table(data, col_widths=None, header=True, accent=None):
     if header:
         cmds += [
             ("BACKGROUND",   (0,0),(-1,0), accent),
-            ("TEXTCOLOR",    (0,0),(-1,0), BLANC),
+            ("TEXTCOLOR", (0,0),(-1,0), BLEU),
+            ("LINEBELOW",(0,0),(-1,0), 1.0, BLEU),
             ("FONTNAME",     (0,0),(-1,0), "Helvetica-Bold"),
             ("FONTSIZE",     (0,0),(-1,0), 8),
             ("TOPPADDING",   (0,0),(-1,0), 7),
@@ -500,10 +498,7 @@ def make_header_footer(report_title, patient_name=""):
 
         # Fond blanc header (transparent — pas de fond coloré)
         # Trait terracotta en haut de page
-        canvas.setFillColor(TERRA)
-        canvas.rect(0, h - 0.35*_cm, w, 0.35*_cm, fill=1, stroke=0)
-
-        # Logo à gauche
+                # Logo à gauche
         logo_p = _find_logo()
         if logo_p:
             try:
@@ -542,19 +537,19 @@ def make_header_footer(report_title, patient_name=""):
         canvas.restoreState()
     return _draw
 
-def section_band(title, accent=None):
-    if accent is None: accent = BLEU
-    row = [[_Para(
-        f"<font color='#C4603A'>▌</font>&nbsp;&nbsp;<b>{title}</b>",
-        _PS("sh369", fontSize=11, fontName="Helvetica-Bold", textColor=BLANC, leading=14)
-    )]]
-    tbl = _Table(row, colWidths=[USEFUL_W])
-    tbl.setStyle(_TableStyle([
-        ("BACKGROUND",    (0,0),(-1,-1), accent),
-        ("TOPPADDING",    (0,0),(-1,-1), 6),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 6),
-        ("LEFTPADDING",   (0,0),(-1,-1), 10),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 10),
+def section_band(title, color=None):
+    """Titre sobre : bleu gras + filet bleu bas."""
+    row = [[Paragraph(f"<b>{title}</b>",
+        ParagraphStyle("lsb", fontSize=11, fontName="Helvetica-Bold",
+                       textColor=BLEU_FONCE, leading=15))]]
+    tbl = Table(row, colWidths=[USEFUL_W if "USEFUL_W" in dir() else W])
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0),(-1,-1), BLANC),
+        ("LINEBELOW",     (0,0),(-1,-1), 1.2, BLEU_FONCE),
+        ("TOPPADDING",    (0,0),(-1,-1), 8),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 4),
+        ("LEFTPADDING",   (0,0),(-1,-1), 0),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 0),
     ]))
     return tbl
 
@@ -575,7 +570,8 @@ def make_table(data, col_widths=None, header=True, accent=None):
     if header:
         cmds += [
             ("BACKGROUND",   (0,0),(-1,0), accent),
-            ("TEXTCOLOR",    (0,0),(-1,0), BLANC),
+            ("TEXTCOLOR", (0,0),(-1,0), BLEU),
+            ("LINEBELOW",(0,0),(-1,0), 1.0, BLEU),
             ("FONTNAME",     (0,0),(-1,0), "Helvetica-Bold"),
             ("FONTSIZE",     (0,0),(-1,0), 8),
             ("TOPPADDING",   (0,0),(-1,0), 7),
@@ -883,8 +879,9 @@ def build_orebro(story, styles):
     col_w = [7*cm] + [0.75*cm]*11
     act_tbl = Table(act_header + act_rows, colWidths=col_w)
     act_tbl.setStyle(TableStyle([
-        ("BACKGROUND",(0,0),(-1,0),BLEU),
-        ("TEXTCOLOR",(0,0),(-1,0),BLANC),
+        ("BACKGROUND", (0,0),(-1,0), BLEU_LIGHT),
+        ("TEXTCOLOR",  (0,0),(-1,0), BLEU),
+        ("LINEBELOW",  (0,0),(-1,0), 1.0, BLEU),
         ("FONTNAME",(0,0),(-1,-1),"Helvetica"),
         ("FONTSIZE",(0,0),(-1,-1),7),
         ("ALIGN",(1,0),(-1,-1),"CENTER"),
@@ -1050,8 +1047,9 @@ def build_luomajoki(story, styles):
     tbl.setStyle(TableStyle([
         ("FONTNAME",      (0,0),(-1,0),  "Helvetica-Bold"),
         ("FONTSIZE",      (0,0),(-1,0),  8),
-        ("BACKGROUND",    (0,0),(-1,0),  BLEU),
-        ("TEXTCOLOR",     (0,0),(-1,0),  BLANC),
+        ("BACKGROUND", (0,0),(-1,0), BLEU_LIGHT),
+        ("TEXTCOLOR",  (0,0),(-1,0), BLEU),
+        ("LINEBELOW",  (0,0),(-1,0), 1.0, BLEU),
         ("ALIGN",         (2,0),(-1,-1), "CENTER"),
         ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
         ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
