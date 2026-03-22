@@ -8,7 +8,7 @@ import streamlit as st
 
 
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
-MODEL             = "claude-haiku-4-5-20251001"  # Rapide et économique
+MODEL = "claude-haiku-4-5-20251001"
 MAX_TOKENS        = 1200
 
 
@@ -134,6 +134,12 @@ N'émets aucun diagnostic médical."""
         return data["content"][0]["text"]
     except requests.exceptions.Timeout:
         return "⚠️ Délai dépassé — veuillez réessayer."
+    except requests.exceptions.HTTPError as e:
+        try:
+            detail = e.response.json()
+        except Exception:
+            detail = e.response.text
+        return f"⚠️ Erreur API ({e.response.status_code}) : {detail}"
     except Exception as e:
         return f"⚠️ Erreur lors de la génération : {str(e)}"
 
