@@ -103,9 +103,17 @@ les seuils cliniques franchis, et les points de vigilance.
 N'émets aucun diagnostic médical."""
 
     try:
+        api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            return "⚠️ Clé API Anthropic manquante — ajoutez ANTHROPIC_API_KEY dans les secrets Streamlit."
+        
         resp = requests.post(
             ANTHROPIC_API_URL,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+            },
             json={
                 "model":      MODEL,
                 "max_tokens": MAX_TOKENS,
