@@ -17,7 +17,6 @@ from utils.db import (
     get_patient_bilans, save_bilan, delete_bilan,
 )
 from utils.shv_data import HAD_QUESTIONS, compute_had_scores
-from utils.muscle_widget import render_muscle_testing
 from utils.shv_data import (
     SF12_QUESTIONS, SF12_KEYS, SF12_DIMENSIONS,
     compute_sf12_scores, interpret_pcs_mcs,
@@ -1269,8 +1268,8 @@ def render_formulaire():
     # ═════════════════════════════════════════════════════════════════════════
     # ── MUSCULAIRE MI ─────────────────────────────────────────────────────────
     with tab_muscle:
-        from utils.muscle_tab import render_muscle_tab
-        muscle_data = render_muscle_tab(load_val, prefix="shv", with_legpress=False)
+        from utils.muscle_widget import render_muscle_tab
+        muscle_data = render_muscle_tab(lv_fn=load_val, key_prefix="shv", show_leg_press=False)
         collected.update(muscle_data)
 
 
