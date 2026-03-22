@@ -312,10 +312,6 @@ def generate_pdf_equilibre(bilans_df, patient_info: dict, analyse_text: str = ""
                 story.append(Paragraph(para,
                     ParagraphStyle("ai_cv2", fontSize=9.5, fontName="Helvetica",
                         textColor=NOIR, leading=14, spaceAfter=8)))
-        story.append(Paragraph(
-            f"Synthèse générée par IA le {date.today().strftime('%d/%m/%Y')} — À valider par le thérapeute.",
-            ParagraphStyle("ai_cv2_foot", fontSize=7.5, fontName="Helvetica-Oblique",
-                textColor=GRIS_TEXTE)))
 
     story.append(PageBreak())
 
