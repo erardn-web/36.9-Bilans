@@ -1177,16 +1177,12 @@ def render_formulaire():
             pat_mode = radio_load("Mode ventilatoire", PATTERN_MODES, "pattern_mode", "pat_mode")
             pat_ryt  = radio_load("Rythme", PATTERN_RYTHMES, "pattern_rythme", "pat_rythme")
 
-        pat_para  = st.checkbox("Respiration paradoxale",
-                                value=(load_val("pattern_paradoxal") == "Oui"),
-                                key="pat_paradoxal")
         pat_notes = st.text_area("Observations cliniques",
                                  value=str(load_val("pattern_notes") or ""),
                                  height=100, key="pat_notes")
         collected.update({
             "pattern_frequence": pat_freq if pat_freq is not None else "", "pattern_amplitude": pat_amp,
             "pattern_mode": pat_mode, "pattern_rythme": pat_ryt,
-            "pattern_paradoxal": "Oui" if pat_para else "Non",
             "pattern_notes": pat_notes,
         })
 
