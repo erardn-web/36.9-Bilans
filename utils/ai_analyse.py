@@ -135,7 +135,10 @@ def render_analyse_section(bilans_df, patient_info: dict, module: str,
     st.markdown("### 🤖 Synthèse physiothérapeutique (IA)")
 
     # Charger le texte existant
-    session_key = f"analyse_text_{module}_{patient_id}"
+    session_key  = f"analyse_text_{module}_{patient_id}"
+    stale_key    = f"analyse_stale_{module}_{patient_id}"
+    is_stale     = st.session_state.get(stale_key, False)
+
     if session_key not in st.session_state:
         stored = load_analyse(patient_id, module)
         st.session_state[session_key] = stored
@@ -144,15 +147,23 @@ def render_analyse_section(bilans_df, patient_info: dict, module: str,
 
     col_gen, col_info = st.columns([2, 5])
     with col_gen:
-        btn_label = "🤖 Générer la synthèse" if not analyse_text else "🔄 Regénérer"
+        if is_stale:
+            btn_label = "🔄 Regénérer (bilan modifié)"
+        elif not analyse_text:
+            btn_label = "🤖 Générer la synthèse"
+        else:
+            btn_label = "🔄 Regénérer"
         if st.button(btn_label, key=f"btn_gen_{module}", type="primary"):
             with st.spinner("Analyse en cours…"):
                 new_text = generate_analyse(bilans_df, patient_info, module)
             st.session_state[session_key] = new_text
             save_analyse(patient_id, module, new_text)
+            st.session_state.pop(stale_key, None)
             st.rerun()
     with col_info:
-        if analyse_text:
+        if is_stale:
+            st.warning("⚠️ Un bilan a été modifié — la synthèse doit être régénérée.")
+        elif analyse_text:
             st.caption("✏️ Texte éditable — vos modifications sont sauvegardées automatiquement.")
         else:
             st.caption("Cliquez sur 'Générer' pour produire une synthèse basée sur les bilans sélectionnés.")
