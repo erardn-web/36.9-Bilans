@@ -71,7 +71,7 @@ def render_accueil():
                 unsafe_allow_html=True)
             bp1, bp2 = st.columns(2)
             with bp1: bpr_musc = st.checkbox("💪 Testing musculaire", value=True, key="bp_acc_musc")
-            with bp2: bpr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="bp_acc_lp")
+            with bp2: bpr_lp   = st.checkbox(tab_label_local("🏋️ 1RM Leg Press", ["lp_1rm_estime"]),     value=True, key="bp_acc_lp")
             sel_bp = (["muscle"] if bpr_musc else []) + (["leg_press"] if bpr_lp else [])
             ga, gb, _ = st.columns([1.5, 1, 4])
             with ga:
@@ -176,7 +176,7 @@ def render_bilan_selection():
                 unsafe_allow_html=True)
             bp1, bp2 = st.columns(2)
             with bp1: bpr_musc = st.checkbox("💪 Testing musculaire", value=True, key="bp_pr_musc")
-            with bp2: bpr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="bp_pr_lp")
+            with bp2: bpr_lp   = st.checkbox(tab_label_local("🏋️ 1RM Leg Press", ["lp_1rm_estime"]),     value=True, key="bp_pr_lp")
             sel_bp = (["muscle"] if bpr_musc else []) + (["leg_press"] if bpr_lp else [])
             ga, gb, _ = st.columns([1.5, 1, 4])
             with ga:
@@ -256,6 +256,31 @@ def tab_label_local(base_label, keys, bilan_key="bp_bilan_data"):
     )
     return f"{base_label} ✅" if filled else base_label
 
+
+def highlight_filled_tabs(tab_definitions: list):
+    """Fond vert sur les onglets remplis via CSS nth-child."""
+    bd = st.session_state.get("bp_bilan_data", {})
+    css_rules = []
+    for i, (label, keys) in enumerate(tab_definitions):
+        filled = any(
+            str(bd.get(k, "")).strip() not in ("", "0", "0.0", "None", "nan")
+            and bd.get(k) is not None
+            for k in keys
+        )
+        if filled:
+            n = i + 1
+            css_rules.append(
+                "[data-baseweb=\'tab-list\'] button:nth-child("
+                + str(n)
+                + ") {background-color:#d4edda !important;"
+                  "border-bottom:3px solid #388e3c !important;}"
+            )
+    if css_rules:
+        st.markdown(
+            "<style>" + " ".join(css_rules) + "</style>",
+            unsafe_allow_html=True
+        )
+
 def render_formulaire():
     info=st.session_state.bp_patient_info; bd=st.session_state.bp_bilan_data
     st.markdown(f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} '
@@ -283,10 +308,21 @@ def render_formulaire():
                 st.session_state["bp_confirm_back"]=False; st.rerun()
     st.markdown("---")
     collected=dict(st.session_state.bp_bilan_data)
+    highlight_filled_tabs([
+        ("📝 Général",        []),
+        ("🌬️ Spirométrie",   ["spiro_vems","spiro_vems_pct"]),
+        ("🏃 6MWT",          ["mwt_distance"]),
+        ("🪑 STS 1min",      ["sts_1min_reps"]),
+        ("😮‍💨 mMRC",   ["mmrc_grade"]),
+        ("📋 CAT",           ["cat_score"]),
+        ("📊 BODE",          ["bode_score"]),
+        ("💪 Testing",       ["musc_hip_flex_d","musc_knee_ext_d"]),
+        ("🏋️ 1RM Leg Press", ["lp_1rm_estime"]),
+    ])
 
     tab_gen,tab_spiro,tab_mwt,tab_sts,tab_mmrc,tab_cat,tab_bode,tab_musc,tab_lp = st.tabs([
-        "📝 Général","🌬️ Spirométrie","🏃 6MWT","🪑 STS 1min",
-        "😮‍💨 mMRC","📋 CAT","📊 BODE",tab_label_local("💪 Testing", ["musc_hip_flex_d","musc_hip_flex_g","musc_knee_ext_d","musc_knee_ext_g"]),"🏋️ 1RM Leg Press",
+        "📝 Général",tab_label_local("🌬️ Spirométrie", ["spiro_vems","spiro_vems_pct","spiro_gold"]),tab_label_local("🏃 6MWT", ["mwt_distance"]),tab_label_local("🪑 STS 1min", ["sts_1min_reps"]),
+        tab_label_local("😮‍💨 mMRC", ["mmrc_grade"]),tab_label_local("📋 CAT", ["cat_score"]),tab_label_local("📊 BODE", ["bode_score"]),tab_label_local("💪 Testing", ["musc_hip_flex_d","musc_hip_flex_g","musc_knee_ext_d","musc_knee_ext_g"]),tab_label_local("🏋️ 1RM Leg Press", ["lp_1rm_estime"]),
     ])
 
     # ── GÉNÉRAL ───────────────────────────────────────────────────────────────
