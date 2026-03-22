@@ -245,6 +245,17 @@ def render_bilan_selection():
             st.session_state.bp_mode="formulaire"; st.session_state.bp_unsaved=True; st.rerun()
 
 # ─── Formulaire ───────────────────────────────────────────────────────────────
+
+def tab_label_local(base_label, keys, bilan_key="bp_bilan_data"):
+    """Ajoute ✅ si au moins une clé est renseignée."""
+    bd = st.session_state.get(bilan_key, {})
+    filled = any(
+        str(bd.get(k, "")).strip() not in ("", "0", "0.0", "None", "nan")
+        and bd.get(k) is not None
+        for k in keys
+    )
+    return f"{base_label} ✅" if filled else base_label
+
 def render_formulaire():
     info=st.session_state.bp_patient_info; bd=st.session_state.bp_bilan_data
     st.markdown(f'<div class="patient-badge">👤 {info["nom"]} {info["prenom"]} '
@@ -275,7 +286,7 @@ def render_formulaire():
 
     tab_gen,tab_spiro,tab_mwt,tab_sts,tab_mmrc,tab_cat,tab_bode,tab_musc,tab_lp = st.tabs([
         "📝 Général","🌬️ Spirométrie","🏃 6MWT","🪑 STS 1min",
-        "😮‍💨 mMRC","📋 CAT","📊 BODE","💪 Musculaire","🏋️ 1RM Leg Press",
+        "😮‍💨 mMRC","📋 CAT","📊 BODE",tab_label_local("💪 Testing", ["musc_hip_flex_d","musc_hip_flex_g","musc_knee_ext_d","musc_knee_ext_g"]),"🏋️ 1RM Leg Press",
     ])
 
     # ── GÉNÉRAL ───────────────────────────────────────────────────────────────
