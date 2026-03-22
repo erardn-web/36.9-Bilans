@@ -107,11 +107,6 @@ def make_header_footer(report_title, patient_name=""):
         canvas.saveState()
         w, h = _A4
 
-        # Fond blanc header (transparent — pas de fond coloré)
-        # Trait terracotta en haut de page
-        canvas.setFillColor(TERRA)
-        canvas.rect(0, h - 0.35*_cm, w, 0.35*_cm, fill=1, stroke=0)
-
         # Logo à gauche
         logo_p = _find_logo()
         if logo_p:
@@ -122,24 +117,24 @@ def make_header_footer(report_title, patient_name=""):
             except Exception:
                 pass
 
-        # Titre rapport (centre, discret)
+        # Titre centré
         canvas.setFillColor(GRIS_TEXTE)
         canvas.setFont("Helvetica", 8)
         canvas.drawCentredString(w/2, h - 1.1*_cm, report_title)
 
-        # Patient (droite, en bleu)
+        # Patient à droite en bleu
         if patient_name:
             canvas.setFillColor(BLEU)
             canvas.setFont("Helvetica-Bold", 8)
             canvas.drawRightString(w - MARGIN, h - 1.1*_cm, patient_name)
 
-        # Ligne séparatrice fine
-        canvas.setStrokeColor(GRIS_BORD)
-        canvas.setLineWidth(0.5)
+        # Ligne séparatrice fine bleu clair
+        canvas.setStrokeColor(_colors.HexColor("#CCDBF0"))
+        canvas.setLineWidth(0.7)
         canvas.line(MARGIN, h - 1.5*_cm, w - MARGIN, h - 1.5*_cm)
 
         # Pied de page
-        canvas.setStrokeColor(GRIS_BORD)
+        canvas.setStrokeColor(_colors.HexColor("#CCDBF0"))
         canvas.setLineWidth(0.5)
         canvas.line(MARGIN, 0.9*_cm, w - MARGIN, 0.9*_cm)
         canvas.setFillColor(GRIS_TEXTE)
@@ -160,9 +155,8 @@ def make_styles():
             spaceAfter=4, alignment=TA_CENTER),
         "subtitle": _PS("subtitle", fontSize=12, fontName="Helvetica", textColor=GRIS_TEXTE,
             spaceAfter=2, alignment=TA_CENTER),
-        "section": _PS("section369", fontSize=11, fontName="Helvetica-Bold", textColor=BLANC,
-            spaceBefore=12, spaceAfter=6, backColor=BLEU,
-            leftIndent=-6, rightIndent=-6, borderPadding=(5,8,5,8)),
+        "section": _PS("section369", fontSize=11, fontName="Helvetica-Bold", textColor=BLEU,
+            spaceBefore=14, spaceAfter=4),
         "subsection": _PS("subsection369", fontSize=10, fontName="Helvetica-Bold",
             textColor=TERRA, spaceBefore=10, spaceAfter=4),
         "normal": _PS("normal369", fontSize=9, fontName="Helvetica",
@@ -182,18 +176,17 @@ def make_styles():
     }
 
 def section_band(title, accent=None):
-    if accent is None: accent = BLEU
-    row = [[_Para(
-        f"<font color='#C4603A'>▌</font>&nbsp;&nbsp;<b>{title}</b>",
-        _PS("sh369", fontSize=11, fontName="Helvetica-Bold", textColor=BLANC, leading=14)
-    )]]
+    """Titre de section : texte bleu gras, filet bleu en bas, sans fond."""
+    row = [[_Para(f"<b>{title}</b>",
+        _PS("sh369", fontSize=11, fontName="Helvetica-Bold", textColor=BLEU, leading=15))]]
     tbl = _Table(row, colWidths=[USEFUL_W])
     tbl.setStyle(_TableStyle([
-        ("BACKGROUND",    (0,0),(-1,-1), accent),
-        ("TOPPADDING",    (0,0),(-1,-1), 6),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 6),
-        ("LEFTPADDING",   (0,0),(-1,-1), 10),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 10),
+        ("BACKGROUND",    (0,0),(-1,-1), BLANC),
+        ("LINEBELOW",     (0,0),(-1,-1), 1.2, BLEU),
+        ("TOPPADDING",    (0,0),(-1,-1), 8),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 4),
+        ("LEFTPADDING",   (0,0),(-1,-1), 0),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 0),
     ]))
     return tbl
 
@@ -213,12 +206,13 @@ def make_table(data, col_widths=None, header=True, accent=None):
     ]
     if header:
         cmds += [
-            ("BACKGROUND",   (0,0),(-1,0), accent),
-            ("TEXTCOLOR",    (0,0),(-1,0), BLANC),
+            ("BACKGROUND",   (0,0),(-1,0), BLEU_LIGHT),
+            ("TEXTCOLOR",    (0,0),(-1,0), BLEU),
             ("FONTNAME",     (0,0),(-1,0), "Helvetica-Bold"),
             ("FONTSIZE",     (0,0),(-1,0), 8),
             ("TOPPADDING",   (0,0),(-1,0), 7),
             ("BOTTOMPADDING",(0,0),(-1,0), 7),
+            ("LINEBELOW",    (0,0),(-1,0), 1.0, BLEU),
         ]
     t.setStyle(_TableStyle(cmds))
     return t
@@ -226,65 +220,64 @@ def make_table(data, col_widths=None, header=True, accent=None):
 def make_cover(story, title, subtitle, patient_info, bilans_df, labels, styles):
     import pandas as _pd
     from datetime import date as _date
-    from reportlab.platypus import Spacer, PageBreak
-    # Bandeau titre bleu
-    band_data = [[_Para(f"<font color='white'><b>{title}</b></font>",
-        _PS("ct369", fontSize=22, fontName="Helvetica-Bold",
-            textColor=BLANC, alignment=_TA_CENTER))]]
-    band = _Table(band_data, colWidths=[USEFUL_W])
-    band.setStyle(_TableStyle([("BACKGROUND",(0,0),(-1,-1),BLEU),
-        ("TOPPADDING",(0,0),(-1,-1),20),("BOTTOMPADDING",(0,0),(-1,-1),20)]))
-    story.append(Spacer(1, 0.8*_cm))
-    story.append(band)
-    # Sous-bande terracotta
-    sub_data = [[_Para(f"<font color='white'>{subtitle}</font>",
-        _PS("cs369", fontSize=11, fontName="Helvetica",
-            textColor=BLANC, alignment=_TA_CENTER))]]
-    sub = _Table(sub_data, colWidths=[USEFUL_W])
-    sub.setStyle(_TableStyle([("BACKGROUND",(0,0),(-1,-1),TERRA),
-        ("TOPPADDING",(0,0),(-1,-1),8),("BOTTOMPADDING",(0,0),(-1,-1),8)]))
-    story.append(sub)
-    story.append(Spacer(1, 0.6*_cm))
+    from reportlab.platypus import Spacer, HRFlowable
+
+    story.append(Spacer(1, 2.0*_cm))
+
     # Logo centré
-    logo = get_logo(width=5*_cm, height=2*_cm)
+    logo = get_logo(width=5.5*_cm, height=2.2*_cm)
     if logo:
         lt = _Table([[logo]], colWidths=[USEFUL_W])
         lt.setStyle(_TableStyle([("ALIGN",(0,0),(-1,-1),"CENTER")]))
         story.append(lt)
-        story.append(Spacer(1, 0.5*_cm))
+        story.append(Spacer(1, 0.8*_cm))
+
+    # Titre bleu + sous-titre terracotta
+    story.append(_Para(f"<b>{title}</b>",
+        _PS("ct369", fontSize=22, fontName="Helvetica-Bold",
+            textColor=BLEU, alignment=_TA_CENTER, spaceAfter=4)))
+    story.append(_Para(subtitle,
+        _PS("cs369", fontSize=11, fontName="Helvetica",
+            textColor=TERRA, alignment=_TA_CENTER, spaceAfter=0)))
+    story.append(Spacer(1, 0.3*_cm))
+    story.append(HRFlowable(width="100%", thickness=1.0,
+                            color=_colors.HexColor("#CCDBF0")))
+    story.append(Spacer(1, 0.8*_cm))
+
     # Infos patient
     n = len(bilans_df)
     pat = [
         ["Patient",           f"{patient_info.get('nom','')} {patient_info.get('prenom','')}"],
         ["Date de naissance", str(patient_info.get("date_naissance","—"))],
         ["Sexe",              patient_info.get("sexe","—")],
-        ["Profession",        patient_info.get("profession","—") or "—"],
         ["Nombre de bilans",  str(n)],
         ["Généré le",         _date.today().strftime("%d/%m/%Y")],
     ]
     pt = _Table(pat, colWidths=[4.5*_cm, USEFUL_W-4.5*_cm])
     pt.setStyle(_TableStyle([
-        ("FONTNAME",(0,0),(0,-1),"Helvetica-Bold"),
-        ("FONTNAME",(1,0),(1,-1),"Helvetica"),
-        ("FONTSIZE",(0,0),(-1,-1),9),
-        ("TEXTCOLOR",(0,0),(0,-1),BLEU),
-        ("ROWBACKGROUNDS",(0,0),(-1,-1),[BLANC,BLEU_LIGHT]),
-        ("LINEBELOW",(0,0),(-1,-1),0.3,GRIS_BORD),
-        ("TOPPADDING",(0,0),(-1,-1),6),
-        ("BOTTOMPADDING",(0,0),(-1,-1),6),
-        ("LEFTPADDING",(0,0),(-1,-1),10),
+        ("FONTNAME",      (0,0),(0,-1), "Helvetica-Bold"),
+        ("FONTNAME",      (1,0),(1,-1), "Helvetica"),
+        ("FONTSIZE",      (0,0),(-1,-1), 9),
+        ("TEXTCOLOR",     (0,0),(0,-1), BLEU),
+        ("ROWBACKGROUNDS",(0,0),(-1,-1), [BLANC, BLEU_LIGHT]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 7),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 7),
+        ("LEFTPADDING",   (0,0),(-1,-1), 10),
     ]))
     story.append(pt)
-    story.append(Spacer(1, 0.6*_cm))
+    story.append(Spacer(1, 0.8*_cm))
+
     # Tableau bilans
     story.append(_Para("Bilans inclus dans ce rapport",
         _PS("subs369b", fontSize=10, fontName="Helvetica-Bold",
-            textColor=TERRA, spaceBefore=8, spaceAfter=4)))
-    bil = [["#","Date","Type","Praticien"]]
-    for i,(_, row) in enumerate(bilans_df.iterrows()):
-        d = row["date_bilan"]
+            textColor=BLEU, spaceBefore=0, spaceAfter=4)))
+    bil = [["#", "Date", "Type", "Praticien"]]
+    for i, (_, row) in enumerate(bilans_df.iterrows()):
+        d  = row["date_bilan"]
         ds = d.strftime("%d/%m/%Y") if _pd.notna(d) else "—"
-        bil.append([str(i+1), ds, row.get("type_bilan","—") or "—",
+        bil.append([str(i+1), ds,
+                    row.get("type_bilan","—") or "—",
                     row.get("praticien","—") or "—"])
     story.append(make_table(bil, col_widths=[1.2*_cm,3.2*_cm,5*_cm,USEFUL_W-9.4*_cm]))
 
@@ -591,11 +584,6 @@ def make_header_footer(report_title, patient_name=""):
         canvas.saveState()
         w, h = _A4
 
-        # Fond blanc header (transparent — pas de fond coloré)
-        # Trait terracotta en haut de page
-        canvas.setFillColor(TERRA)
-        canvas.rect(0, h - 0.35*_cm, w, 0.35*_cm, fill=1, stroke=0)
-
         # Logo à gauche
         logo_p = _find_logo()
         if logo_p:
@@ -606,24 +594,24 @@ def make_header_footer(report_title, patient_name=""):
             except Exception:
                 pass
 
-        # Titre rapport (centre, discret)
+        # Titre centré
         canvas.setFillColor(GRIS_TEXTE)
         canvas.setFont("Helvetica", 8)
         canvas.drawCentredString(w/2, h - 1.1*_cm, report_title)
 
-        # Patient (droite, en bleu)
+        # Patient à droite en bleu
         if patient_name:
             canvas.setFillColor(BLEU)
             canvas.setFont("Helvetica-Bold", 8)
             canvas.drawRightString(w - MARGIN, h - 1.1*_cm, patient_name)
 
-        # Ligne séparatrice fine
-        canvas.setStrokeColor(GRIS_BORD)
-        canvas.setLineWidth(0.5)
+        # Ligne séparatrice fine bleu clair
+        canvas.setStrokeColor(_colors.HexColor("#CCDBF0"))
+        canvas.setLineWidth(0.7)
         canvas.line(MARGIN, h - 1.5*_cm, w - MARGIN, h - 1.5*_cm)
 
         # Pied de page
-        canvas.setStrokeColor(GRIS_BORD)
+        canvas.setStrokeColor(_colors.HexColor("#CCDBF0"))
         canvas.setLineWidth(0.5)
         canvas.line(MARGIN, 0.9*_cm, w - MARGIN, 0.9*_cm)
         canvas.setFillColor(GRIS_TEXTE)
@@ -636,18 +624,17 @@ def make_header_footer(report_title, patient_name=""):
     return _draw
 
 def section_band(title, accent=None):
-    if accent is None: accent = BLEU
-    row = [[_Para(
-        f"<font color='#C4603A'>▌</font>&nbsp;&nbsp;<b>{title}</b>",
-        _PS("sh369", fontSize=11, fontName="Helvetica-Bold", textColor=BLANC, leading=14)
-    )]]
+    """Titre de section : texte bleu gras, filet bleu en bas, sans fond."""
+    row = [[_Para(f"<b>{title}</b>",
+        _PS("sh369", fontSize=11, fontName="Helvetica-Bold", textColor=BLEU, leading=15))]]
     tbl = _Table(row, colWidths=[USEFUL_W])
     tbl.setStyle(_TableStyle([
-        ("BACKGROUND",    (0,0),(-1,-1), accent),
-        ("TOPPADDING",    (0,0),(-1,-1), 6),
-        ("BOTTOMPADDING", (0,0),(-1,-1), 6),
-        ("LEFTPADDING",   (0,0),(-1,-1), 10),
-        ("RIGHTPADDING",  (0,0),(-1,-1), 10),
+        ("BACKGROUND",    (0,0),(-1,-1), BLANC),
+        ("LINEBELOW",     (0,0),(-1,-1), 1.2, BLEU),
+        ("TOPPADDING",    (0,0),(-1,-1), 8),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 4),
+        ("LEFTPADDING",   (0,0),(-1,-1), 0),
+        ("RIGHTPADDING",  (0,0),(-1,-1), 0),
     ]))
     return tbl
 
@@ -667,12 +654,13 @@ def make_table(data, col_widths=None, header=True, accent=None):
     ]
     if header:
         cmds += [
-            ("BACKGROUND",   (0,0),(-1,0), accent),
-            ("TEXTCOLOR",    (0,0),(-1,0), BLANC),
+            ("BACKGROUND",   (0,0),(-1,0), BLEU_LIGHT),
+            ("TEXTCOLOR",    (0,0),(-1,0), BLEU),
             ("FONTNAME",     (0,0),(-1,0), "Helvetica-Bold"),
             ("FONTSIZE",     (0,0),(-1,0), 8),
             ("TOPPADDING",   (0,0),(-1,0), 7),
             ("BOTTOMPADDING",(0,0),(-1,0), 7),
+            ("LINEBELOW",    (0,0),(-1,0), 1.0, BLEU),
         ]
     t.setStyle(_TableStyle(cmds))
     return t
@@ -680,65 +668,64 @@ def make_table(data, col_widths=None, header=True, accent=None):
 def make_cover(story, title, subtitle, patient_info, bilans_df, labels, styles):
     import pandas as _pd
     from datetime import date as _date
-    from reportlab.platypus import Spacer, PageBreak
-    # Bandeau titre bleu
-    band_data = [[_Para(f"<font color='white'><b>{title}</b></font>",
-        _PS("ct369", fontSize=22, fontName="Helvetica-Bold",
-            textColor=BLANC, alignment=_TA_CENTER))]]
-    band = _Table(band_data, colWidths=[USEFUL_W])
-    band.setStyle(_TableStyle([("BACKGROUND",(0,0),(-1,-1),BLEU),
-        ("TOPPADDING",(0,0),(-1,-1),20),("BOTTOMPADDING",(0,0),(-1,-1),20)]))
-    story.append(Spacer(1, 0.8*_cm))
-    story.append(band)
-    # Sous-bande terracotta
-    sub_data = [[_Para(f"<font color='white'>{subtitle}</font>",
-        _PS("cs369", fontSize=11, fontName="Helvetica",
-            textColor=BLANC, alignment=_TA_CENTER))]]
-    sub = _Table(sub_data, colWidths=[USEFUL_W])
-    sub.setStyle(_TableStyle([("BACKGROUND",(0,0),(-1,-1),TERRA),
-        ("TOPPADDING",(0,0),(-1,-1),8),("BOTTOMPADDING",(0,0),(-1,-1),8)]))
-    story.append(sub)
-    story.append(Spacer(1, 0.6*_cm))
+    from reportlab.platypus import Spacer, HRFlowable
+
+    story.append(Spacer(1, 2.0*_cm))
+
     # Logo centré
-    logo = get_logo(width=5*_cm, height=2*_cm)
+    logo = get_logo(width=5.5*_cm, height=2.2*_cm)
     if logo:
         lt = _Table([[logo]], colWidths=[USEFUL_W])
         lt.setStyle(_TableStyle([("ALIGN",(0,0),(-1,-1),"CENTER")]))
         story.append(lt)
-        story.append(Spacer(1, 0.5*_cm))
+        story.append(Spacer(1, 0.8*_cm))
+
+    # Titre bleu + sous-titre terracotta
+    story.append(_Para(f"<b>{title}</b>",
+        _PS("ct369", fontSize=22, fontName="Helvetica-Bold",
+            textColor=BLEU, alignment=_TA_CENTER, spaceAfter=4)))
+    story.append(_Para(subtitle,
+        _PS("cs369", fontSize=11, fontName="Helvetica",
+            textColor=TERRA, alignment=_TA_CENTER, spaceAfter=0)))
+    story.append(Spacer(1, 0.3*_cm))
+    story.append(HRFlowable(width="100%", thickness=1.0,
+                            color=_colors.HexColor("#CCDBF0")))
+    story.append(Spacer(1, 0.8*_cm))
+
     # Infos patient
     n = len(bilans_df)
     pat = [
         ["Patient",           f"{patient_info.get('nom','')} {patient_info.get('prenom','')}"],
         ["Date de naissance", str(patient_info.get("date_naissance","—"))],
         ["Sexe",              patient_info.get("sexe","—")],
-        ["Profession",        patient_info.get("profession","—") or "—"],
         ["Nombre de bilans",  str(n)],
         ["Généré le",         _date.today().strftime("%d/%m/%Y")],
     ]
     pt = _Table(pat, colWidths=[4.5*_cm, USEFUL_W-4.5*_cm])
     pt.setStyle(_TableStyle([
-        ("FONTNAME",(0,0),(0,-1),"Helvetica-Bold"),
-        ("FONTNAME",(1,0),(1,-1),"Helvetica"),
-        ("FONTSIZE",(0,0),(-1,-1),9),
-        ("TEXTCOLOR",(0,0),(0,-1),BLEU),
-        ("ROWBACKGROUNDS",(0,0),(-1,-1),[BLANC,BLEU_LIGHT]),
-        ("LINEBELOW",(0,0),(-1,-1),0.3,GRIS_BORD),
-        ("TOPPADDING",(0,0),(-1,-1),6),
-        ("BOTTOMPADDING",(0,0),(-1,-1),6),
-        ("LEFTPADDING",(0,0),(-1,-1),10),
+        ("FONTNAME",      (0,0),(0,-1), "Helvetica-Bold"),
+        ("FONTNAME",      (1,0),(1,-1), "Helvetica"),
+        ("FONTSIZE",      (0,0),(-1,-1), 9),
+        ("TEXTCOLOR",     (0,0),(0,-1), BLEU),
+        ("ROWBACKGROUNDS",(0,0),(-1,-1), [BLANC, BLEU_LIGHT]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 7),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 7),
+        ("LEFTPADDING",   (0,0),(-1,-1), 10),
     ]))
     story.append(pt)
-    story.append(Spacer(1, 0.6*_cm))
+    story.append(Spacer(1, 0.8*_cm))
+
     # Tableau bilans
     story.append(_Para("Bilans inclus dans ce rapport",
         _PS("subs369b", fontSize=10, fontName="Helvetica-Bold",
-            textColor=TERRA, spaceBefore=8, spaceAfter=4)))
-    bil = [["#","Date","Type","Praticien"]]
-    for i,(_, row) in enumerate(bilans_df.iterrows()):
-        d = row["date_bilan"]
+            textColor=BLEU, spaceBefore=0, spaceAfter=4)))
+    bil = [["#", "Date", "Type", "Praticien"]]
+    for i, (_, row) in enumerate(bilans_df.iterrows()):
+        d  = row["date_bilan"]
         ds = d.strftime("%d/%m/%Y") if _pd.notna(d) else "—"
-        bil.append([str(i+1), ds, row.get("type_bilan","—") or "—",
+        bil.append([str(i+1), ds,
+                    row.get("type_bilan","—") or "—",
                     row.get("praticien","—") or "—"])
     story.append(make_table(bil, col_widths=[1.2*_cm,3.2*_cm,5*_cm,USEFUL_W-9.4*_cm]))
 
