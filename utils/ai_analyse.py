@@ -103,8 +103,15 @@ les seuils cliniques franchis, et les points de vigilance.
 N'émets aucun diagnostic médical."""
 
     try:
-        api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
-        if not api_key:
+        # Lire la clé API — Streamlit secrets peut retourner un objet AttrDict
+        try:
+            api_key = str(st.secrets["ANTHROPIC_API_KEY"]).strip()
+        except (KeyError, Exception):
+            api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+            if api_key:
+                api_key = str(api_key).strip()
+
+        if not api_key or api_key == "":
             return "⚠️ Clé API Anthropic manquante — ajoutez ANTHROPIC_API_KEY dans les secrets Streamlit."
         
         resp = requests.post(
