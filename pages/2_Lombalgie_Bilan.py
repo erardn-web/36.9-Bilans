@@ -976,8 +976,8 @@ def render_evolution():
         for _, r in bilans_df.iterrows()
     ]
 
-    tab_doul, tab_q, tab_mob, tab_luom, tab_soap = st.tabs([
-        "🩸 Douleur (EVA)", "📊 Questionnaires", "🦴 Mobilité",
+    tab_ai, tab_doul, tab_q, tab_mob, tab_luom, tab_soap = st.tabs([
+        "🤖 Synthèse IA", "🩸 Douleur (EVA)", "📊 Questionnaires", "🦴 Mobilité",
         "🏃 Luomajoki", "📋 SOAP synthèse",
     ])
 
@@ -1171,8 +1171,9 @@ def render_evolution():
 
 
     # ── ANALYSE IA ───────────────────────────────────────────────────────────
-    from utils.ai_analyse import render_analyse_section
-    render_analyse_section(bilans_df, info, "lombalgie", st.session_state.lomb_patient_id)
+    with tab_ai:
+        from utils.ai_analyse import render_analyse_section
+        render_analyse_section(bilans_df, info, "lombalgie", st.session_state.lomb_patient_id)
 
 
 
