@@ -137,7 +137,7 @@ def render_accueil():
             with pcol7:
                 p_comb = st.checkbox("🏥 Comorb.",    value=True, key="pa_comb")
             with pcol8:
-                p_musc = st.checkbox("💪 Musculaire", value=True, key="pa_musc")
+                p_musc = st.checkbox(tab_label("💪 Testing", ["musc_hip_flex_d","musc_hip_flex_g","musc_knee_ext_d","musc_knee_ext_g"]), value=True, key="pa_musc")
 
             selected = []
             if p_had:  selected.append("had")
@@ -320,7 +320,7 @@ def render_bilan_selection():
             with pcol7:
                 print_comb = st.checkbox("🏥 Comorb.",  value=True, key="print_comb")
             with pcol8:
-                print_musc = st.checkbox("💪 Musculaire",value=True, key="print_musc")
+                print_musc = st.checkbox(tab_label("💪 Testing", ["musc_hip_flex_d","musc_hip_flex_g","musc_knee_ext_d","musc_knee_ext_g"]),value=True, key="print_musc")
 
             selected = []
             if print_had:  selected.append("had")
@@ -566,7 +566,7 @@ def render_formulaire():
         tab_label("💪 SNIF/PImax/PEmax", ["snif_val","pimax_val","pemax_val"]),
         tab_label("🚶 MRC Dyspnée",      ["mrc_score"]),
         tab_label("🏥 Comorbidités",     ["comorb_list","comorb_traitements"]),
-        "💪 Musculaire",
+        tab_label("💪 Testing", ["musc_hip_flex_d","musc_hip_flex_g","musc_knee_ext_d","musc_knee_ext_g"]),
     ])
 
     # Pré-remplir depuis les données existantes pour ne pas perdre les valeurs non visitées
