@@ -646,7 +646,9 @@ def render_evolution():
         except: return None
 
     import plotly.graph_objects as go
-    tab_scores,tab_detail=st.tabs(["📊 Scores","📋 Détail"])
+    tab_scores,tab_spiro_ev,tab_mwt_ev,tab_mmrc_ev,tab_cat_ev,tab_testing_ev,tab_detail = st.tabs([
+        "📊 Scores","🌬️ Spirométrie","🏃 6MWT","😮‍💨 mMRC","📋 CAT","💪 Testing MI","📋 Détail"
+    ])
 
     with tab_scores:
         fig=go.Figure()
@@ -677,6 +679,98 @@ def render_evolution():
                          for _,r in bilans_df.iterrows()
                          for v in [r.get(key,"")]]
         st.dataframe(pd.DataFrame(synth),use_container_width=True,hide_index=True)
+
+    # ── SPIROMÉTRIE ──────────────────────────────────────────────────────────
+    with tab_spiro_ev:
+        st.markdown('<div class="section-title">🌬️ Évolution — Spirométrie</div>', unsafe_allow_html=True)
+        fig_sp = go.Figure()
+        for name, key, color in [
+            ("VEMS (L)", "spiro_vems", "#2B57A7"),
+            ("CVF (L)",  "spiro_cvf",  "#C4603A"),
+            ("VEMS % prédit", "spiro_vems_pct", "#388e3c"),
+        ]:
+            vals = [sn(r.get(key)) for _, r in bilans_df.iterrows()]
+            xp = [labels[i] for i,v in enumerate(vals) if v is not None]
+            yp = [v for v in vals if v is not None]
+            if xp:
+                fig_sp.add_trace(go.Scatter(x=xp, y=yp, mode="lines+markers+text",
+                    name=name, line=dict(color=color, width=2.5), marker=dict(size=9),
+                    text=[f"{v:.1f}" for v in yp], textposition="top center"))
+        fig_sp.update_layout(height=350, legend=dict(orientation="h", y=-0.2),
+                             plot_bgcolor="white", paper_bgcolor="white")
+        st.plotly_chart(fig_sp, use_container_width=True)
+        spiro_rows = [{"Bilan": lbl, "VEMS (L)": r.get("spiro_vems","—"),
+            "CVF (L)": r.get("spiro_cvf","—"), "VEMS %": r.get("spiro_vems_pct","—"),
+            "Ratio": r.get("spiro_ratio","—"), "GOLD": r.get("spiro_gold","—")}
+            for lbl, (_, r) in zip(labels, bilans_df.iterrows())]
+        st.dataframe(pd.DataFrame(spiro_rows), use_container_width=True, hide_index=True)
+
+    # ── 6MWT ─────────────────────────────────────────────────────────────────
+    with tab_mwt_ev:
+        st.markdown('<div class="section-title">🏃 Évolution — 6MWT</div>', unsafe_allow_html=True)
+        fig_mwt = go.Figure()
+        dist_vals = [sn(r.get("mwt_distance")) for _, r in bilans_df.iterrows()]
+        xp = [labels[i] for i,v in enumerate(dist_vals) if v is not None]
+        yp = [v for v in dist_vals if v is not None]
+        if xp:
+            fig_mwt.add_trace(go.Bar(x=xp, y=yp, name="Distance (m)",
+                marker_color="#2B57A7", text=[f"{int(v)} m" for v in yp], textposition="outside"))
+        fig_mwt.add_hline(y=400, line_dash="dot", line_color="#388e3c",
+                          annotation_text="400 m (bon pronostic)")
+        fig_mwt.add_hline(y=150, line_dash="dot", line_color="#d32f2f",
+                          annotation_text="150 m (très limité)")
+        fig_mwt.update_layout(height=350, plot_bgcolor="white", paper_bgcolor="white",
+                              yaxis_title="Distance (m)")
+        st.plotly_chart(fig_mwt, use_container_width=True)
+        mwt_rows = [{"Bilan": lbl, "Distance (m)": r.get("mwt_distance","—"),
+            "SpO₂ avant": r.get("mwt_spo2_avant","—"), "SpO₂ après": r.get("mwt_spo2_apres","—"),
+            "SpO₂ min": r.get("mwt_spo2_min","—"), "FC avant": r.get("mwt_fc_avant","—"),
+            "FC après": r.get("mwt_fc_apres","—"), "Aide": r.get("mwt_aide_technique","—")}
+            for lbl, (_, r) in zip(labels, bilans_df.iterrows())]
+        st.dataframe(pd.DataFrame(mwt_rows), use_container_width=True, hide_index=True)
+
+    # ── mMRC ─────────────────────────────────────────────────────────────────
+    with tab_mmrc_ev:
+        st.markdown('<div class="section-title">😮‍💨 Évolution — mMRC</div>', unsafe_allow_html=True)
+        from utils.bpco_data import MMRC_GRADES
+        mmrc_rows = [{"Bilan": lbl,
+            "Grade": r.get("mmrc_grade","—"),
+            "Description": next((d for g,d in MMRC_GRADES
+                if str(g)==str(r.get("mmrc_grade",""))), "—")}
+            for lbl, (_, r) in zip(labels, bilans_df.iterrows())]
+        st.dataframe(pd.DataFrame(mmrc_rows), use_container_width=True, hide_index=True)
+
+    # ── CAT ──────────────────────────────────────────────────────────────────
+    with tab_cat_ev:
+        st.markdown('<div class="section-title">📋 Évolution — CAT</div>', unsafe_allow_html=True)
+        fig_cat = go.Figure()
+        cat_vals = [sn(r.get("cat_score")) for _, r in bilans_df.iterrows()]
+        xp = [labels[i] for i,v in enumerate(cat_vals) if v is not None]
+        yp = [v for v in cat_vals if v is not None]
+        if xp:
+            fig_cat.add_trace(go.Scatter(x=xp, y=yp, mode="lines+markers+text",
+                name="CAT", line=dict(color="#f57c00", width=2.5), marker=dict(size=9),
+                text=[f"{int(v)}/40" for v in yp], textposition="top center"))
+        for threshold, color, label in [(10,"#388e3c","≤10 faible"),(20,"#f57c00","20 modéré"),(30,"#d32f2f","30 sévère")]:
+            fig_cat.add_hline(y=threshold, line_dash="dot", line_color=color, annotation_text=label)
+        fig_cat.update_layout(height=350, yaxis=dict(range=[0,42], title="Score CAT /40"),
+                              plot_bgcolor="white", paper_bgcolor="white")
+        st.plotly_chart(fig_cat, use_container_width=True)
+
+    # ── TESTING MUSCULAIRE ────────────────────────────────────────────────────
+    with tab_testing_ev:
+        st.markdown('<div class="section-title">💪 Évolution — Testing musculaire MI</div>', unsafe_allow_html=True)
+        from utils.muscle_data import MUSCLE_GROUPS, get_muscle_key
+        musc_rows = []
+        for lbl, (_, row) in zip(labels, bilans_df.iterrows()):
+            rd = {"Bilan": lbl}
+            for key_sfx, label_m, _ in MUSCLE_GROUPS:
+                for side in ["d","g"]:
+                    k = get_muscle_key(key_sfx, side)
+                    v = row.get(k,"")
+                    rd[f"{label_m[:10]} {'D' if side=='d' else 'G'}"] =                         str(int(float(v))) if str(v).strip() not in ("","None") else "—"
+            musc_rows.append(rd)
+        st.dataframe(pd.DataFrame(musc_rows), use_container_width=True, hide_index=True)
 
     with tab_detail:
         for i,(_,row) in enumerate(bilans_df.iterrows()):
