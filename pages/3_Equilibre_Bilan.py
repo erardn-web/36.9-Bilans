@@ -737,7 +737,9 @@ def render_evolution():
         except: return None
 
     import plotly.graph_objects as go
-    tab_scores, tab_detail = st.tabs(["📊 Scores", "📋 Détail"])
+    tab_scores, tab_tinetti_ev, tab_berg_ev, tab_tug_ev, tab_sts_ev, tab_unip_ev, tab_testing_ev, tab_detail = st.tabs([
+        "📊 Scores", "🧍 Tinetti", "⚖️ Berg", "⏱️ TUG", "🪑 STS", "🦵 Unipodal", "💪 Testing MI", "📋 Détail"
+    ])
 
     with tab_scores:
         # Graphique scores principaux
