@@ -100,6 +100,12 @@ def get_shv_headers():
         "mrc_score",
         # Comorbidités
         "comorb_list", "comorb_traitements", "comorb_notes",
+        # Testing musculaire MI
+        "mmt_hip_flex_d","mmt_hip_flex_g","mmt_hip_ext_d","mmt_hip_ext_g",
+        "mmt_hip_abd_d","mmt_hip_abd_g","mmt_hip_add_d","mmt_hip_add_g",
+        "mmt_knee_ext_d","mmt_knee_ext_g","mmt_knee_flex_d","mmt_knee_flex_g",
+        "mmt_dors_flex_d","mmt_dors_flex_g","mmt_plant_flex_d","mmt_plant_flex_g",
+        "mmt_notes","mmt_score_total",
     ]
 
 
