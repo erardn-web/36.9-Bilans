@@ -17,6 +17,7 @@ from utils.db import (
     get_patient_bilans, save_bilan, delete_bilan,
 )
 from utils.shv_data import HAD_QUESTIONS, compute_had_scores
+from utils.muscle_widget import render_muscle_testing
 from utils.shv_data import (
     SF12_QUESTIONS, SF12_KEYS, SF12_DIMENSIONS,
     compute_sf12_scores, interpret_pcs_mcs,
@@ -119,7 +120,7 @@ def render_accueil():
             </div>
             """, unsafe_allow_html=True)
 
-            pcol1, pcol2, pcol3, pcol4, pcol5, pcol6, pcol7 = st.columns(7)
+            pcol1, pcol2, pcol3, pcol4, pcol5, pcol6, pcol7, pcol8 = st.columns(8)
             with pcol1:
                 p_had  = st.checkbox("😟 HAD",       value=True, key="pa_had")
             with pcol2:
@@ -134,6 +135,8 @@ def render_accueil():
                 p_mrc  = st.checkbox("🚶 MRC",        value=True, key="pa_mrc")
             with pcol7:
                 p_comb = st.checkbox("🏥 Comorb.",    value=True, key="pa_comb")
+            with pcol8:
+                p_musc = st.checkbox("💪 Musculaire", value=True, key="pa_musc")
 
             selected = []
             if p_had:  selected.append("had")
@@ -143,6 +146,7 @@ def render_accueil():
             if p_nij:  selected.append("nijmegen")
             if p_mrc:  selected.append("mrc")
             if p_comb: selected.append("comorb")
+            if p_musc: selected.append("muscle")
 
             ga, gb, _ = st.columns([1.5, 1, 4])
             with ga:
@@ -299,7 +303,7 @@ def render_bilan_selection():
             </div>
             """, unsafe_allow_html=True)
 
-            pcol1, pcol2, pcol3, pcol4, pcol5, pcol6, pcol7 = st.columns(7)
+            pcol1, pcol2, pcol3, pcol4, pcol5, pcol6, pcol7, pcol8 = st.columns(8)
             with pcol1:
                 print_had  = st.checkbox("😟 HAD",      value=True, key="print_had")
             with pcol2:
@@ -314,6 +318,8 @@ def render_bilan_selection():
                 print_mrc  = st.checkbox("🚶 MRC",      value=True, key="print_mrc")
             with pcol7:
                 print_comb = st.checkbox("🏥 Comorb.",  value=True, key="print_comb")
+            with pcol8:
+                print_musc = st.checkbox("💪 Musculaire",value=True, key="print_musc")
 
             selected = []
             if print_had:  selected.append("had")
@@ -323,6 +329,7 @@ def render_bilan_selection():
             if print_nij:  selected.append("nijmegen")
             if print_mrc:  selected.append("mrc")
             if print_comb: selected.append("comorb")
+            if print_musc: selected.append("muscle")
 
             ga, gb, gc = st.columns([1.5, 1, 4])
             with ga:
@@ -544,7 +551,7 @@ def render_formulaire():
 
     # ──── Onglets ────────────────────────────────────────────────────────────
     tab_gen, tab_had, tab_sf12, tab_bolt, tab_hvt, \
-    tab_nij, tab_gazo, tab_etco2, tab_pattern, tab_snif, tab_mrc, tab_comorb = st.tabs([
+    tab_nij, tab_gazo, tab_etco2, tab_pattern, tab_snif, tab_mrc, tab_comorb, tab_muscle = st.tabs([
         "📝 Général",
         tab_label("😟 HAD",             ["had_score_anxiete","had_score_depression"]),
         tab_label("📊 SF-12",            ["sf12_pcs","sf12_mcs"]),
@@ -1260,6 +1267,13 @@ def render_formulaire():
     # ═════════════════════════════════════════════════════════════════════════
     #  SAUVEGARDE
     # ═════════════════════════════════════════════════════════════════════════
+    # ── MUSCULAIRE MI ─────────────────────────────────────────────────────────
+    with tab_muscle:
+        from utils.muscle_tab import render_muscle_tab
+        muscle_data = render_muscle_tab(load_val, prefix="shv", with_legpress=False)
+        collected.update(muscle_data)
+
+
     if save_top or st.button("💾 Sauvegarder le bilan", type="primary", key="save_bottom"):
         final_data = {
             **st.session_state.bilan_data,
@@ -1350,7 +1364,7 @@ def render_evolution():
     tab_etco2_ev, tab_pattern_ev, tab_gazo_ev, tab_musc, tab_mrc_ev, tab_comorb2 = st.tabs([
         "😟 HAD", "⏱️ BOLT", "📊 SF-12", "🌬️ Test HV",
         "📋 Nijmegen", "📈 Capnographie", "🔬 Pattern respi.",
-        "🧪 Gazométrie", "💪 Force musculaire", "🚶 MRC Dyspnée", "🏥 Comorbidités",
+        "🧪 Gazométrie", "💪 Force musculaire", "🚶 MRC Dyspnée", "🏥 Comorbidités", "💪 Testing MI",
     ])
 
     # ── HAD ──────────────────────────────────────────────────────────────────
