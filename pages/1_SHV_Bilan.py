@@ -1372,7 +1372,7 @@ def render_evolution():
     with col_export:
         if not bilans_df.empty:
             with st.spinner("Génération du PDF…"):
-                pdf_bytes = generate_pdf(bilans_df, info)
+                pdf_bytes = generate_pdf(bilans_df, info, analyse_text=__import__('utils.db',fromlist=['load_analyse']).load_analyse(st.session_state.patient_id,'shv'))
             st.download_button(
                 label=f"📄 Exporter en PDF ({n_sel} bilan{'s' if n_sel>1 else ''})",
                 data=pdf_bytes,
@@ -1819,6 +1819,10 @@ def render_evolution():
             st.dataframe(pd.DataFrame(musc_ev_rows), use_container_width=True, hide_index=True)
         else:
             st.info("Aucune donnée de testing musculaire.")
+
+    # ── ANALYSE IA ───────────────────────────────────────────────────────────
+    from utils.ai_analyse import render_analyse_section
+    render_analyse_section(bilans_df, info, "shv", st.session_state.patient_id)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
