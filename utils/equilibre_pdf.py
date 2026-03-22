@@ -48,8 +48,6 @@ def _make_hf(patient_name=""):
     def _draw(canvas, doc):
         canvas.saveState()
         w, h = A4
-        canvas.setFillColor(TERRA)
-        canvas.rect(0, h-0.35*cm, w, 0.35*cm, fill=1, stroke=0)
         logo = _find_logo()
         if logo:
             try: canvas.drawImage(logo, MARGIN, h-1.4*cm, width=2.6*cm, height=1.0*cm,
@@ -112,7 +110,8 @@ def _make_table(data, col_widths=None, header=True):
             ("LINEBELOW",(0,0),(-1,-1),0.3,GRIS_BORD),("TOPPADDING",(0,0),(-1,-1),5),
             ("BOTTOMPADDING",(0,0),(-1,-1),5),("LEFTPADDING",(0,0),(-1,-1),7)]
     if header:
-        cmds += [("BACKGROUND",(0,0),(-1,0),BLEU),("TEXTCOLOR",(0,0),(-1,0),BLANC),
+        cmds += [("BACKGROUND",(0,0),(-1,0), BLEU_LIGHT),("TEXTCOLOR", (0,0),(-1,0), BLEU),
+            ("LINEBELOW",(0,0),(-1,0), 1.0, BLEU),
                  ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),("FONTSIZE",(0,0),(-1,0),8),
                  ("TOPPADDING",(0,0),(-1,0),7),("BOTTOMPADDING",(0,0),(-1,0),7)]
     t.setStyle(TableStyle(cmds)); return t
@@ -172,8 +171,9 @@ def build_muscle(story, styles, with_legpress=True):
     tbl.setStyle(TableStyle([
         ("FONTNAME",      (0,0),(-1,0),  "Helvetica-Bold"),
         ("FONTSIZE",      (0,0),(-1,0),  8),
-        ("BACKGROUND",    (0,0),(-1,0),  BLEU),
-        ("TEXTCOLOR",     (0,0),(-1,0),  BLANC),
+        ("BACKGROUND",(0,0),(-1,0), BLEU_LIGHT),
+        ("TEXTCOLOR", (0,0),(-1,0), BLEU),
+            ("LINEBELOW",(0,0),(-1,0), 1.0, BLEU),
         ("ALIGN",         (2,0),(-1,-1), "CENTER"),
         ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
         ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
@@ -472,8 +472,9 @@ def build_tinetti(story, styles):
             ])
         tbl = Table(header + rows, colWidths=[USEFUL_W-2*cm, 2*cm], repeatRows=1)
         tbl.setStyle(TableStyle([
-            ("BACKGROUND",    (0,0),(-1,0),  BLEU),
-            ("TEXTCOLOR",     (0,0),(-1,0),  BLANC),
+            ("BACKGROUND",(0,0),(-1,0), BLEU_LIGHT),
+            ("TEXTCOLOR", (0,0),(-1,0), BLEU),
+            ("LINEBELOW",(0,0),(-1,0), 1.0, BLEU),
             ("ALIGN",         (1,0),(1,-1),  "CENTER"),
             ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
             ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
@@ -555,8 +556,9 @@ def build_berg_print(story, styles):
     col_w = [USEFUL_W - 5*1.2*cm] + [1.2*cm]*5
     tbl = Table(header + rows, colWidths=col_w, repeatRows=1)
     tbl.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0),(-1,0),  BLEU),
-        ("TEXTCOLOR",     (0,0),(-1,0),  BLANC),
+        ("BACKGROUND",(0,0),(-1,0), BLEU_LIGHT),
+        ("TEXTCOLOR", (0,0),(-1,0), BLEU),
+            ("LINEBELOW",(0,0),(-1,0), 1.0, BLEU),
         ("ALIGN",         (1,0),(-1,-1), "CENTER"),
         ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
         ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
