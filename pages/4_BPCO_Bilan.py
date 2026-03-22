@@ -55,6 +55,40 @@ def lv_int_or_none(key):
 # ─── Accueil ──────────────────────────────────────────────────────────────────
 def render_accueil():
     st.markdown('<div class="page-title">🫁 Bilan BPCO</div>', unsafe_allow_html=True)
+
+    # Bouton questionnaires vierges
+    col_print, _ = st.columns([2, 5])
+    with col_print:
+        if st.button("🖨️ Imprimer questionnaires", key="bp_print_accueil"):
+            st.session_state["bp_show_print_accueil"] = True
+
+    if st.session_state.get("bp_show_print_accueil", False):
+        with st.container():
+            st.markdown("""<div style="background:#E8EEF9;border:2px solid #2B57A7;
+                border-radius:10px;padding:1.2rem 1.5rem;margin-bottom:1rem;">
+                <span style="font-size:1.1rem;font-weight:700;color:#2B57A7;">
+                🖨️ Questionnaires à imprimer (vierges)</span></div>""",
+                unsafe_allow_html=True)
+            bp1, bp2 = st.columns(2)
+            with bp1: bpr_musc = st.checkbox("💪 Testing musculaire", value=True, key="bp_acc_musc")
+            with bp2: bpr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="bp_acc_lp")
+            sel_bp = (["muscle"] if bpr_musc else []) + (["leg_press"] if bpr_lp else [])
+            ga, gb, _ = st.columns([1.5, 1, 4])
+            with ga:
+                if sel_bp:
+                    from utils.bpco_pdf import generate_questionnaires_pdf as _gqb
+                    with st.spinner("Génération…"):
+                        q_pdf = _gqb(sel_bp, None)
+                    st.download_button("📥 Télécharger", data=q_pdf,
+                        file_name=f"questionnaires_bpco_vierges_{date.today()}.pdf",
+                        mime="application/pdf", type="primary", key="bp_acc_dl")
+                else:
+                    st.warning("Sélectionnez au moins un questionnaire.")
+            with gb:
+                if st.button("✖ Fermer", key="bp_acc_close"):
+                    st.session_state["bp_show_print_accueil"] = False; st.rerun()
+    st.markdown("---")
+
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("#### 🔍 Rechercher un patient")
@@ -85,7 +119,7 @@ def render_accueil():
             nom=st.text_input("Nom *"); prenom=st.text_input("Prénom *")
             ddn=st.date_input("Date naissance *",min_value=date(1900,1,1),max_value=date.today())
             sexe=st.selectbox("Sexe",["Féminin","Masculin","Autre"])
-            sub=st.form_submit_button("Créer",type="primary")
+            sub=st.form_submit_button("➕ Créer",type="primary")
         if sub:
             if not nom or not prenom: st.error("Nom et prénom obligatoires.")
             else:
@@ -118,7 +152,7 @@ def render_bilan_selection():
             st.session_state.bp_mode="accueil"; st.rerun()
     with col_evol:
         if not bilans_df.empty:
-            if st.button("📈 Évolution",type="primary"):
+            if st.button("📈 Voir l'évolution",type="primary"):
                 st.session_state.bp_mode="evolution"; st.rerun()
     with col_pdf:
         if not bilans_df.empty:
@@ -130,7 +164,7 @@ def render_bilan_selection():
                 file_name=f"bpco_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
                 mime="application/pdf")
     with col_print:
-        if st.button("🖨️ Imprimer", key="bp_print_btn"):
+        if st.button("🖨️ Imprimer questionnaires", key="bp_print_btn"):
             st.session_state["bp_show_print"] = True
 
     if st.session_state.get("bp_show_print", False):
@@ -176,7 +210,7 @@ def render_bilan_selection():
                     st.markdown(f"**{row.get('date_bilan','—')}** — {row.get('type_bilan','—')}"
                                 f"  \n<small>`{bid}`</small>",unsafe_allow_html=True)
                 with c_open:
-                    if st.button("✏️",key=f"bpopen_{bid}",help="Ouvrir"):
+                    if st.button("✏️",key=f"bpopen_{bid}",help="Ouvrir ce bilan"):
                         st.session_state.bp_bilan_id=bid
                         st.session_state.bp_bilan_data=row.to_dict()
                         st.session_state.bp_mode="formulaire"
@@ -188,13 +222,13 @@ def render_bilan_selection():
                     st.warning("⚠️ Supprimer définitivement ce bilan ?")
                     ca,cb,_=st.columns([1,1,3])
                     with ca:
-                        if st.button("✅",key=f"bpdelok_{bid}",type="primary"):
+                        if st.button("✅ Confirmer",key=f"bpdelok_{bid}",type="primary"):
                             delete_bilan_bpco(bid)
                             st.session_state.pop(f"bp_confirm_del_{bid}",None)
                             st.session_state["bp_selected_ids"]=[i for i in sel_ids if i!=bid]
                             st.rerun()
                     with cb:
-                        if st.button("✖",key=f"bpdelcancel_{bid}"):
+                        if st.button("✖ Annuler",key=f"bpdelcancel_{bid}"):
                             st.session_state.pop(f"bp_confirm_del_{bid}",None); st.rerun()
             st.session_state["bp_selected_ids"]=new_sel
     with col_right:
@@ -203,7 +237,7 @@ def render_bilan_selection():
             bilan_date=st.date_input("Date",value=date.today())
             bilan_type=st.selectbox("Type",["Bilan initial","Bilan intermédiaire","Bilan final"])
             praticien=st.text_input("Praticien")
-            go=st.form_submit_button("Créer",type="primary")
+            go=st.form_submit_button("➕ Créer",type="primary")
         if go:
             st.session_state.bp_bilan_id=None
             st.session_state.bp_bilan_data={"patient_id":st.session_state.bp_patient_id,
@@ -230,11 +264,11 @@ def render_formulaire():
         st.warning("⚠️ **Modifications non sauvegardées.** Quitter sans sauvegarder ?")
         ca,cb,_=st.columns([1.5,1.5,4])
         with ca:
-            if st.button("✅ Quitter",type="primary",key="bp_back_ok"):
+            if st.button("🚪 Quitter sans sauvegarder",type="primary",key="bp_back_ok"):
                 st.session_state["bp_confirm_back"]=False
                 st.session_state.bp_mode="bilan"; st.rerun()
         with cb:
-            if st.button("✖ Continuer",key="bp_back_cancel"):
+            if st.button("✏️ Continuer l'édition",key="bp_back_cancel"):
                 st.session_state["bp_confirm_back"]=False; st.rerun()
     st.markdown("---")
     collected=dict(st.session_state.bp_bilan_data)
@@ -420,8 +454,25 @@ def render_formulaire():
                 if x==5: return f"5 — {r}"
                 return str(x)
             default_v=None if stored=="" else int(float(stored))
-            chosen=st.select_slider(f"Question {num}",options=opts,
-                value=default_v,format_func=fmt,key=f"cat_{key}")
+            # Afficher le texte des deux pôles avant le slider
+            st.markdown(
+                f"**Question {num}**  \n"
+                f"<small style='color:#2B57A7'>0 — {left}</small>"
+                f"<small style='color:#888'> &nbsp;···&nbsp; </small>"
+                f"<small style='color:#C4603A'>5 — {right}</small>",
+                unsafe_allow_html=True)
+            chosen=st.select_slider(
+                label=f"Q{num}",
+                options=opts,
+                value=default_v,
+                format_func=fmt,
+                key=f"cat_{key}",
+                label_visibility="collapsed")
+            if chosen is not None:
+                cat_answers[key]=chosen; collected[key]=chosen
+            else:
+                collected[key]=""
+            st.markdown("")
             if chosen is not None:
                 cat_answers[key]=chosen; collected[key]=chosen
             else:
