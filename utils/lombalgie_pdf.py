@@ -224,7 +224,7 @@ def make_table(data, col_widths=None, header=True, accent=None):
     t.setStyle(_TableStyle(cmds))
     return t
 
-def make_cover(story, title, subtitle, patient_info, bilans_df, labels, styles):
+def make_cover(story, title, subtitle, patient_info, bilans_df, labels, styles, analyse_text=""):
     import pandas as _pd
     from datetime import date as _date
     from reportlab.platypus import Spacer, PageBreak
@@ -288,6 +288,22 @@ def make_cover(story, title, subtitle, patient_info, bilans_df, labels, styles):
         bil.append([str(i+1), ds, row.get("type_bilan","—") or "—",
                     row.get("praticien","—") or "—"])
     story.append(make_table(bil, col_widths=[1.2*_cm,3.2*_cm,5*_cm,USEFUL_W-9.4*_cm]))
+    # ── Synthèse IA (si disponible) ──────────────────────────────────────────
+    if analyse_text and str(analyse_text).strip():
+        story.append(Spacer(1, 0.6*cm))
+        story.append(section_band("Synthèse physiothérapeutique"))
+        story.append(Spacer(1, 0.3*cm))
+        for para in str(analyse_text).strip().split("\n\n"):
+            para = para.strip()
+            if para:
+                story.append(Paragraph(para,
+                    ParagraphStyle("ai_cv", fontSize=9.5, fontName="Helvetica",
+                        textColor=NOIR, leading=14, spaceAfter=8)))
+        story.append(Paragraph(
+            f"Synthèse générée par IA le {_date.today().strftime('%d/%m/%Y')} — À valider par le thérapeute.",
+            ParagraphStyle("ai_cv_foot", fontSize=7.5, fontName="Helvetica-Oblique",
+                textColor=GRIS_TEXTE)))
+
 
 
 matplotlib.use("Agg")
@@ -580,7 +596,7 @@ def make_table(data, col_widths=None, header=True, accent=None):
     t.setStyle(_TableStyle(cmds))
     return t
 
-def make_cover(story, title, subtitle, patient_info, bilans_df, labels, styles):
+def make_cover(story, title, subtitle, patient_info, bilans_df, labels, styles, analyse_text=""):
     import pandas as _pd
     from datetime import date as _date
     from reportlab.platypus import Spacer, PageBreak
@@ -644,6 +660,22 @@ def make_cover(story, title, subtitle, patient_info, bilans_df, labels, styles):
         bil.append([str(i+1), ds, row.get("type_bilan","—") or "—",
                     row.get("praticien","—") or "—"])
     story.append(make_table(bil, col_widths=[1.2*_cm,3.2*_cm,5*_cm,USEFUL_W-9.4*_cm]))
+    # ── Synthèse IA (si disponible) ──────────────────────────────────────────
+    if analyse_text and str(analyse_text).strip():
+        story.append(Spacer(1, 0.6*cm))
+        story.append(section_band("Synthèse physiothérapeutique"))
+        story.append(Spacer(1, 0.3*cm))
+        for para in str(analyse_text).strip().split("\n\n"):
+            para = para.strip()
+            if para:
+                story.append(Paragraph(para,
+                    ParagraphStyle("ai_cv", fontSize=9.5, fontName="Helvetica",
+                        textColor=NOIR, leading=14, spaceAfter=8)))
+        story.append(Paragraph(
+            f"Synthèse générée par IA le {_date.today().strftime('%d/%m/%Y')} — À valider par le thérapeute.",
+            ParagraphStyle("ai_cv_foot", fontSize=7.5, fontName="Helvetica-Oblique",
+                textColor=GRIS_TEXTE)))
+
 
 
 
@@ -1129,13 +1161,7 @@ def generate_pdf_lombalgie(bilans_df, patient_info: dict, analyse_text: str = ""
     labels = [bilan_label(r) for _, r in bilans_df.iterrows()]
 
     # ── Page de garde moderne ───────────────────────────────────────────────────
-    make_cover(story,
-               title="Rapport d'évolution — Lombalgie",
-               subtitle="Bilan physiothérapeutique",
-               patient_info=patient_info,
-               bilans_df=bilans_df,
-               labels=labels,
-               styles=styles)
+    make_cover(story, title="Rapport d'évolution — Lombalgie", subtitle="Bilan physiothérapeutique", patient_info=patient_info, bilans_df=bilans_df, labels=labels, styles=styles, analyse_text=analyse_text)
 
     story.append(PageBreak())
 
@@ -1406,28 +1432,6 @@ def generate_pdf_lombalgie(bilans_df, patient_info: dict, analyse_text: str = ""
             story.append(PageBreak())
 
 
-    # ── Synthèse IA ──────────────────────────────────────────────────────────
-    if analyse_text and str(analyse_text).strip():
-        story.append(PageBreak())
-        story.append(section_band("Synthèse de l'évolution — Lombalgie"))
-        story.append(Spacer(1, 0.4*cm))
-        story.append(Paragraph(
-            "<b>Synthèse physiothérapeutique de l'évolution</b>",
-            ParagraphStyle("ai_head", fontSize=10, fontName="Helvetica-Bold",
-                textColor=BLEU, spaceAfter=6)))
-        # Découper en paragraphes
-        for para in str(analyse_text).strip().split("\n\n"):
-            para = para.strip()
-            if para:
-                story.append(Paragraph(para,
-                    ParagraphStyle("ai_body", fontSize=9.5, fontName="Helvetica",
-                        textColor=NOIR, leading=14, spaceAfter=8)))
-        story.append(Spacer(1, 0.3*cm))
-        story.append(Paragraph(
-            f"Généré automatiquement par IA le {date.today().strftime('%d/%m/%Y')} — "
-            "À valider par le thérapeute.",
-            ParagraphStyle("ai_foot", fontSize=7.5, fontName="Helvetica-Oblique",
-                textColor=GRIS_TEXTE)))
 
     doc.build(story, onFirstPage=hf, onLaterPages=hf)
     return buffer.getvalue()
