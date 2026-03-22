@@ -334,27 +334,6 @@ def generate_pdf_bpco(bilans_df, patient_info: dict) -> bytes:
     return buf.getvalue()
 
 
-# ─── Questionnaire imprimable Testing MI + Leg Press ─────────────────────────
-from utils.muscle_pdf import build_muscle_testing as _build_mt_bp
-from reportlab.platypus import Paragraph as _Para2
-from reportlab.lib.styles import ParagraphStyle as _PS2
-
-def _bp_section_band(title):
-    row=[[_Para2(f"<font color='#C4603A'>▌</font>&nbsp;&nbsp;<b>{title}</b>",
-        _PS2("bp_sh2",fontSize=10,fontName="Helvetica-Bold",textColor=BLANC,leading=14))]]
-    t=_Table(row,colWidths=[W])
-    t.setStyle(_TableStyle([("BACKGROUND",(0,0),(-1,-1),BLEU),
-        ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),("LEFTPADDING",(0,0),(-1,-1),10)]))
-    return t
-
-def build_muscle_bp(story,styles):
-    """Fiche testing MI + Leg Press — BPCO."""
-    _build_mt_bp(story,styles,W,_bp_section_band,include_leg_press=True)
-
-QUESTIONNAIRES_BPCO = {
-    "muscle": ("Testing musculaire MI + Leg Press", build_muscle_bp),
-}
-
 def generate_questionnaires_bpco_pdf(selected, patient_info=None) -> bytes:
     buf=io.BytesIO()
     doc=SimpleDocTemplate(buf,pagesize=A4,
@@ -364,8 +343,8 @@ def generate_questionnaires_bpco_pdf(selected, patient_info=None) -> bytes:
     styles=_styles()
     story=[]
     for i,key in enumerate(selected):
-        if key in QUESTIONNAIRES_BPCO:
-            QUESTIONNAIRES_BPCO[key][1](story,styles)
+        if key in QUESTIONNAIRES_PRINT:
+            QUESTIONNAIRES_PRINT[key][1](story,styles)
             if i<len(selected)-1:
                 from reportlab.platypus import PageBreak
                 story.append(PageBreak())
