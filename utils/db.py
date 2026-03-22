@@ -22,15 +22,42 @@ def get_client():
 YOUR_EMAIL = "votre.email@gmail.com"  # ← Remplacez par votre adresse Gmail
 
 
-def get_spreadsheet():
+@st.cache_resource(ttl=300)
+def _get_spreadsheet_cached():
+    """Ouvre le spreadsheet et crée les feuilles SHV de base si nécessaire.
+    Mis en cache 5 minutes pour éviter les erreurs de quota Google Sheets."""
     client = get_client()
     try:
-        return client.open(SPREADSHEET_NAME)
+        ss = client.open(SPREADSHEET_NAME)
     except gspread.SpreadsheetNotFound:
         ss = client.create(SPREADSHEET_NAME)
-        # Partage automatique avec votre compte Google personnel
         ss.share(YOUR_EMAIL, perm_type="user", role="writer", notify=True)
-        return ss
+
+    # Init feuilles de base
+    try:
+        ws_p = ss.worksheet("Patients")
+        _sync_headers(ws_p, PATIENTS_HEADERS)
+    except gspread.WorksheetNotFound:
+        ws_p = ss.add_worksheet("Patients", rows=1000, cols=len(PATIENTS_HEADERS))
+        ws_p.append_row(PATIENTS_HEADERS)
+
+    try:
+        ws_b = ss.worksheet("Bilans_SHV")
+        _sync_headers(ws_b, get_shv_headers())
+    except gspread.WorksheetNotFound:
+        ws_b = ss.add_worksheet("Bilans_SHV", rows=5000, cols=len(get_shv_headers()))
+        ws_b.append_row(get_shv_headers())
+
+    return ss
+
+
+def ensure_sheets():
+    return _get_spreadsheet_cached()
+
+
+def get_spreadsheet():
+    """Alias pour compatibilité — utilise le cache."""
+    return _get_spreadsheet_cached()
 
 
 # ─── Headers ────────────────────────────────────────────────────────────────
@@ -155,26 +182,6 @@ def _sync_headers(ws, expected_headers: list):
     except Exception:
         # Si la sync échoue, on continue sans bloquer l'app
         pass
-
-
-def ensure_sheets():
-    ss = get_spreadsheet()
-
-    try:
-        ws_p = ss.worksheet("Patients")
-        _sync_headers(ws_p, PATIENTS_HEADERS)
-    except gspread.WorksheetNotFound:
-        ws_p = ss.add_worksheet("Patients", rows=1000, cols=len(PATIENTS_HEADERS))
-        ws_p.append_row(PATIENTS_HEADERS)
-
-    try:
-        ws_b = ss.worksheet("Bilans_SHV")
-        _sync_headers(ws_b, get_shv_headers())
-    except gspread.WorksheetNotFound:
-        ws_b = ss.add_worksheet("Bilans_SHV", rows=5000, cols=len(get_shv_headers()))
-        ws_b.append_row(get_shv_headers())
-
-    return ss
 
 
 # ─── Patients ────────────────────────────────────────────────────────────────
