@@ -628,7 +628,7 @@ def render_evolution():
         if not bilans_df.empty:
             from utils.bpco_pdf import generate_pdf_bpco
             with st.spinner("PDF…"):
-                pdf=generate_pdf_bpco(bilans_df,info)
+                pdf=generate_pdf_bpco(bilans_df,info,analyse_text=__import__("utils.db",fromlist=["load_analyse"]).load_analyse(st.session_state.bp_patient_id,"bpco"))
             st.download_button(f"📄 PDF ({n_sel})",data=pdf,
                 file_name=f"evolution_bpco_{info['nom']}_{info['prenom']}_{date.today()}.pdf",
                 mime="application/pdf",type="primary")
@@ -787,6 +787,10 @@ def render_evolution():
                     st.metric("STS 1min",f"{row.get('sts_1min_reps','—')} rép")
                 if row.get("notes_generales"):
                     st.markdown(f"*{row['notes_generales']}*")
+    # ── ANALYSE IA ───────────────────────────────────────────────────────────
+    from utils.ai_analyse import render_analyse_section
+    render_analyse_section(bilans_df, info, "bpco", st.session_state.bp_patient_id)
+
 
 # ─── Router ───────────────────────────────────────────────────────────────────
 mode=st.session_state.bp_mode
