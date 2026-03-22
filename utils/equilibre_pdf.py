@@ -14,6 +14,19 @@ from reportlab.platypus import (
     PageBreak, Image, HRFlowable,
 )
 
+from reportlab.platypus import Flowable as _FlowableEQ
+
+class Checkbox(_FlowableEQ):
+    """Case à cocher dessinée."""
+    def __init__(self, size=8):
+        _FlowableEQ.__init__(self)
+        self.size = size; self.width = size + 4; self.height = size
+    def draw(self):
+        self.canv.setStrokeColor(colors.HexColor("#333"))
+        self.canv.setLineWidth(0.7)
+        self.canv.rect(1, 0, self.size, self.size, fill=0, stroke=1)
+
+
 # ── Thème ──────────────────────────────────────────────────────────────────────
 TERRA = colors.HexColor("#C4603A"); BLEU = colors.HexColor("#2B57A7")
 GRIS  = colors.HexColor("#F4F4F4"); GRIS_BORD = colors.HexColor("#DEDEDE")
@@ -22,7 +35,7 @@ NOIR  = colors.HexColor("#1A1A1A"); BLEU_LIGHT = colors.HexColor("#E8EEF9")
 VERT  = colors.HexColor("#388e3c"); ORANGE = colors.HexColor("#f57c00")
 ROUGE = colors.HexColor("#d32f2f")
 
-W = A4[0] - 3*cm; MARGIN = 1.5*cm; HEADER_H = 1.5*cm
+W = A4[0] - 3*cm; USEFUL_W=W; MARGIN = 1.5*cm; HEADER_H = 1.5*cm
 
 LOGO_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "logo_369.png")
 
@@ -71,7 +84,17 @@ def _styles():
         "normal": ParagraphStyle("eq_norm", fontSize=9, fontName="Helvetica",
             textColor=NOIR, spaceAfter=2),
         "small": ParagraphStyle("eq_sm", fontSize=7.5, fontName="Helvetica", textColor=GRIS_TEXTE),
+        "intro":    ParagraphStyle("eq_intro", fontSize=9, fontName="Helvetica-Oblique",
+            textColor=colors.HexColor("#444"), spaceAfter=6, leftIndent=4),
+        "question": ParagraphStyle("eq_question", fontSize=10, fontName="Helvetica-Bold",
+            textColor=NOIR, spaceBefore=8, spaceAfter=3, leftIndent=4),
+        "option":   ParagraphStyle("eq_option", fontSize=9, fontName="Helvetica",
+            textColor=NOIR, spaceAfter=2, leftIndent=20),
     }
+
+# Alias pour les builders partagés
+def section_band(title):
+    return _section(title)
 
 def _section(title):
     row = [[Paragraph(f"<font color='#C4603A'>▌</font>&nbsp;&nbsp;<b>{title}</b>",
@@ -118,13 +141,7 @@ def build_muscle(story, styles, with_legpress=True):
                        textColor=GRIS_TEXTE, spaceAfter=6)))
     story.append(Spacer(1, 0.2*cm))
 
-    from reportlab.platypus import Flowable as _F
-    class Checkbox(_F):
-        def __init__(self, size=8):
-            _F.__init__(self); self.size=size; self.width=size+4; self.height=size
-        def draw(self):
-            self.canv.setStrokeColor(_colors.HexColor("#333")); self.canv.setLineWidth(0.7)
-            self.canv.rect(1,0,self.size,self.size,fill=0,stroke=1)
+
 
     def score_box():
         return Table([[Checkbox(8)] + [
@@ -427,9 +444,173 @@ def _build_leg_press(story, styles):
     from utils.shv_pdf import build_leg_press
     build_leg_press(story, styles)
 
+
+def build_tinetti(story, styles):
+    """Grille Tinetti imprimable."""
+    from utils.equilibre_data import TINETTI_EQUILIBRE, TINETTI_MARCHE, TINETTI_EQ_MAX, TINETTI_MA_MAX
+    story.append(section_band("Tinetti — Performance Oriented Mobility Assessment (POMA)"))
+    story.append(Spacer(1, 0.3*cm))
+
+    for part_title, items, max_score in [
+        ("Partie A — Équilibre (0–" + str(TINETTI_EQ_MAX) + ")", TINETTI_EQUILIBRE, TINETTI_EQ_MAX),
+        ("Partie B — Marche (0–" + str(TINETTI_MA_MAX) + ")", TINETTI_MARCHE, TINETTI_MA_MAX),
+    ]:
+        story.append(Paragraph(part_title,
+            ParagraphStyle("tin_pt",fontSize=10,fontName="Helvetica-Bold",
+                textColor=TERRA,spaceBefore=8,spaceAfter=4)))
+        header = [[
+            Paragraph("<b>Item</b>", ParagraphStyle("th1",fontSize=8,fontName="Helvetica-Bold",textColor=BLANC)),
+            Paragraph("<b>Score</b>", ParagraphStyle("th2",fontSize=8,fontName="Helvetica-Bold",textColor=BLANC,alignment=1)),
+        ]]
+        rows = []
+        for key, label, options in items:
+            opt_text = "   ".join([f"{s}={desc[:25]}" for s,desc in options])
+            rows.append([
+                Paragraph(f"<b>{label}</b><br/><font size='7' color='#777'>{opt_text}</font>",
+                    ParagraphStyle("ti",fontSize=8,fontName="Helvetica",textColor=NOIR,leading=11)),
+                "",
+            ])
+        tbl = Table(header + rows, colWidths=[USEFUL_W-2*cm, 2*cm], repeatRows=1)
+        tbl.setStyle(TableStyle([
+            ("BACKGROUND",    (0,0),(-1,0),  BLEU),
+            ("TEXTCOLOR",     (0,0),(-1,0),  BLANC),
+            ("ALIGN",         (1,0),(1,-1),  "CENTER"),
+            ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+            ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
+            ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+            ("TOPPADDING",    (0,0),(-1,-1), 5),
+            ("BOTTOMPADDING", (0,0),(-1,-1), 5),
+            ("LEFTPADDING",   (0,0),(-1,-1), 5),
+        ]))
+        story.append(tbl)
+        story.append(Paragraph(
+            f"Sous-total {part_title.split('—')[0].strip()} : _____ / {max_score}",
+            ParagraphStyle("tin_sub",fontSize=9,fontName="Helvetica-Bold",
+                textColor=BLEU,spaceAfter=6,spaceBefore=4)))
+
+    story.append(Paragraph(
+        "Score TOTAL : _____ / 28    "
+        "Seuils : < 19 = risque élevé · 19–23 = risque modéré · ≥ 24 = risque faible",
+        ParagraphStyle("tin_tot",fontSize=8,fontName="Helvetica-Oblique",textColor=GRIS_TEXTE)))
+
+
+def build_tug_fiche(story, styles):
+    """Fiche TUG imprimable."""
+    story.append(section_band("TUG — Timed Up and Go"))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "Le patient se lève d'une chaise (sans aide des bras si possible), "
+        "marche 3 mètres, fait demi-tour, revient et se rassied. "
+        "Chronométrer du signal de départ jusqu'au contact du dos avec la chaise.",
+        styles["intro"]))
+    story.append(Spacer(1, 0.3*cm))
+    rows = [
+        ["Temps (secondes)", ""],
+        ["Aide technique", "Aucune   /   Canne   /   Déambulateur"],
+        ["Chaussures / orthèses", ""],
+        ["Observations", ""],
+    ]
+    tbl = Table(rows, colWidths=[5*cm, USEFUL_W-5*cm])
+    tbl.setStyle(TableStyle([
+        ("FONTNAME",      (0,0),(0,-1), "Helvetica-Bold"),
+        ("FONTSIZE",      (0,0),(-1,-1), 9),
+        ("TEXTCOLOR",     (0,0),(0,-1), BLEU),
+        ("ROWBACKGROUNDS",(0,0),(-1,-1), [BLANC, GRIS]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 9),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 9),
+        ("LEFTPADDING",   (0,0),(-1,-1), 8),
+    ]))
+    story.append(tbl)
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "Seuils : < 10 sec = normal · 10–19 sec = risque modéré · ≥ 20 sec = risque élevé de chute",
+        ParagraphStyle("tug_n",fontSize=8,fontName="Helvetica-Oblique",textColor=GRIS_TEXTE)))
+
+
+def build_berg_print(story, styles):
+    """Berg Balance Scale imprimable — version simplifiée (sans descriptions complètes)."""
+    from utils.equilibre_data import BERG_ITEMS
+    story.append(section_band("Berg Balance Scale (0–56)"))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "14 items cotés de 0 à 4. Score total sur 56. "
+        "Seuils : ≤ 20 risque élevé · 21–40 modéré · ≥ 41 risque faible.",
+        styles["intro"]))
+    story.append(Spacer(1, 0.2*cm))
+    header = [[
+        Paragraph("<b>Item</b>", ParagraphStyle("bh1",fontSize=8,fontName="Helvetica-Bold",textColor=BLANC)),
+        Paragraph("<b>0</b>", ParagraphStyle("bh2",fontSize=8,fontName="Helvetica-Bold",textColor=BLANC,alignment=1)),
+        Paragraph("<b>1</b>", ParagraphStyle("bh3",fontSize=8,fontName="Helvetica-Bold",textColor=BLANC,alignment=1)),
+        Paragraph("<b>2</b>", ParagraphStyle("bh4",fontSize=8,fontName="Helvetica-Bold",textColor=BLANC,alignment=1)),
+        Paragraph("<b>3</b>", ParagraphStyle("bh5",fontSize=8,fontName="Helvetica-Bold",textColor=BLANC,alignment=1)),
+        Paragraph("<b>4</b>", ParagraphStyle("bh6",fontSize=8,fontName="Helvetica-Bold",textColor=BLANC,alignment=1)),
+    ]]
+    rows = []
+    for key, label, options in BERG_ITEMS:
+        rows.append([
+            Paragraph(label, ParagraphStyle("bi",fontSize=8,fontName="Helvetica",textColor=NOIR,leading=11)),
+            Checkbox(size=8), Checkbox(size=8), Checkbox(size=8), Checkbox(size=8), Checkbox(size=8),
+        ])
+    col_w = [USEFUL_W - 5*1.2*cm] + [1.2*cm]*5
+    tbl = Table(header + rows, colWidths=col_w, repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0),(-1,0),  BLEU),
+        ("TEXTCOLOR",     (0,0),(-1,0),  BLANC),
+        ("ALIGN",         (1,0),(-1,-1), "CENTER"),
+        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 5),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 5),
+        ("LEFTPADDING",   (0,0),(-1,-1), 5),
+    ]))
+    story.append(tbl)
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "Score TOTAL : _____ / 56",
+        ParagraphStyle("berg_tot",fontSize=10,fontName="Helvetica-Bold",textColor=BLEU)))
+
+
+def build_sts_eq_fiche(story, styles):
+    """Fiche STS 1 minute — Équilibre."""
+    story.append(section_band("STS — Sit to Stand 1 minute"))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "Chaise standard sans appui-bras (~46 cm). "
+        "Compter le nombre de levers complets en 1 minute.",
+        styles["intro"]))
+    story.append(Spacer(1, 0.3*cm))
+    rows = [
+        ["Nombre de répétitions / minute", ""],
+        ["Utilisation des bras", "Oui   /   Non"],
+        ["Observations", ""],
+    ]
+    tbl = Table(rows, colWidths=[6*cm, USEFUL_W-6*cm])
+    tbl.setStyle(TableStyle([
+        ("FONTNAME",      (0,0),(0,-1), "Helvetica-Bold"),
+        ("FONTSIZE",      (0,0),(-1,-1), 9),
+        ("TEXTCOLOR",     (0,0),(0,-1), BLEU),
+        ("ROWBACKGROUNDS",(0,0),(-1,-1), [BLANC, GRIS]),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.3, GRIS_BORD),
+        ("TOPPADDING",    (0,0),(-1,-1), 9),
+        ("BOTTOMPADDING", (0,0),(-1,-1), 9),
+        ("LEFTPADDING",   (0,0),(-1,-1), 8),
+    ]))
+    story.append(tbl)
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "Normes orientatives gériatrie : < 10 rép/min = limitée · 10–13 = modérée · ≥ 14 = bonne",
+        ParagraphStyle("sts_eq_n",fontSize=8,fontName="Helvetica-Oblique",textColor=GRIS_TEXTE)))
+
+
 QUESTIONNAIRES_PRINT = {
     "muscle":    ("Testing musculaire MI",  _build_muscle_testing),
     "leg_press": ("1RM Leg Press",          _build_leg_press),
+    "tinetti":   ("Grille Tinetti",         build_tinetti),
+    "tug":       ("Fiche TUG",              build_tug_fiche),
+    "berg":      ("Berg Balance Scale",     build_berg_print),
+    "sts":       ("STS 1 minute",           build_sts_eq_fiche),
 }
 
 def generate_questionnaires_pdf(selected, patient_info=None):
