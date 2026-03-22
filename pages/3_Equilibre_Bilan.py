@@ -88,7 +88,7 @@ def render_accueil():
                 unsafe_allow_html=True)
             ep1, ep2 = st.columns(2)
             with ep1: pr_musc = st.checkbox("💪 Testing musculaire", value=True, key="eq_acc_musc")
-            with ep2: pr_lp   = st.checkbox(tab_label_local("🏋️ 1RM Leg Press", ["lp_1rm_estime"]),     value=True, key="eq_acc_lp")
+            with ep2: pr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="eq_acc_lp")
             sel_eq = (["muscle"] if pr_musc else []) + (["leg_press"] if pr_lp else [])
             ga, gb, _ = st.columns([1.5, 1, 4])
             with ga:
@@ -217,7 +217,7 @@ def render_bilan_selection():
                 unsafe_allow_html=True)
             ep1, ep2 = st.columns(2)
             with ep1: pr_musc = st.checkbox("💪 Testing musculaire", value=True, key="eq_pr_musc")
-            with ep2: pr_lp   = st.checkbox(tab_label_local("🏋️ 1RM Leg Press", ["lp_1rm_estime"]),     value=True, key="eq_pr_lp")
+            with ep2: pr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="eq_pr_lp")
             sel_eq = (["muscle"] if pr_musc else []) + (["leg_press"] if pr_lp else [])
             ga, gb, _ = st.columns([1.5, 1, 4])
             with ga:
@@ -303,15 +303,6 @@ def render_bilan_selection():
 #  FORMULAIRE BILAN
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def tab_label_local(base_label, keys, bilan_key="eq_bilan_data"):
-    """Ajoute ✅ si au moins une clé est renseignée."""
-    bd = st.session_state.get(bilan_key, {})
-    filled = any(
-        str(bd.get(k, "")).strip() not in ("", "0", "0.0", "None", "nan")
-        and bd.get(k) is not None
-        for k in keys
-    )
-    return f"{base_label} ✅" if filled else base_label
 
 
 def highlight_filled_tabs(tab_definitions: list):
@@ -386,9 +377,9 @@ def render_formulaire():
     ])
 
     tab_gen, tab_tinetti, tab_sts, tab_unip, tab_tug, tab_berg, tab_sppb, tab_musc, tab_lp = st.tabs([
-        "📝 Général", tab_label_local("🧍 Tinetti", ["tinetti_total","tinetti_eq_score"]), tab_label_local("🪑 STS 1 min", ["sts_1min_reps"]),
-        tab_label_local("🦵 Unipodal", ["unipodal_d_ouvert","unipodal_g_ouvert"]), tab_label_local("⏱️ TUG", ["tug_temps"]), tab_label_local("⚖️ Berg", ["berg_score"]), tab_label_local("📊 SPPB", ["sppb_score"]),
-        tab_label_local("💪 Testing", ["musc_hip_flex_d","musc_hip_flex_g","musc_knee_ext_d","musc_knee_ext_g"]), tab_label_local("🏋️ 1RM Leg Press", ["lp_1rm_estime"]),
+        "📝 Général", "🧍 Tinetti", "🪑 STS 1 min",
+        "🦵 Unipodal", "⏱️ TUG", "⚖️ Berg", "📊 SPPB",
+        "💪 Testing", "🏋️ 1RM Leg Press",
     ])
 
     # ── GÉNÉRAL ───────────────────────────────────────────────────────────────
