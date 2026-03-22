@@ -1164,17 +1164,18 @@ def render_formulaire():
                 st.markdown(f'<small style="color:{color}">Normale : 12–18 · Tachypnée : &gt; 20</small>',
                             unsafe_allow_html=True)
 
-            def radio_load(label, opts, key):
+            def radio_load(label, opts, data_key, widget_key):
+                """data_key = clé dans bilan_data (Google Sheets), widget_key = clé Streamlit unique."""
                 opts_with_empty = ["— Non renseigné —"] + list(opts)
-                val = str(load_val(key) or "")
+                val = str(load_val(data_key) or "")
                 idx = opts_with_empty.index(val) if val in opts_with_empty else 0
-                chosen = st.radio(label, opts_with_empty, index=idx, key=key)
+                chosen = st.radio(label, opts_with_empty, index=idx, key=widget_key)
                 return "" if chosen == "— Non renseigné —" else chosen
 
-            pat_amp  = radio_load("Amplitude", PATTERN_AMPLITUDES, "pat_amp")
+            pat_amp  = radio_load("Amplitude", PATTERN_AMPLITUDES, "pattern_amplitude", "pat_amp")
         with pc2:
-            pat_mode = radio_load("Mode ventilatoire", PATTERN_MODES, "pat_mode")
-            pat_ryt  = radio_load("Rythme", PATTERN_RYTHMES, "pat_rythme")
+            pat_mode = radio_load("Mode ventilatoire", PATTERN_MODES, "pattern_mode", "pat_mode")
+            pat_ryt  = radio_load("Rythme", PATTERN_RYTHMES, "pattern_rythme", "pat_rythme")
 
         pat_para  = st.checkbox("Respiration paradoxale", value=bool(load_val("pattern_paradoxal")),
                                 key="pat_paradoxal")
