@@ -506,6 +506,31 @@ def tab_label(base_label, keys):
     return f"{base_label} ✅" if filled else base_label
 
 
+
+def highlight_filled_tabs(tab_definitions: list):
+    """Fond vert sur les onglets remplis via CSS nth-child."""
+    bd = st.session_state.get("bilan_data", {})
+    css_rules = []
+    for i, (label, keys) in enumerate(tab_definitions):
+        filled = any(
+            str(bd.get(k, "")).strip() not in ("", "0", "0.0", "None", "nan")
+            and bd.get(k) is not None
+            for k in keys
+        )
+        if filled:
+            n = i + 1
+            css_rules.append(
+                "[data-baseweb=\'tab-list\'] button:nth-child("
+                + str(n)
+                + ") {background-color:#d4edda !important;"
+                  "border-bottom:3px solid #388e3c !important;}"
+            )
+    if css_rules:
+        st.markdown(
+            "<style>" + " ".join(css_rules) + "</style>",
+            unsafe_allow_html=True
+        )
+
 def render_formulaire():
 
     info = st.session_state.patient_info
@@ -571,6 +596,21 @@ def render_formulaire():
 
     # Pré-remplir depuis les données existantes pour ne pas perdre les valeurs non visitées
     collected = dict(st.session_state.bilan_data)
+    highlight_filled_tabs([
+        ("📝 Général",            []),
+        ("😟 HAD",                ["had_score_anxiete","had_score_depression"]),
+        ("📊 SF-12",              ["sf12_pcs","sf12_mcs"]),
+        ("⏱️ BOLT",               ["bolt_score"]),
+        ("🌬️ Test HV",            ["hvt_symptomes_reproduits","hvt_repos_0_petco2"]),
+        ("📋 Nijmegen",           ["nij_score"]),
+        ("🧪 Gazométrie",         ["gazo_ph","gazo_paco2","gazo_sato2"]),
+        ("📈 Capnographie",       ["etco2_repos","etco2_pattern"]),
+        ("🔬 Pattern respi.",     ["pattern_frequence","pattern_mode"]),
+        ("💪 SNIF/PImax/PEmax",   ["snif_val","pimax_val","pemax_val"]),
+        ("🚶 MRC Dyspnée",        ["mrc_score"]),
+        ("🏥 Comorbidités",       ["comorb_list","comorb_traitements"]),
+        ("💪 Testing",            ["musc_hip_flex_d","musc_knee_ext_d"]),
+    ])
 
     # ═════════════════════════════════════════════════════════════════════════
     #  TAB 1 – GÉNÉRAL
