@@ -217,7 +217,7 @@ def render_accueil():
                                       min_value=date(1900, 1, 1),
                                       max_value=date.today())
             sexe      = st.selectbox("Sexe", ["Féminin", "Masculin", "Autre"])
-            submitted = st.form_submit_button("Créer le patient", type="primary")
+            submitted = st.form_submit_button("➕ Créer", type="primary")
 
         if submitted:
             if not nom or not prenom:
@@ -389,7 +389,7 @@ def render_bilan_selection():
                     st.markdown(f"**{bdate}** — {btype}  \n<small>`{bid}`</small>",
                                 unsafe_allow_html=True)
                 with c_open:
-                    if st.button("✏️ Ouvrir", key=f"open_{bid}"):
+                    if st.button("✏️", key=f"open_{bid}", help="Ouvrir ce bilan"):
                         st.session_state.bilan_id   = bid
                         st.session_state.bilan_data = row.to_dict()
                         st.session_state.mode       = "formulaire"
@@ -445,7 +445,7 @@ def render_bilan_selection():
                 ["Bilan initial", "Bilan intermédiaire", "Bilan final"]
             )
             praticien  = st.text_input("Praticien")
-            go_btn     = st.form_submit_button("Créer le bilan", type="primary")
+            go_btn     = st.form_submit_button("➕ Créer", type="primary")
 
         if go_btn:
             st.session_state.bilan_id   = None  # sera généré à la sauvegarde
@@ -536,13 +536,13 @@ def render_formulaire():
         )
         ca, cb, _ = st.columns([1.2, 1.2, 4])
         with ca:
-            if st.button("✅ Quitter sans sauvegarder", type="primary", key="shv_confirm_back_ok"):
+            if st.button("🚪 Quitter sans sauvegarder", type="primary", key="shv_confirm_back_ok"):
                 st.session_state["shv_confirm_back"] = False
                 st.session_state["shv_unsaved"] = False
                 st.session_state.mode = "bilan"
                 st.rerun()
         with cb:
-            if st.button("✖ Continuer l'édition", key="shv_confirm_back_cancel"):
+            if st.button("✏️ Continuer l'édition", key="shv_confirm_back_cancel"):
                 st.session_state["shv_confirm_back"] = False
                 st.rerun()
 
