@@ -341,10 +341,13 @@ def render_formulaire():
                 format_func=lambda x: "—" if x is None else str(x), key="mwt_fa2")
         dist=st.number_input("Distance parcourue (mètres)",0,1000,lv_int_or_none("mwt_distance"),1,
                              key="mwt_dist",help="0 = non réalisé")
-        aide_opts=["— Non renseigné —","Aucune","Canne","Déambulateur","Oxygène","Autre"]
-        mwt_aide=st.selectbox("Aide technique",aide_opts,
-            index=aide_opts.index(lv("mwt_aide_technique","— Non renseigné —"))
-            if lv("mwt_aide_technique","") in aide_opts else 0)
+        aide_opts=["Aucune","Canne","Déambulateur","Oxygène","Autre"]
+        # Charger valeurs existantes (stockées comme "Canne|Oxygène")
+        stored_aide = lv("mwt_aide_technique","")
+        default_aide = [x for x in str(stored_aide).split("|") if x in aide_opts] if stored_aide else []
+        mwt_aides = st.multiselect("Aide(s) technique(s)", aide_opts,
+                                   default=default_aide, key="mwt_aide_multi")
+        mwt_aide_val = "|".join(mwt_aides) if mwt_aides else ""
         mwt_inc=st.text_area("Incidents / arrêts",value=lv("mwt_incidents",""),height=50,key="mwt_inc")
         mwt_interp=""
         if dist and dist>0:
@@ -359,7 +362,7 @@ def render_formulaire():
             "mwt_dyspnee_apres":"" if dysp_ap is None else dysp_ap,
             "mwt_fatigue_avant":"" if fat_av is None else fat_av,
             "mwt_fatigue_apres":"" if fat_ap is None else fat_ap,
-            "mwt_aide_technique":"" if mwt_aide=="— Non renseigné —" else mwt_aide,
+            "mwt_aide_technique":mwt_aide_val,
             "mwt_incidents":mwt_inc,"mwt_interpretation":mwt_interp,
             "spo2_effort":spo2_ap or "","spo2_min_effort":spo2_min or ""})
 
