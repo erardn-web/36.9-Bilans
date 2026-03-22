@@ -1393,9 +1393,9 @@ def render_evolution():
               for _, row in bilans_df.iterrows()]
 
     # ── Onglets ──────────────────────────────────────────────────────────────
-    tab_had, tab_bolt, tab_sf12, tab_hvt, tab_nij, \
+    tab_ai, tab_had, tab_bolt, tab_sf12, tab_hvt, tab_nij, \
     tab_etco2_ev, tab_pattern_ev, tab_gazo_ev, tab_musc, tab_mrc_ev, tab_comorb2, tab_testing_ev = st.tabs([
-        "😟 HAD", "⏱️ BOLT", "📊 SF-12", "🌬️ Test HV",
+        "🤖 Synthèse IA", "😟 HAD", "⏱️ BOLT", "📊 SF-12", "🌬️ Test HV",
         "📋 Nijmegen", "📈 Capnographie", "🔬 Pattern respi.",
         "🧪 Gazométrie", "💪 Force musculaire", "🚶 MRC Dyspnée", "🏥 Comorbidités", "💪 Testing MI",
     ])
@@ -1819,8 +1819,9 @@ def render_evolution():
             st.info("Aucune donnée de testing musculaire.")
 
     # ── ANALYSE IA ───────────────────────────────────────────────────────────
-    from utils.ai_analyse import render_analyse_section
-    render_analyse_section(bilans_df, info, "shv", st.session_state.patient_id)
+    with tab_ai:
+        from utils.ai_analyse import render_analyse_section
+        render_analyse_section(bilans_df, info, "shv", st.session_state.patient_id)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
