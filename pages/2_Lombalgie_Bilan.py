@@ -109,14 +109,19 @@ def _render_print_panel(patient_info, key_prefix):
     with p1: pr_odi   = st.checkbox("📊 Oswestry (ODI)",   value=True, key=f"{key_prefix}_odi")
     with p2: pr_tampa = st.checkbox("😨 Tampa Scale",       value=True, key=f"{key_prefix}_tampa")
     with p3: pr_oreb  = st.checkbox("🧠 Örebro",            value=True, key=f"{key_prefix}_orebro")
-    with p4: pr_drap  = st.checkbox(tab_label_lomb("🚩 Drapeaux", ["drapeaux_rouges_list","drapeaux_jaunes_list"]),          value=True, key=f"{key_prefix}_drap")
+    with p4: pr_drap  = st.checkbox("🚩 Drapeaux",          value=True, key=f"{key_prefix}_drap")
     with p5: pr_luom  = st.checkbox("🏃 Luomajoki",         value=True, key=f"{key_prefix}_luom")
+    p6, p7, _ = st.columns([1, 1, 3])
+    with p6: pr_musc = st.checkbox("💪 Testing MI",    value=True, key=f"{key_prefix}_musc")
+    with p7: pr_lp   = st.checkbox("🏋️ 1RM Leg Press", value=True, key=f"{key_prefix}_lp")
     selected = (
         (["odi"]       if pr_odi   else []) +
         (["tampa"]     if pr_tampa else []) +
         (["orebro"]    if pr_oreb  else []) +
         (["drapeaux"]  if pr_drap  else []) +
-        (["luomajoki"] if pr_luom  else [])
+        (["luomajoki"] if pr_luom  else []) +
+        (["muscle"]    if pr_musc  else []) +
+        (["leg_press"] if pr_lp    else [])
     )
     ga,gb,_ = st.columns([1.5,1,4])
     with ga:
@@ -336,15 +341,6 @@ def render_bilan_selection():
             st.rerun()
 
 
-def tab_label_lomb(base_label, keys):
-    """Ajoute ✅ si au moins une clé est renseignée dans le bilan en cours."""
-    bd = st.session_state.get("lomb_bilan_data", {})
-    filled = any(
-        str(bd.get(k, "")).strip() not in ("", "0", "0.0", "None", "nan")
-        and bd.get(k) is not None
-        for k in keys
-    )
-    return f"{base_label} ✅" if filled else base_label
 
 
 def highlight_filled_tabs(tab_definitions: list):
@@ -422,9 +418,9 @@ def render_formulaire():
     collected = {}
 
     tab_gen, tab_s, tab_flags, tab_o, tab_diag, tab_pronostic, tab_p, tab_q = st.tabs([
-        "📝 Général", tab_label_lomb("🟦 S – Subjectif", ["s_motif_consultation","s_eva_repos","s_douleur_localisation"]), tab_label_lomb("🚩 Drapeaux", ["drapeaux_rouges_list","drapeaux_jaunes_list"]),
-        tab_label_lomb("🔬 O – Objectif", ["o_schober","o_luomajoki_score","o_posture_notes"]), tab_label_lomb("🩺 Raisonnement clinique", ["diag_principal","diag_diff_list"]), tab_label_lomb("🔮 A – Pronostic", ["a_appreciation"]),
-        tab_label_lomb("📋 P – Plan", ["p_objectifs","p_traitement"]), tab_label_lomb("📊 Questionnaires", ["odi_score","tampa_score","orebro_score"]),
+        "📝 Général", "🟦 S – Subjectif", "🚩 Drapeaux",
+        "🔬 O – Objectif", "🩺 Raisonnement clinique", "🔮 A – Pronostic",
+        "📋 P – Plan", "📊 Questionnaires",
     ])
 
     # ── GÉNÉRAL ──────────────────────────────────────────────────────────────
@@ -981,7 +977,7 @@ def render_evolution():
     ]
 
     tab_doul, tab_q, tab_mob, tab_luom, tab_soap = st.tabs([
-        "🩸 Douleur (EVA)", tab_label_lomb("📊 Questionnaires", ["odi_score","tampa_score","orebro_score"]), "🦴 Mobilité",
+        "🩸 Douleur (EVA)", "📊 Questionnaires", "🦴 Mobilité",
         "🏃 Luomajoki", "📋 SOAP synthèse",
     ])
 
