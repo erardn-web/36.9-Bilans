@@ -737,8 +737,8 @@ def render_evolution():
         except: return None
 
     import plotly.graph_objects as go
-    tab_scores, tab_tinetti_ev, tab_berg_ev, tab_tug_ev, tab_sts_ev, tab_unip_ev, tab_testing_ev, tab_detail = st.tabs([
-        "📊 Scores", "🧍 Tinetti", "⚖️ Berg", "⏱️ TUG", "🪑 STS", "🦵 Unipodal", "💪 Testing MI", "📋 Détail"
+    tab_ai, tab_scores, tab_tinetti_ev, tab_berg_ev, tab_tug_ev, tab_sts_ev, tab_unip_ev, tab_testing_ev, tab_detail = st.tabs([
+        "🤖 Synthèse IA", "📊 Scores", "🧍 Tinetti", "⚖️ Berg", "⏱️ TUG", "🪑 STS", "🦵 Unipodal", "💪 Testing MI", "📋 Détail"
     ])
 
     with tab_scores:
@@ -788,8 +788,9 @@ def render_evolution():
                     st.markdown(f"*{row['notes_generales']}*")
 
     # ── ANALYSE IA ───────────────────────────────────────────────────────────
-    from utils.ai_analyse import render_analyse_section
-    render_analyse_section(bilans_df, info, "equilibre", st.session_state.eq_patient_id)
+    with tab_ai:
+        from utils.ai_analyse import render_analyse_section
+        render_analyse_section(bilans_df, info, "equilibre", st.session_state.eq_patient_id)
 
 
 
