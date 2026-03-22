@@ -261,4 +261,8 @@ def get_equilibre_headers():
     # SPPB
     h += ["sppb_balance","sppb_walk_time","sppb_walk_score",
           "sppb_chair_time","sppb_chair_score","sppb_score","sppb_interpretation"]
+    # Testing musculaire MI + 1RM Leg Press
+    from utils.muscle_data import get_muscle_keys as _gmk, LEG_PRESS_KEYS as _lpk
+    h += _gmk()
+    h += _lpk
     return h
