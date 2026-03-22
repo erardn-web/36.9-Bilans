@@ -299,10 +299,6 @@ def make_cover(story, title, subtitle, patient_info, bilans_df, labels, styles, 
                 story.append(Paragraph(para,
                     ParagraphStyle("ai_cv", fontSize=9.5, fontName="Helvetica",
                         textColor=NOIR, leading=14, spaceAfter=8)))
-        story.append(Paragraph(
-            f"Synthèse générée par IA le {_date.today().strftime('%d/%m/%Y')} — À valider par le thérapeute.",
-            ParagraphStyle("ai_cv_foot", fontSize=7.5, fontName="Helvetica-Oblique",
-                textColor=GRIS_TEXTE)))
 
 
 
@@ -671,10 +667,6 @@ def make_cover(story, title, subtitle, patient_info, bilans_df, labels, styles, 
                 story.append(Paragraph(para,
                     ParagraphStyle("ai_cv", fontSize=9.5, fontName="Helvetica",
                         textColor=NOIR, leading=14, spaceAfter=8)))
-        story.append(Paragraph(
-            f"Synthèse générée par IA le {_date.today().strftime('%d/%m/%Y')} — À valider par le thérapeute.",
-            ParagraphStyle("ai_cv_foot", fontSize=7.5, fontName="Helvetica-Oblique",
-                textColor=GRIS_TEXTE)))
 
 
 
