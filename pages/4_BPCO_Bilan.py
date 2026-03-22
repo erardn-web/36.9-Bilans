@@ -6,7 +6,6 @@ from utils.db import (
     get_all_patients, create_patient,
     get_patient_bilans_bpco, save_bilan_bpco, delete_bilan_bpco,
 )
-from utils.muscle_widget import render_muscle_testing
 from utils.muscle_widget import render_muscle_tab
 from utils.bpco_data import (
     MMRC_GRADES, CAT_ITEMS, CAT_KEYS, compute_cat,
