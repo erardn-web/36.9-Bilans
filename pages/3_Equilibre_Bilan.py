@@ -6,7 +6,6 @@ from utils.db import (
     get_all_patients, create_patient,
     get_patient_bilans_equilibre, save_bilan_equilibre, delete_bilan_equilibre,
 )
-from utils.muscle_widget import render_muscle_testing
 from utils.muscle_widget import render_muscle_tab
 from utils.equilibre_data import (
     TINETTI_EQUILIBRE, TINETTI_MARCHE, TINETTI_EQ_KEYS, TINETTI_MA_KEYS,
