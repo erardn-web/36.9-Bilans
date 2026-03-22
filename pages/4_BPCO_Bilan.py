@@ -69,10 +69,22 @@ def render_accueil():
                 <span style="font-size:1.1rem;font-weight:700;color:#2B57A7;">
                 🖨️ Questionnaires à imprimer (vierges)</span></div>""",
                 unsafe_allow_html=True)
-            bp1, bp2 = st.columns(2)
-            with bp1: bpr_musc = st.checkbox("💪 Testing musculaire", value=True, key="bp_acc_musc")
-            with bp2: bpr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="bp_acc_lp")
-            sel_bp = (["muscle"] if bpr_musc else []) + (["leg_press"] if bpr_lp else [])
+            bp1, bp2, bp3, bp4 = st.columns(4)
+            with bp1: ba_mmrc = st.checkbox("😮‍💨 mMRC",         value=True, key="bp_acc_mmrc")
+            with bp2: ba_cat  = st.checkbox("📋 CAT",            value=True, key="bp_acc_cat")
+            with bp3: ba_6mwt = st.checkbox("🏃 6MWT",           value=True, key="bp_acc_6mwt")
+            with bp4: ba_sts  = st.checkbox("🪑 STS",            value=True, key="bp_acc_sts")
+            bp5, bp6, _ = st.columns([1, 1, 2])
+            with bp5: ba_musc = st.checkbox("💪 Testing MI",     value=True, key="bp_acc_musc")
+            with bp6: ba_lp   = st.checkbox("🏋️ 1RM Leg Press",  value=True, key="bp_acc_lp")
+            sel_bp = (
+                (["mmrc"]      if ba_mmrc else []) +
+                (["cat"]       if ba_cat  else []) +
+                (["6mwt"]      if ba_6mwt else []) +
+                (["sts"]       if ba_sts  else []) +
+                (["muscle"]    if ba_musc else []) +
+                (["leg_press"] if ba_lp   else [])
+            )
             ga, gb, _ = st.columns([1.5, 1, 4])
             with ga:
                 if sel_bp:
@@ -174,10 +186,22 @@ def render_bilan_selection():
                 <span style="font-size:1.1rem;font-weight:700;color:#2B57A7;">
                 🖨️ Questionnaires à imprimer</span></div>""",
                 unsafe_allow_html=True)
-            bp1, bp2 = st.columns(2)
-            with bp1: bpr_musc = st.checkbox("💪 Testing musculaire", value=True, key="bp_pr_musc")
-            with bp2: bpr_lp   = st.checkbox("🏋️ 1RM Leg Press",     value=True, key="bp_pr_lp")
-            sel_bp = (["muscle"] if bpr_musc else []) + (["leg_press"] if bpr_lp else [])
+            bp1, bp2, bp3, bp4 = st.columns(4)
+            with bp1: bpr_mmrc = st.checkbox("😮‍💨 mMRC",        value=True, key="bp_pr_mmrc")
+            with bp2: bpr_cat  = st.checkbox("📋 CAT",           value=True, key="bp_pr_cat")
+            with bp3: bpr_6mwt = st.checkbox("🏃 6MWT",          value=True, key="bp_pr_6mwt")
+            with bp4: bpr_sts  = st.checkbox("🪑 STS",           value=True, key="bp_pr_sts")
+            bp5, bp6, _ = st.columns([1, 1, 2])
+            with bp5: bpr_musc = st.checkbox("💪 Testing MI",    value=True, key="bp_pr_musc")
+            with bp6: bpr_lp   = st.checkbox("🏋️ 1RM Leg Press", value=True, key="bp_pr_lp")
+            sel_bp = (
+                (["mmrc"]      if bpr_mmrc else []) +
+                (["cat"]       if bpr_cat  else []) +
+                (["6mwt"]      if bpr_6mwt else []) +
+                (["sts"]       if bpr_sts  else []) +
+                (["muscle"]    if bpr_musc else []) +
+                (["leg_press"] if bpr_lp   else [])
+            )
             ga, gb, _ = st.columns([1.5, 1, 4])
             with ga:
                 if sel_bp:
