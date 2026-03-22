@@ -138,4 +138,8 @@ def get_bpco_headers():
     h += ["bmi","bode_score","bode_interpretation"]
     # IMC
     h += ["poids","taille"]
+    # Testing musculaire MI + 1RM Leg Press
+    from utils.muscle_data import get_muscle_keys as _gmk, LEG_PRESS_KEYS as _lpk
+    h += _gmk()
+    h += _lpk
     return h
