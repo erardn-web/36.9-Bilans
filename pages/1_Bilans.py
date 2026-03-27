@@ -45,7 +45,14 @@ def _load_templates():
     import templates.equilibre  # noqa
     import templates.bpco       # noqa
     import templates.lombalgie  # noqa
-    import templates.neutre      # noqa
+    import templates.neutre              # noqa
+    from tests.tests_cliniques.quick_dash            import QuickDASH            # noqa
+    from tests.tests_cliniques.ases                  import ASES                  # noqa
+    from tests.tests_cliniques.amplitudes_epaule     import AmplitudesEpaule     # noqa
+    from tests.tests_cliniques.testing_epaule        import TestingEpaule        # noqa
+    from tests.tests_cliniques.tests_epaule_speciaux import TestsEpauleSpeciaux  # noqa
+    from tests.tests_cliniques.classification_epaule import ClassificationEpaule # noqa
+    import templates.epaule_douloureuse  # noqa
     return True
 
 try:
@@ -107,6 +114,12 @@ def _ensure_registry():
         from tests.tests_cliniques.luomajoki                import Luomajoki                # noqa
         from tests.tests_cliniques.tests_objectifs_lombaire import TestsObjectifsLombaire  # noqa
         from tests.tests_cliniques.classification_lombaire  import ClassificationLombaire  # noqa
+        from tests.tests_cliniques.quick_dash            import QuickDASH            # noqa
+        from tests.tests_cliniques.ases                  import ASES                  # noqa
+        from tests.tests_cliniques.amplitudes_epaule     import AmplitudesEpaule     # noqa
+        from tests.tests_cliniques.testing_epaule        import TestingEpaule        # noqa
+        from tests.tests_cliniques.tests_epaule_speciaux import TestsEpauleSpeciaux  # noqa
+        from tests.tests_cliniques.classification_epaule import ClassificationEpaule # noqa
         from tests.tests_cliniques.quick_dash            import QuickDASH            # noqa
         from tests.tests_cliniques.ases                  import ASES                  # noqa
         from tests.tests_cliniques.amplitudes_epaule     import AmplitudesEpaule     # noqa
