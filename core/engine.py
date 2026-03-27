@@ -70,21 +70,92 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
                                key=f"{key_prefix}_active_{cls.test_id()}"):
                     new_active.append(cls.test_id())
 
-        # Tests supplémentaires — recherche
+        # Tests supplémentaires — recherche fuzzy + tags + IA
         if extra_ids:
             st.markdown("**Ajouter depuis la bibliothèque**")
             _all_tests_map = _all_tests()
-            search = st.text_input("🔍 Rechercher un test",
+            s1, s2 = st.columns([3, 2])
+            search = s1.text_input("🔍 Rechercher un test",
                                    key=f"{key_prefix}_search_extra",
-                                   placeholder="ex: Berg, TUG, ODI…")
-            matches = [tid for tid in extra_ids
-                       if not search or search.lower() in
-                          (_all_tests_map[tid].tab_label() + " " +
-                           _all_tests_map[tid].meta().get("nom","") + " " +
-                           _all_tests_map[tid].meta().get("description","")).lower()
-                       if tid in _all_tests_map]
+                                   placeholder="ex: épaule, équilibre, Berg, ODI…")
+            ai_query = s2.text_input("🤖 Décrire le patient",
+                                     key=f"{key_prefix}_ai_search",
+                                     placeholder="ex: douleur épaule après chute")
+            ai_result_key = f"{key_prefix}_ai_results"
+            ai_prev_key   = f"{key_prefix}_ai_query_prev"
+            if ai_query and st.session_state.get(ai_prev_key) != ai_query:
+                st.session_state[ai_prev_key] = ai_query
+                with st.spinner("Recherche IA en cours..."):
+                    try:
+                        import anthropic as _ant, json as _aj
+                        _client = _ant.Anthropic()
+                        _catalog = [{"id": tid,
+                            "nom": _all_tests_map[tid].meta().get("nom",""),
+                            "tags": _all_tests_map[tid].meta().get("tags",[]),
+                            "desc": _all_tests_map[tid].meta().get("description","")}
+                            for tid in extra_ids if tid in _all_tests_map]
+                        _system = ("Tu es un assistant physiothérapeute expert. "
+                            "On te donne un catalogue de tests cliniques et une description de patient. "
+                            "Reponds UNIQUEMENT avec un JSON {\"ids\": [\"id1\",\"id2\",...]} "
+                            "contenant les 3 a 6 IDs les plus pertinents. Rien d autre.")
+                        _user = ("Catalogue: " + _aj.dumps(_catalog, ensure_ascii=False)
+                            + "\n\nDescription patient: " + ai_query)
+                        _msg = _client.messages.create(
+                            model="claude-haiku-4-5", max_tokens=300,
+                            system=_system,
+                            messages=[{"role":"user","content":_user}])
+                        _parsed = _aj.loads(_msg.content[0].text.strip())
+                        st.session_state[ai_result_key] = _parsed.get("ids",[])
+                    except Exception as _e:
+                        st.session_state[ai_result_key] = []
+                        st.caption(f"Erreur IA : {_e}")
+            ai_suggested = st.session_state.get(ai_result_key, [])
+            if ai_suggested:
+                st.markdown("**Suggestions IA :**")
+                a1, a2 = st.columns(2)
+                for _i, _tid in enumerate(ai_suggested):
+                    _ecls = _all_tests_map.get(_tid)
+                    if not _ecls: continue
+                    _col = a1 if _i % 2 == 0 else a2
+                    with _col:
+                        if st.checkbox(f"✨ {_ecls.tab_label()}",
+                                       value=_tid in current_active,
+                                       key=f"{key_prefix}_ai_{_tid}"):
+                            if _tid not in new_active:
+                                new_active.append(_tid)
+                st.markdown("---")
+
+            def _score(tid, query):
+                """Retourne un score de pertinence (0=non pertinent)."""
+                if not query: return 0
+                ecls = _all_tests_map.get(tid)
+                if not ecls: return 0
+                m = ecls.meta()
+                # Corpus de recherche : id + nom + tab_label + description + tags
+                tags = " ".join(m.get("tags", []))
+                corpus = " ".join([
+                    tid, m.get("nom",""), m.get("tab_label",""),
+                    m.get("description",""), tags
+                ]).lower()
+                words = query.lower().split()
+                # Score : nombre de mots trouvés (exact ou partiel)
+                score = sum(1 for w in words if w in corpus)
+                # Bonus : correspondance exacte dans tags ou nom
+                if any(query.lower() in t.lower() for t in m.get("tags",[])):
+                    score += 3
+                if query.lower() in m.get("nom","").lower():
+                    score += 2
+                return score
+
+            if search:
+                scored = [(tid, _score(tid, search)) for tid in extra_ids
+                          if tid in _all_tests_map]
+                matches = [tid for tid, s in sorted(scored, key=lambda x: -x[1]) if s > 0]
+            else:
+                matches = []
+
             if search and not matches:
-                st.caption("Aucun test trouvé.")
+                st.caption("Aucun test trouvé — essayez un autre mot-clé.")
             e1, e2 = st.columns(2)
             for i, tid in enumerate(matches):
                 ecls = _all_tests_map[tid]
