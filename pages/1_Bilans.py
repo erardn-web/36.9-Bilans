@@ -45,6 +45,7 @@ def _load_templates():
     import templates.equilibre  # noqa
     import templates.bpco       # noqa
     import templates.lombalgie  # noqa
+    import templates.neutre      # noqa
     return True
 
 try:
@@ -106,6 +107,12 @@ def _ensure_registry():
         from tests.tests_cliniques.luomajoki                import Luomajoki                # noqa
         from tests.tests_cliniques.tests_objectifs_lombaire import TestsObjectifsLombaire  # noqa
         from tests.tests_cliniques.classification_lombaire  import ClassificationLombaire  # noqa
+        from tests.tests_cliniques.quick_dash            import QuickDASH            # noqa
+        from tests.tests_cliniques.ases                  import ASES                  # noqa
+        from tests.tests_cliniques.amplitudes_epaule     import AmplitudesEpaule     # noqa
+        from tests.tests_cliniques.testing_epaule        import TestingEpaule        # noqa
+        from tests.tests_cliniques.tests_epaule_speciaux import TestsEpauleSpeciaux  # noqa
+        from tests.tests_cliniques.classification_epaule import ClassificationEpaule # noqa
         from tests.tests_cliniques.odi              import ODI              # noqa
         from tests.tests_cliniques.tampa            import Tampa            # noqa
         from tests.tests_cliniques.orebro           import Orebro           # noqa
@@ -122,7 +129,8 @@ def _ensure_registry():
     if "bpco" not in _templates:
         import templates.bpco       # noqa
     if "lombalgie" not in _templates:
-        import templates.lombalgie  # noqa
+        import templates.lombalgie           # noqa
+        import templates.epaule_douloureuse  # noqa
 
 # ── CSS (copie fidèle v1) ─────────────────────────────────────────────────────
 st.markdown("""
@@ -220,16 +228,20 @@ def render_accueil():
             nom    = st.text_input("Nom *")
             prenom = st.text_input("Prénom *")
             ddn    = st.date_input("Date de naissance *",
+                                   value=None,
                                    min_value=date(1900,1,1), max_value=date.today())
-            sexe   = st.selectbox("Sexe", ["Féminin","Masculin","Autre"])
+            sexe   = st.selectbox("Sexe", ["— Non renseigné —","Féminin","Masculin","Non-binaire"])
             submitted = st.form_submit_button("➕ Créer", type="primary")
 
         if submitted:
             if not nom or not prenom:
                 st.error("Nom et prénom obligatoires.")
+            elif ddn is None:
+                st.error("Date de naissance obligatoire.")
             else:
+                sexe_val = "" if sexe == "— Non renseigné —" else sexe
                 with st.spinner("Enregistrement…"):
-                    pid = create_patient(nom, prenom, str(ddn), sexe, S.cabinet_id)
+                    pid = create_patient(nom, prenom, str(ddn), sexe_val, S.cabinet_id)
                 patients_df2 = get_all_patients(S.cabinet_id)
                 rows2 = patients_df2[patients_df2["patient_id"]==pid]
                 if not rows2.empty:
