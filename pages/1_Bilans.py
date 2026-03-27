@@ -624,7 +624,9 @@ def render_formulaire():
     if tc_key not in S or not S[tc_key]:
         S[tc_key] = build_tests_from_snapshot(snap)
     test_classes = S[tc_key]
-    if not test_classes:
+    # Template neutre (tests=[]) — OK, on continue sans warning
+    _template_id_bilan = snap.get("template_id","")
+    if not test_classes and _template_id_bilan != "neutre":
         from core.registry import all_tests
         reg = all_tests()
         if not reg:
