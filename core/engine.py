@@ -44,14 +44,23 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
         try:    current_active = _json.loads(current_active)
         except: current_active = [cls.test_id() for cls in test_classes]
 
+    # Tests disponibles dans la bibliothèque mais hors template
+    from core.registry import all_tests as _all_tests
+    all_test_ids   = list(_all_tests().keys())
+    template_ids   = [cls.test_id() for cls in test_classes]
+    extra_ids      = [tid for tid in all_test_ids if tid not in template_ids]
+    extra_active   = [tid for tid in current_active if tid not in template_ids]
+
     # Sélection dans un expander AVANT les onglets
     new_active = list(current_active)
     with st.expander("🔧 Tests actifs pour ce bilan", expanded=False):
         st.markdown(
-            '<div class="info-box">Décochez les tests non réalisés. '
-            "L'onglet disparaît immédiatement.</div>",
+            '<div class="info-box">Décochez les tests non réalisés · '            "Cochez des tests supplémentaires depuis la bibliothèque.</div>",
             unsafe_allow_html=True)
         new_active = []
+
+        # Tests du template
+        st.markdown("**Tests du template**")
         c1, c2 = st.columns(2)
         for i, cls in enumerate(test_classes):
             col = c1 if i % 2 == 0 else c2
@@ -60,10 +69,46 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
                                value=cls.test_id() in current_active,
                                key=f"{key_prefix}_active_{cls.test_id()}"):
                     new_active.append(cls.test_id())
+
+        # Tests supplémentaires — recherche
+        if extra_ids:
+            st.markdown("**Ajouter depuis la bibliothèque**")
+            _all_tests_map = _all_tests()
+            search = st.text_input("🔍 Rechercher un test",
+                                   key=f"{key_prefix}_search_extra",
+                                   placeholder="ex: Berg, TUG, ODI…")
+            matches = [tid for tid in extra_ids
+                       if not search or search.lower() in
+                          (_all_tests_map[tid].tab_label() + " " +
+                           _all_tests_map[tid].meta().get("nom","") + " " +
+                           _all_tests_map[tid].meta().get("description","")).lower()
+                       if tid in _all_tests_map]
+            if search and not matches:
+                st.caption("Aucun test trouvé.")
+            e1, e2 = st.columns(2)
+            for i, tid in enumerate(matches):
+                ecls = _all_tests_map[tid]
+                col = e1 if i % 2 == 0 else e2
+                with col:
+                    if st.checkbox(ecls.tab_label(),
+                                   value=tid in current_active,
+                                   key=f"{key_prefix}_extra_{tid}"):
+                        new_active.append(tid)
+            # Garder cochés les extras déjà actifs même si hors recherche
+            for tid in extra_active:
+                if tid not in new_active and tid in _all_tests_map:
+                    new_active.append(tid)
+
     collected["tests_actifs"] = _json.dumps(new_active)
 
-    # Seuls les tests actifs ont un onglet
-    active_classes = [cls for cls in test_classes if cls.test_id() in new_active]
+    # Reconstruire active_classes en incluant les extras
+    _all_tests_map = _all_tests()
+    extra_classes  = [_all_tests_map[tid] for tid in new_active
+                      if tid not in template_ids and tid in _all_tests_map]
+
+    # Seuls les tests actifs ont un onglet (template + extras)
+    active_classes = ([cls for cls in test_classes if cls.test_id() in new_active]
+                      + extra_classes)
 
     _inject_tab_highlight_css(active_classes, bilan_data, key_prefix)
 
@@ -186,10 +231,27 @@ def render_evolution_view(bilans_df, patient_info: dict,
             return True
         return False
 
-    visible_classes = [cls for cls in test_classes if _test_used(cls)]
+    # Inclure aussi les tests extras (hors template) cochés dans au moins un bilan
+    from core.registry import all_tests as _all_ev_tests
+    _all_ev_map    = _all_ev_tests()
+    template_ids   = {cls.test_id() for cls in test_classes}
+    # Collecter tous les test_ids actifs dans les bilans
+    extra_ev_ids   = set()
+    for _, row in bilans_df.iterrows():
+        ta_raw = row.get("tests_actifs","")
+        if ta_raw and ta_raw not in ("","[]","None"):
+            try:
+                for tid in _j.loads(ta_raw):
+                    if tid not in template_ids:
+                        extra_ev_ids.add(tid)
+            except Exception:
+                pass
+    extra_ev_classes = [_all_ev_map[tid] for tid in extra_ev_ids if tid in _all_ev_map]
+    all_ev_classes   = test_classes + extra_ev_classes
+    visible_classes  = [cls for cls in all_ev_classes if _test_used(cls)]
 
-    # Onglets : Synthèse IA + tests visibles + Détail
-    tab_labels = ["🤖 Synthèse IA"] + [cls.tab_label() for cls in visible_classes] + ["📋 Détail"]
+    # Onglets : Synthèse IA + tests visibles
+    tab_labels = ["🤖 Synthèse IA"] + [cls.tab_label() for cls in visible_classes]
     tabs = st.tabs(tab_labels)
 
     # Onglet Synthèse IA
@@ -207,19 +269,7 @@ def render_evolution_view(bilans_df, patient_info: dict,
             )
             test_cls.render_evolution(bilans_df, labels)
 
-    # Onglet Détail
-    with tabs[-1]:
-        for i, (_, row) in enumerate(bilans_df.iterrows()):
-            with st.expander(f"Bilan {i+1} — {labels[i]}"):
-                if test_classes:
-                    cols = st.columns(min(len(test_classes), 4))
-                    for j, test_cls in enumerate(test_classes):
-                        s = test_cls.score(dict(row))
-                        if s["score"] is not None:
-                            with cols[j % len(cols)]:
-                                st.metric(test_cls.test_nom(), s["score"])
-                if row.get("notes_generales"):
-                    st.markdown(f"*{row['notes_generales']}*")
+
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
