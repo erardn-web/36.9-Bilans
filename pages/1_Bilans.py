@@ -204,18 +204,20 @@ def render_accueil():
 
     with col_a:
         st.markdown("#### 🔍 Rechercher un patient existant")
-        patients_df = get_all_patients(S.cabinet_id)
-        if patients_df.empty:
-            st.info("Aucun patient enregistré.")
-        else:
-            search = st.text_input("Recherche (nom, prénom)…", key="search_input",
-                                   placeholder="Dupont, Marie…")
-            if search:
-                filtered = search_patients(search, S.cabinet_id)
+        search = st.text_input("Recherche (nom, prénom)…", key="search_input",
+                               placeholder="Dupont, Marie…")
+        if len(search.strip()) < 2:
+            if not search.strip():
+                st.caption("Tapez au moins 2 caractères pour rechercher.")
             else:
-                filtered = patients_df
+                st.caption("Continuez à taper…")
+            filtered = None
+        else:
+            filtered = search_patients(search, S.cabinet_id)
 
-            if filtered.empty:
+            if filtered is None:
+                pass
+            elif filtered.empty:
                 st.warning("Aucun résultat.")
             else:
                 for _, row in filtered.iterrows():
