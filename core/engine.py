@@ -286,18 +286,17 @@ def _render_general_tab(lv, key_prefix: str, patient_info: dict = None) -> dict:
     st.markdown("**Constantes au repos**")
     v1, v2, v3, v4 = st.columns(4)
     with v1:
-        fc_repos = st.number_input("FC (bpm)", 0, 300, int(_lf("fc_repos") or 0) or None,
-                                   key=f"{key_prefix}_fc")
+        fc_repos = st.text_input("FC (bpm)", value=str(int(_lf("fc_repos"))) if _lf("fc_repos") else "",
+                                 placeholder="ex: 72", key=f"{key_prefix}_fc")
     with v2:
-        fr_repos = st.number_input("FR (/min)", 0, 60, int(_lf("fr_repos") or 0) or None,
-                                   key=f"{key_prefix}_fr")
+        fr_repos = st.text_input("FR (/min)", value=str(int(_lf("fr_repos"))) if _lf("fr_repos") else "",
+                                 placeholder="ex: 16", key=f"{key_prefix}_fr")
     with v3:
         ta_repos = st.text_input("TA (mmHg)", value=lv("ta_repos",""),
-                                 placeholder="ex: 120/80",
-                                 key=f"{key_prefix}_ta")
+                                 placeholder="ex: 120/80", key=f"{key_prefix}_ta")
     with v4:
-        spo2_repos = st.number_input("SpO2 (%)", 0, 100, int(_lf("spo2_repos") or 0) or None,
-                                     key=f"{key_prefix}_spo2")
+        spo2_repos = st.text_input("SpO2 (%)", value=str(int(_lf("spo2_repos"))) if _lf("spo2_repos") else "",
+                                   placeholder="ex: 98", key=f"{key_prefix}_spo2")
 
     st.markdown("---")
 
@@ -316,10 +315,10 @@ def _render_general_tab(lv, key_prefix: str, patient_info: dict = None) -> dict:
         "poids_kg":                 poids or "",
         "taille_cm":                taille or "",
         "bmi":                      bmi or "",
-        "fc_repos":                 fc_repos or "",
-        "fr_repos":                 fr_repos or "",
-        "ta_repos":                 ta_repos,
-        "spo2_repos":               spo2_repos or "",
+        "fc_repos":                 fc_repos.strip() or "",
+        "fr_repos":                 fr_repos.strip() or "",
+        "ta_repos":                 ta_repos.strip(),
+        "spo2_repos":               spo2_repos.strip() or "",
         "notes_generales":          notes,
     }
 
