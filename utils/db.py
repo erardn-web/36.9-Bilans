@@ -71,7 +71,7 @@ CAS_HEADERS = [
 BILANS_BASE_HEADERS = [
     "bilan_id","cas_id","patient_id","cabinet_id",
     "praticien","date_bilan",
-    "tests_actifs","diagnostic_prescription","notes_generales","analyse_ia",
+    "tests_actifs","diagnostic_prescription","poids_kg","taille_cm","bmi","fc_repos","fr_repos","ta_repos","spo2_repos","notes_generales","analyse_ia",
 ]
 
 # Headers complets de la feuille Bilans
