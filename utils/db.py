@@ -418,9 +418,11 @@ def get_bilan_donnees(bilan_id) -> dict:
     """Retourne les données du bilan — directement depuis la ligne plate."""
     bilan = get_bilan(bilan_id)
     if not bilan: return {}
-    # Retourner uniquement les champs de tests (pas les métadonnées)
+    # Retourner les champs de tests + champs généraux (poids, FC, etc.)
+    GENERAL_EXTRA = ["diagnostic_prescription","poids_kg","taille_cm","bmi",
+                     "fc_repos","fr_repos","ta_repos","spo2_repos"]
     donnees = {}
-    for f in ALL_TEST_FIELDS:
+    for f in GENERAL_EXTRA + ALL_TEST_FIELDS:
         if f in bilan:
             donnees[f] = bilan[f]
     # Compatibilité : si ancienne structure JSON encore présente
