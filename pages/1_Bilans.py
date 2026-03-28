@@ -66,7 +66,7 @@ except Exception as _e:
 from utils.pdf import generate_pdf, generate_questionnaires_pdf
 from utils.ai_analyse import load_analyse_cas
 from utils.db import (
-    get_all_patients, create_patient, search_patients,
+    get_all_patients, create_patient, update_patient, search_patients,
     get_patient_cas, create_cas, get_cas, set_cas_statut,
     get_cas_bilans, get_cas_bilans_meta, create_bilan, get_bilan_donnees,
     save_bilan_donnees, get_tests_actifs, get_audit_log,
