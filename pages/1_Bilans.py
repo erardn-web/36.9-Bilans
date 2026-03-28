@@ -211,10 +211,7 @@ def render_accueil():
             search = st.text_input("Recherche (nom, prénom)…", key="search_input",
                                    placeholder="Dupont, Marie…")
             if search:
-                q    = search.upper().strip()
-                mask = (patients_df["nom"].str.upper().str.contains(q, na=False) |
-                        patients_df["prenom"].str.upper().str.contains(q, na=False))
-                filtered = patients_df[mask]
+                filtered = search_patients(search, S.cabinet_id)
             else:
                 filtered = patients_df
 
