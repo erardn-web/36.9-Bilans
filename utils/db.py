@@ -86,15 +86,10 @@ AUDIT_HEADERS = [
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _ensure_sheet(ss, name, headers):
-    """Crée la feuille si elle n'existe pas, ajoute les colonnes manquantes.
-    Optimisé : skip header check si le nombre de colonnes est déjà correct."""
+    """Crée la feuille si elle n'existe pas, ajoute les colonnes manquantes."""
     import gspread
     try:
         ws = ss.worksheet(name)
-        # Vérification légère : compter les colonnes sans lire tout le contenu
-        if ws.col_count >= len(headers):
-            return ws  # Headers déjà en place — ne pas relire
-        # Colonnes manquantes — lire et corriger
         existing = ws.row_values(1)
         if not existing:
             ws.append_row(headers)
