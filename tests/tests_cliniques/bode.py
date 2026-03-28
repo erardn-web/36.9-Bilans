@@ -53,8 +53,12 @@ class BODE(BaseTest):
         st.markdown('<div class="info-box">Calculé à partir du VEMS%, mMRC, 6MWT et IMC. '
                     'Remplissez les onglets correspondants d\'abord.</div>', unsafe_allow_html=True)
 
-        # IMC depuis onglet général
+        # IMC depuis onglet général (bmi calculé, ou recalcul depuis poids_kg/taille_cm)
         bmi_val = _lf("bmi")
+        if not bmi_val:
+            p = _lf("poids_kg"); t = _lf("taille_cm")
+            if p and t and p > 0 and t > 0:
+                bmi_val = round(p / (t/100)**2, 1)
         if bmi_val:
             st.info(f"IMC (onglet Général) : **{bmi_val} kg/m²**")
         else:
