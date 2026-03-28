@@ -37,7 +37,7 @@ class BODE(BaseTest):
 
     @classmethod
     def fields(cls):
-        return ["poids","taille","bmi","bode_score","bode_interpretation"]
+        return ["bode_score","bode_interpretation"]
 
     def render(self, lv, key_prefix):
         def _lf(k):
@@ -53,23 +53,17 @@ class BODE(BaseTest):
         st.markdown('<div class="info-box">Calculé à partir du VEMS%, mMRC, 6MWT et IMC. '
                     'Remplissez les onglets correspondants d\'abord.</div>', unsafe_allow_html=True)
 
-        b1,b2 = st.columns(2)
-        with b1:
-            poids = st.number_input("Poids (kg)",0.0,250.0,_lf("poids"),0.1,
-                                    key=f"{key_prefix}_poids")
-            taille = st.number_input("Taille (cm)",0.0,250.0,_lf("taille"),0.1,
-                                     key=f"{key_prefix}_taille")
-        with b2:
-            bmi_calc = None
-            if poids and taille and poids>0 and taille>0:
-                bmi_calc = round(poids / (taille/100)**2, 1)
-                st.metric("IMC calculé", f"{bmi_calc} kg/m²")
+        # IMC depuis onglet général
+        bmi_val = _lf("bmi")
+        if bmi_val:
+            st.info(f"IMC (onglet Général) : **{bmi_val} kg/m²**")
+        else:
+            st.warning("⚠️ Renseignez le poids et la taille dans l'onglet Général pour calculer l'IMC.")
 
         # Lire les valeurs des autres tests depuis bilan_data via lv
         fev1_val = _lf("spiro_vems_pct")
         mmrc_val = _li("mmrc_grade")
         dist_val = _li("mwt_distance")
-        bmi_val  = bmi_calc or _lf("bmi")
 
         c1,c2,c3,c4 = st.columns(4)
         with c1: st.metric("VEMS % prédit", f"{fev1_val}%" if fev1_val else "—")
@@ -85,7 +79,7 @@ class BODE(BaseTest):
                         f'  <small>({bode_r["survival"]})</small></div>', unsafe_allow_html=True)
             bode_score=bode_r["score"]; bode_interp=bode_r["interpretation"]
 
-        return {"poids":poids or "","taille":taille or "","bmi":bmi_val or "",
+        return {"bmi":bmi_val or "",
                 "bode_score":bode_score,"bode_interpretation":bode_interp}
 
     @classmethod
