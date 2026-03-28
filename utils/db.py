@@ -245,10 +245,14 @@ def get_all_patients(cabinet_id="default") -> pd.DataFrame:
 def search_patients(query, cabinet_id="default") -> pd.DataFrame:
     df = get_all_patients(cabinet_id)
     if not query.strip(): return df
-    q    = query.upper().strip()
-    mask = (df["nom"].str.upper().str.contains(q, na=False) |
-            df["prenom"].str.upper().str.contains(q, na=False))
-    return df[mask].reset_index(drop=True)
+    from utils.search import fuzzy_score
+    def _score(row):
+        corpus = f"{row['nom']} {row['prenom']}"
+        return fuzzy_score(query, corpus)
+    scores = df.apply(_score, axis=1)
+    df = df[scores > 0].copy()
+    df["_score"] = scores[scores > 0]
+    return df.sort_values("_score", ascending=False).drop("_score", axis=1).reset_index(drop=True)
 
 def create_patient(nom, prenom, date_naissance, sexe,
                    cabinet_id="default") -> str:
