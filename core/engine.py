@@ -13,7 +13,7 @@ from datetime import date
 # ── Moteur de formulaire ──────────────────────────────────────────────────────
 
 def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
-                      key_prefix: str) -> dict:
+                      key_prefix: str, patient_info: dict = None) -> dict:
     """
     Affiche le formulaire d'un bilan avec un onglet par test.
 
@@ -101,7 +101,7 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
                         _user = ("Catalogue: " + _aj.dumps(_catalog, ensure_ascii=False)
                             + "\n\nDescription patient: " + ai_query)
                         _msg = _client.messages.create(
-                            model="claude-haiku-4-5", max_tokens=300,
+                            model="claude-haiku-4-5", max_tokens=600,
                             system=_system,
                             messages=[{"role":"user","content":_user}])
                         _raw = _msg.content[0].text.strip()
@@ -194,7 +194,7 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
     tabs = st.tabs(tab_labels) if len(tab_labels) > 1 else [st.container()]
 
     with tabs[0]:
-        general = _render_general_tab(lv, key_prefix)
+        general = _render_general_tab(lv, key_prefix, patient_info=patient_info)
         collected.update(general)
 
     for i, test_cls in enumerate(active_classes):
@@ -205,8 +205,11 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
     return collected
 
 
-def _render_general_tab(lv, key_prefix: str) -> dict:
+def _render_general_tab(lv, key_prefix: str, patient_info: dict = None) -> dict:
     """Onglet général commun à tous les bilans."""
+    import math as _math
+
+    # ── Ligne 1 : date + praticien ────────────────────────────────────────────
     c1, c2 = st.columns(2)
     with c1:
         bilan_date = st.date_input(
@@ -214,30 +217,109 @@ def _render_general_tab(lv, key_prefix: str) -> dict:
             value=_parse_date(lv("date_bilan", str(date.today()))),
             key=f"{key_prefix}_date"
         )
-        diagnostic_prescription = st.text_area(
-            "Diagnostics indiqués sur la prescription",
-            value=lv("diagnostic_prescription", ""),
-            height=80,
-            key=f"{key_prefix}_diag_prescription",
-            placeholder="Ex : Lombalgie chronique, syndrome douloureux post-opératoire..."
-        )
-
     with c2:
         praticien = st.text_input(
             "Praticien",
             value=lv("praticien", ""),
             key=f"{key_prefix}_prat"
         )
-        notes = st.text_area(
-            "Notes générales",
-            value=lv("notes_generales", ""),
-            height=80,
-            key=f"{key_prefix}_notes"
-        )
+
+    # ── Prescription ──────────────────────────────────────────────────────────
+    diagnostic_prescription = st.text_area(
+        "Diagnostics indiqués sur la prescription",
+        value=lv("diagnostic_prescription", ""),
+        height=60,
+        key=f"{key_prefix}_diag_prescription",
+        placeholder="Ex : Lombalgie chronique, syndrome douloureux post-opératoire..."
+    )
+
+    st.markdown("---")
+
+    # ── Anthropométrie + âge ──────────────────────────────────────────────────
+    st.markdown("**Données patient**")
+
+    # Âge calculé depuis date_naissance
+    age_txt = ""
+    if patient_info:
+        ddn_raw = patient_info.get("date_naissance","")
+        if ddn_raw:
+            try:
+                import pandas as _pd
+                ddn = _pd.to_datetime(ddn_raw).date()
+                today = date.today()
+                age_val = today.year - ddn.year - ((today.month, today.day) < (ddn.month, ddn.day))
+                age_txt = f"{age_val} ans"
+            except Exception:
+                pass
+
+    a1, a2, a3, a4 = st.columns(4)
+    with a1:
+        if age_txt:
+            st.markdown(f"**Âge**")
+            st.markdown(f"**{age_txt}**")
+    with a2:
+        def _lf(k):
+            v = lv(k, None)
+            try: return float(v) if v not in (None,"","None") else None
+            except: return None
+        poids = st.number_input("Poids (kg)", 0.0, 300.0, _lf("poids_kg"), 0.5,
+                                key=f"{key_prefix}_poids")
+    with a3:
+        taille = st.number_input("Taille (cm)", 0.0, 250.0, _lf("taille_cm"), 0.5,
+                                 key=f"{key_prefix}_taille")
+    with a4:
+        bmi = None
+        if poids and taille and poids > 0 and taille > 0:
+            bmi = round(poids / (taille/100)**2, 1)
+            bmi_color = ("#388e3c" if 18.5 <= bmi < 25
+                         else "#f57c00" if bmi < 18.5 or bmi < 30
+                         else "#d32f2f")
+            st.markdown("**IMC**")
+            st.markdown(
+                f'<span style="font-size:1.3rem;font-weight:700;color:{bmi_color}">'
+                f'{bmi}</span> <small>kg/m²</small>',
+                unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Constantes au repos ───────────────────────────────────────────────────
+    st.markdown("**Constantes au repos**")
+    v1, v2, v3, v4 = st.columns(4)
+    with v1:
+        fc_repos = st.number_input("FC (bpm)", 0, 300, int(_lf("fc_repos") or 0) or None,
+                                   key=f"{key_prefix}_fc")
+    with v2:
+        fr_repos = st.number_input("FR (/min)", 0, 60, int(_lf("fr_repos") or 0) or None,
+                                   key=f"{key_prefix}_fr")
+    with v3:
+        ta_repos = st.text_input("TA (mmHg)", value=lv("ta_repos",""),
+                                 placeholder="ex: 120/80",
+                                 key=f"{key_prefix}_ta")
+    with v4:
+        spo2_repos = st.number_input("SpO2 (%)", 0, 100, int(_lf("spo2_repos") or 0) or None,
+                                     key=f"{key_prefix}_spo2")
+
+    st.markdown("---")
+
+    # ── Notes ─────────────────────────────────────────────────────────────────
+    notes = st.text_area(
+        "Notes générales",
+        value=lv("notes_generales", ""),
+        height=80,
+        key=f"{key_prefix}_notes"
+    )
+
     return {
         "date_bilan":               str(bilan_date),
         "praticien":                praticien,
         "diagnostic_prescription":  diagnostic_prescription,
+        "poids_kg":                 poids or "",
+        "taille_cm":                taille or "",
+        "bmi":                      bmi or "",
+        "fc_repos":                 fc_repos or "",
+        "fr_repos":                 fr_repos or "",
+        "ta_repos":                 ta_repos,
+        "spo2_repos":               spo2_repos or "",
         "notes_generales":          notes,
     }
 
