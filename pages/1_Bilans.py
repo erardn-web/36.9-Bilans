@@ -700,7 +700,8 @@ def render_formulaire():
 
     collected = render_bilan_form(
         bilan_id=bid, bilan_data=S.bilan_data,
-        test_classes=test_classes, key_prefix=f"frm_{bid}")
+        test_classes=test_classes, key_prefix=f"frm_{bid}",
+        patient_info=S.patient_info)
 
     if save_btn:
         with st.spinner("Enregistrement…"):
