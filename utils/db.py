@@ -419,8 +419,10 @@ def get_bilan_donnees(bilan_id) -> dict:
     bilan = get_bilan(bilan_id)
     if not bilan: return {}
     # Retourner les champs de tests + champs généraux (poids, FC, etc.)
-    GENERAL_EXTRA = ["diagnostic_prescription","poids_kg","taille_cm","bmi",
-                     "fc_repos","fr_repos","ta_repos","spo2_repos"]
+    GENERAL_EXTRA = ["praticien","date_bilan","diagnostic_prescription",
+                     "poids_kg","taille_cm","bmi",
+                     "fc_repos","fr_repos","ta_repos","spo2_repos",
+                     "notes_generales"]
     donnees = {}
     for f in GENERAL_EXTRA + ALL_TEST_FIELDS:
         if f in bilan:
