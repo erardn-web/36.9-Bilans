@@ -249,12 +249,11 @@ def render_accueil():
         if submitted:
             if not nom or not prenom:
                 st.error("Nom et prénom obligatoires.")
-            elif ddn is None:
-                st.error("Date de naissance obligatoire.")
             else:
                 sexe_val = "" if sexe == "— Non renseigné —" else sexe
+                ddn_str = str(ddn) if ddn is not None else ""
                 with st.spinner("Enregistrement…"):
-                    pid = create_patient(nom, prenom, str(ddn), sexe_val, S.cabinet_id)
+                    pid = create_patient(nom, prenom, ddn_str, sexe_val, S.cabinet_id)
                 patients_df2 = get_all_patients(S.cabinet_id)
                 rows2 = patients_df2[patients_df2["patient_id"]==pid]
                 if not rows2.empty:
