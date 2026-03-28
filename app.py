@@ -24,7 +24,7 @@ from core.registry       import register_template, all_templates
 def _load_all_templates():
     """Chargé une seule fois par session — importe tous les templates."""
     import traceback
-    for tmpl_name in ["templates.shv","templates.equilibre","templates.bpco","templates.lombalgie"]:
+    for tmpl_name in ["templates.shv","templates.equilibre","templates.bpco","templates.lombalgie","templates.neutre","templates.epaule_douloureuse"]:
         try:
             __import__(tmpl_name)
         except Exception as e:
