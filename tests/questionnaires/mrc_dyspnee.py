@@ -16,7 +16,7 @@ class MRCDyspnee(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"mrc_dyspnee","nom":"MRC Dyspnée","tab_label":"🚶 MRC Dyspnée",
-                "categorie":"questionnaire","description":"Échelle MRC dyspnée — 5 grades (0–4)"}
+                "categorie":"questionnaire","tags":["dyspnée", "respiratoire", "SHV", "BPCO", "essoufflement"],"description":"Échelle MRC dyspnée — 5 grades (0–4)"}
 
     @classmethod
     def fields(cls):
