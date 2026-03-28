@@ -88,20 +88,29 @@ AUDIT_HEADERS = [
 def _ensure_sheet(ss, name, headers):
     """Crée la feuille si elle n'existe pas, ajoute les colonnes manquantes."""
     import gspread
+    changed = False
     try:
         ws = ss.worksheet(name)
         existing = ws.row_values(1)
         if not existing:
             ws.append_row(headers)
+            changed = True
         else:
             missing = [h for h in headers if h not in existing]
             if missing:
                 new_hdrs = existing + missing
                 ws.resize(cols=len(new_hdrs))
                 ws.update([new_hdrs], "A1")
+                changed = True
     except gspread.WorksheetNotFound:
         ws = ss.add_worksheet(name, rows=5000, cols=max(len(headers), 50))
         ws.append_row(headers)
+        changed = True
+    if changed:
+        try:
+            _cached_sheet_values.clear()
+        except Exception:
+            pass
     return ws
 
 
