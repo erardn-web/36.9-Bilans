@@ -9,9 +9,6 @@ from tests.tests_cliniques.amplitudes_epaule     import AmplitudesEpaule
 from tests.tests_cliniques.testing_epaule        import TestingEpaule
 from tests.tests_cliniques.tests_epaule_speciaux import TestsEpauleSpeciaux
 from tests.tests_cliniques.classification_epaule import ClassificationEpaule
-from tests.tests_cliniques.testing_mi            import TestingMI
-from tests.tests_cliniques.leg_press             import LegPress
-
 EPAULE_DOULOUREUSE = register_template(BilanTemplate(
     template_id = "epaule_douloureuse",
     nom         = "Épaule douloureuse",
@@ -25,7 +22,5 @@ EPAULE_DOULOUREUSE = register_template(BilanTemplate(
         TestingEpaule,
         TestsEpauleSpeciaux,
         ClassificationEpaule,
-        TestingMI,
-        LegPress,
     ],
 ))
