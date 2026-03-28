@@ -173,26 +173,37 @@ def _append_row(ws_name, data: dict):
 
 def _update_row(ws_name, id_col, id_val, updates: dict) -> bool:
     ws = _ws(ws_name)
-    try:
-        rows = _cached_sheet_values(ws.title, ws.spreadsheet.id)
-    except Exception:
-        rows = ws.get_all_values()
+    # Toujours lire directement depuis GSheets pour avoir les vrais headers
+    rows = ws.get_all_values()
     if not rows: return False
     hdr = rows[0]
     if id_col not in hdr: return False
     col_id = hdr.index(id_col)
     for i, row in enumerate(rows[1:], start=2):
         if row and len(row) > col_id and row[col_id] == id_val:
-            row = list(row)  # copy
-            while len(row) < len(hdr):
-                row.append("")
+            # Mise à jour cellule par cellule — évite d'écraser toute la ligne
+            cell_updates = []
             for k, v in updates.items():
                 if k in hdr:
-                    row[hdr.index(k)] = str(v)
-            ws.update([row], f"A{i}")
+                    col_num = hdr.index(k) + 1  # 1-based
+                    cell_updates.append({
+                        "range": f"{_col_letter(col_num)}{i}",
+                        "values": [[str(v)]]
+                    })
+            if cell_updates:
+                ws.batch_update(cell_updates)
             _invalidate_read_cache()
             return True
     return False
+
+
+def _col_letter(n: int) -> str:
+    """Convertit un numéro de colonne (1-based) en lettre Excel (A, B, ... Z, AA...)."""
+    result = ""
+    while n > 0:
+        n, r = divmod(n - 1, 26)
+        result = chr(65 + r) + result
+    return result
 
 def _get_row(ws_name, id_col, id_val) -> dict:
     ws = _ws(ws_name)
@@ -428,13 +439,12 @@ def get_bilan_donnees(bilan_id) -> dict:
 
 def save_bilan_donnees(bilan_id, donnees: dict, therapeute="") -> bool:
     """Sauvegarde les données du bilan directement dans les colonnes plates."""
-    # Filtrer uniquement les champs connus
+    # Vider le cache pour s'assurer d'avoir les vrais headers GSheets
+    _invalidate_read_cache()
+
     updates = {}
     for k, v in donnees.items():
         updates[k] = str(v) if v is not None else ""
-    # Inclure aussi notes_generales si présent
-    if "notes_generales" in donnees:
-        updates["notes_generales"] = str(donnees["notes_generales"])
 
     ok = _update_row("Bilans", "bilan_id", bilan_id, updates)
     if ok:
