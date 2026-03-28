@@ -132,32 +132,14 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
                                 new_active.append(_tid)
                 st.markdown("---")
 
-            def _score(tid, query):
-                """Retourne un score de pertinence (0=non pertinent)."""
-                if not query: return 0
-                ecls = _all_tests_map.get(tid)
-                if not ecls: return 0
-                m = ecls.meta()
-                # Corpus de recherche : id + nom + tab_label + description + tags
-                tags = " ".join(m.get("tags", []))
-                corpus = " ".join([
-                    tid, m.get("nom",""), m.get("tab_label",""),
-                    m.get("description",""), tags
-                ]).lower()
-                words = query.lower().split()
-                # Score : nombre de mots trouvés (exact ou partiel)
-                score = sum(1 for w in words if w in corpus)
-                # Bonus : correspondance exacte dans tags ou nom
-                if any(query.lower() in t.lower() for t in m.get("tags",[])):
-                    score += 3
-                if query.lower() in m.get("nom","").lower():
-                    score += 2
-                return score
-
             if search:
-                scored = [(tid, _score(tid, search)) for tid in extra_ids
-                          if tid in _all_tests_map]
-                matches = [tid for tid, s in sorted(scored, key=lambda x: -x[1]) if s > 0]
+                from utils.search import search_items
+                def _test_key(tid):
+                    m = _all_tests_map[tid].meta()
+                    corpus = " ".join([tid, m.get("nom",""), m.get("tab_label",""),
+                                       m.get("description","")])
+                    return corpus, m.get("tags",[])
+                matches = search_items(search, [t for t in extra_ids if t in _all_tests_map], _test_key)
             else:
                 matches = []
 
