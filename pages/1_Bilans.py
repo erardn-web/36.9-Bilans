@@ -269,13 +269,56 @@ def render_dossier():
         unsafe_allow_html=True)
     st.markdown("")
 
-    col_back, col_new, _ = st.columns([1,1,4])
+    col_back, col_new, col_edit, _ = st.columns([1,1,1,3])
     with col_back:
         if st.button("⬅️ Changer de patient"):
             _go("accueil")
     with col_new:
         if st.button("➕ Nouveau cas", type="primary"):
             _go("choisir_template")
+    with col_edit:
+        if st.button("✏️ Modifier patient"):
+            S["show_edit_patient"] = not S.get("show_edit_patient", False)
+
+    # Formulaire de modification patient
+    if S.get("show_edit_patient"):
+        with st.form("form_edit_patient"):
+            st.markdown("**Modifier les informations du patient**")
+            e1, e2 = st.columns(2)
+            with e1:
+                new_nom    = st.text_input("Nom", value=info.get("nom",""))
+                new_prenom = st.text_input("Prénom", value=info.get("prenom",""))
+            with e2:
+                ddn_val = None
+                try:
+                    import pandas as _pd
+                    ddn_val = _pd.to_datetime(info.get("date_naissance","")).date()
+                except Exception:
+                    pass
+                new_ddn  = st.date_input("Date de naissance", value=ddn_val,
+                                         min_value=date(1900,1,1), max_value=date.today())
+                sexe_opts = ["— Non renseigné —","Féminin","Masculin","Non-binaire"]
+                cur_sexe  = info.get("sexe","")
+                sexe_idx  = sexe_opts.index(cur_sexe) if cur_sexe in sexe_opts else 0
+                new_sexe  = st.selectbox("Sexe", sexe_opts, index=sexe_idx)
+            save_btn = st.form_submit_button("💾 Sauvegarder", type="primary")
+            if save_btn:
+                sexe_val = "" if new_sexe == "— Non renseigné —" else new_sexe
+                ok = update_patient(info["patient_id"], new_nom, new_prenom,
+                                    str(new_ddn), sexe_val)
+                if ok:
+                    # Mettre à jour session_state
+                    S.patient_info.update({
+                        "nom": new_nom.upper().strip(),
+                        "prenom": new_prenom.strip(),
+                        "date_naissance": str(new_ddn),
+                        "sexe": sexe_val,
+                    })
+                    S["show_edit_patient"] = False
+                    st.success("✅ Patient mis à jour.")
+                    st.rerun()
+                else:
+                    st.error("❌ Erreur lors de la mise à jour.")
 
     st.markdown("---")
     cas_df = get_patient_cas(S.patient_id)
