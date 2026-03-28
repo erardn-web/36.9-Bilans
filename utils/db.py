@@ -246,6 +246,19 @@ def create_patient(nom, prenom, date_naissance, sexe,
     })
     return pid
 
+def update_patient(patient_id: str, nom: str, prenom: str,
+                   date_naissance: str, sexe: str) -> bool:
+    ok = _update_row("Patients", "patient_id", patient_id, {
+        "nom": nom.upper().strip(),
+        "prenom": prenom.strip(),
+        "date_naissance": date_naissance,
+        "sexe": sexe,
+    })
+    if ok:
+        _invalidate_read_cache()
+        get_all_patients.clear()
+    return ok
+
 # ── Cas ───────────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=60)
