@@ -13,7 +13,7 @@ class Spirometrie(BaseTest):
     @classmethod
     def fields(cls):
         return ["spiro_vems","spiro_cvf","spiro_ratio","spiro_vems_pct","spiro_cvf_pct",
-                "spiro_gold","spiro_notes","spo2_repos"]
+                "spiro_gold","spiro_notes"]
 
     def render(self, lv, key_prefix):
         def _lf(k):
@@ -52,14 +52,12 @@ class Spirometrie(BaseTest):
             st.markdown(f'<div class="score-box" style="background:{gc};">'
                         f'VEMS {vems_pct}% prédit → {gi}</div>', unsafe_allow_html=True)
 
-        spo2_r = st.number_input("SpO₂ repos (%)",0.0,100.0,_lf("spo2_repos"),0.1,
-                                  key=f"{key_prefix}_spo2r",help="0 = non mesuré")
         spiro_notes = st.text_area("Notes",value=lv("spiro_notes",""),height=60,
                                    key=f"{key_prefix}_notes")
         return {"spiro_vems":vems or "","spiro_cvf":cvf or "","spiro_ratio":ratio or "",
                 "spiro_vems_pct":vems_pct or "","spiro_cvf_pct":cvf_pct or "",
                 "spiro_gold":"" if gold=="— Non renseigné —" else gold,
-                "spo2_repos":spo2_r or "","spiro_notes":spiro_notes}
+                "spiro_notes":spiro_notes}
 
     @classmethod
     def is_filled(cls, bilan_data):
