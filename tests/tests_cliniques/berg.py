@@ -9,7 +9,7 @@ class Berg(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"berg","nom":"Berg Balance Scale","tab_label":"⚖️ Berg",
-                "categorie":"test_clinique","description":"14 items /56, seuils chute ≤20/≤40"}
+                "categorie":"test_clinique","tags":["équilibre", "chute", "âgé", "fonctionnel"],"description":"14 items /56, seuils chute ≤20/≤40"}
 
     @classmethod
     def fields(cls):

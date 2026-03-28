@@ -27,7 +27,7 @@ class TestingEpaule(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"testing_epaule","nom":"Testing épaule","tab_label":"💪 Testing épaule",
-                "categorie":"test_clinique",
+                "categorie":"test_clinique","tags":["épaule", "membre supérieur", "force", "testing", "MRC"],
                 "description":"Testing musculaire épaule MRC 0–5 (coiffe + deltoïde + scapulaire)"}
 
     @classmethod

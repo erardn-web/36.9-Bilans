@@ -15,7 +15,7 @@ class PatternRespi(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"pattern_respi","nom":"Pattern respiratoire",
-                "tab_label":"🔬 Pattern respi.","categorie":"mesure",
+                "tab_label":"🔬 Pattern respi.","categorie":"mesure","tags":["respiratoire", "SHV", "pattern", "rythme", "mode"],
                 "description":"FR, amplitude, mode ventilatoire, rythme"}
 
     @classmethod

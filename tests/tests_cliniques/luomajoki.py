@@ -19,7 +19,7 @@ class Luomajoki(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"luomajoki","nom":"Tests de Luomajoki","tab_label":"🔄 Luomajoki",
-                "categorie":"test_clinique",
+                "categorie":"test_clinique","tags":["lombalgie", "contrôle moteur", "rachis", "stabilité"],
                 "description":"Contrôle moteur lombaire /6, seuil ≥ 3 échecs significatif"}
 
     @classmethod

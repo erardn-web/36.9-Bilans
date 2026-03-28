@@ -9,7 +9,7 @@ class SixMWT(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"six_mwt","nom":"Test de marche 6 minutes","tab_label":"🚶 6MWT",
-                "categorie":"test_clinique","description":"Distance parcourue en 6 minutes, seuil ≥ 400 m"}
+                "categorie":"test_clinique","tags":["marche", "aérobie", "BPCO", "effort", "respiratoire"],"description":"Distance parcourue en 6 minutes, seuil ≥ 400 m"}
 
     @classmethod
     def fields(cls):

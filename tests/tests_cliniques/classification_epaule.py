@@ -45,7 +45,7 @@ class ClassificationEpaule(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"classification_epaule","nom":"Classification & Raisonnement épaule",
-                "tab_label":"🩺 Classification","categorie":"test_clinique",
+                "tab_label":"🩺 Classification","categorie":"test_clinique","tags":["épaule", "classification", "raisonnement", "diagnostic"],
                 "description":"Classification clinique épaule + drapeaux rouges + raisonnement + plan"}
 
     @classmethod

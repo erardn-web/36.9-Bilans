@@ -11,7 +11,7 @@ class MobiliteLombaire(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"mobilite_lombaire","nom":"Mobilité lombaire",
-                "tab_label":"📐 Mobilité lombaire","categorie":"test_clinique",
+                "tab_label":"📐 Mobilité lombaire","categorie":"test_clinique","tags":["lombalgie", "rachis", "mobilité", "schober"],
                 "description":"Schober, amplitudes rachis lombaire (1/3, 2/3, 3/3)"}
 
     @classmethod

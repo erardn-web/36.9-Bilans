@@ -20,7 +20,7 @@ class Gazometrie(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"gazometrie","nom":"Gazométrie / Capnographie",
-                "tab_label":"🧪 Gazométrie","categorie":"mesure",
+                "tab_label":"🧪 Gazométrie","categorie":"mesure","tags":["gazométrie", "CO2", "respiratoire", "SHV", "capnographie"],
                 "description":"Gazométrie artérielle et capnographie ETCO₂"}
 
     @classmethod

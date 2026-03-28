@@ -24,7 +24,7 @@ class AmplitudesEpaule(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"amplitudes_epaule","nom":"Amplitudes épaule","tab_label":"📐 Amplitudes épaule",
-                "categorie":"test_clinique",
+                "categorie":"test_clinique","tags":["épaule", "membre supérieur", "mobilité", "amplitude", "ROM"],
                 "description":"Amplitudes articulaires épaule D/G (goniométrie) + Apley"}
 
     @classmethod

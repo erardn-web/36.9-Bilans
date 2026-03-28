@@ -8,7 +8,7 @@ class Spirometrie(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"spirometrie","nom":"Spirométrie","tab_label":"💨 Spirométrie",
-                "categorie":"test_clinique","description":"VEMS, CVF, ratio, stade GOLD"}
+                "categorie":"test_clinique","tags":["BPCO", "respiratoire", "poumon", "VEMS", "CVF"],"description":"VEMS, CVF, ratio, stade GOLD"}
 
     @classmethod
     def fields(cls):

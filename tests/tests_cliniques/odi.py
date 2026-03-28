@@ -33,7 +33,7 @@ class ODI(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"odi","nom":"ODI — Oswestry","tab_label":"📋 ODI",
-                "categorie":"questionnaire","description":"Oswestry Disability Index /100, seuil clinique > 20%"}
+                "categorie":"questionnaire","tags":["lombalgie", "rachis", "incapacité", "dos", "fonctionnel"],"description":"Oswestry Disability Index /100, seuil clinique > 20%"}
 
     @classmethod
     def fields(cls):

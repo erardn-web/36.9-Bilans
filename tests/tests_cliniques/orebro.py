@@ -41,7 +41,7 @@ class Orebro(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"orebro","nom":"Örebro","tab_label":"🔮 Örebro",
-                "categorie":"questionnaire","description":"Risque de chronicisation, seuil > 50/75"}
+                "categorie":"questionnaire","tags":["lombalgie", "chronicisation", "pronostic", "rachis"],"description":"Risque de chronicisation, seuil > 50/75"}
 
     @classmethod
     def fields(cls):

@@ -33,8 +33,8 @@ class QuickDASH(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"quick_dash","nom":"QuickDASH","tab_label":"✋ QuickDASH",
-                "categorie":"questionnaire",
-                "description":"Disabilities of the Arm, Shoulder and Hand — version courte 11 items /100"}
+                "categorie":"questionnaire","tags":["épaule", "coude", "poignet", "membre supérieur", "incapacité"],
+                "description":"Disabilities of the Arm, Shoulder and Hand — épaule, coude, poignet — version courte 11 items /100"}
 
     @classmethod
     def fields(cls):

@@ -20,7 +20,7 @@ class HVT(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"hvt","nom":"Test d'hyperventilation","tab_label":"🌬️ Test HV",
-                "categorie":"test_clinique","description":"Test HVT — grille PetCO₂/FR/SpO₂/FC"}
+                "categorie":"test_clinique","tags":["hyperventilation", "SHV", "respiratoire", "test", "provocation"],"description":"Test HVT — grille PetCO₂/FR/SpO₂/FC"}
 
     @classmethod
     def fields(cls):

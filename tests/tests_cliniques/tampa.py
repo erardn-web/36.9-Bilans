@@ -46,7 +46,7 @@ class Tampa(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"tampa","nom":"Tampa — Kinésiophobie","tab_label":"😰 Tampa",
-                "categorie":"questionnaire","description":"TSK-17, kinésiophobie, seuil > 37"}
+                "categorie":"questionnaire","tags":["lombalgie", "douleur chronique", "kinésiophobie", "psychologique"],"description":"TSK-17, kinésiophobie, seuil > 37"}
 
     @classmethod
     def fields(cls):

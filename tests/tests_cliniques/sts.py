@@ -8,7 +8,7 @@ class STS(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"sts","nom":"STS — Sit to Stand 1 min","tab_label":"🪑 STS 1 min",
-                "categorie":"test_clinique","description":"Levers de chaise en 1 minute"}
+                "categorie":"test_clinique","tags":["équilibre", "chaise", "force", "âgé", "fonctionnel", "BPCO"],"description":"Levers de chaise en 1 minute"}
 
     @classmethod
     def fields(cls):

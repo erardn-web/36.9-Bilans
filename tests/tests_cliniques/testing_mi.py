@@ -64,7 +64,7 @@ class TestingMI(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"testing_mi","nom":"Testing musculaire MI",
-                "tab_label":"💪 Testing MI","categorie":"test_clinique",
+                "tab_label":"💪 Testing MI","categorie":"test_clinique","tags":["force", "membres inférieurs", "MRC", "testing", "musculaire"],
                 "description":"Testing MRC membres inférieurs (0–5)"}
 
     @classmethod

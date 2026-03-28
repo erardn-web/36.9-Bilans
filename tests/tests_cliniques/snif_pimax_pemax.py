@@ -18,7 +18,7 @@ class SNIFPimaxPemax(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"snif_pimax_pemax","nom":"SNIF / PImax / PEmax",
-                "tab_label":"💪 SNIF / PImax / PEmax","categorie":"test_clinique",
+                "tab_label":"💪 SNIF / PImax / PEmax","categorie":"test_clinique","tags":["respiratoire", "SHV", "force", "pression", "inspiration"],
                 "description":"Forces musculaires respiratoires — mesurées et % prédit"}
 
     @classmethod

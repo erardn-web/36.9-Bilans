@@ -11,7 +11,7 @@ class SPPB(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"sppb","nom":"SPPB","tab_label":"📊 SPPB",
-                "categorie":"test_clinique","description":"Short Physical Performance Battery /12"}
+                "categorie":"test_clinique","tags":["équilibre", "marche", "âgé", "fonctionnel"],"description":"Short Physical Performance Battery /12"}
 
     @classmethod
     def fields(cls):

@@ -8,7 +8,7 @@ class TUG(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"tug","nom":"TUG — Timed Up and Go","tab_label":"⏱️ TUG",
-                "categorie":"test_clinique","description":"Lever, marcher 3m, retour — normal < 12 sec"}
+                "categorie":"test_clinique","tags":["équilibre", "marche", "mobilité", "chute", "âgé"],"description":"Lever, marcher 3m, retour — normal < 12 sec"}
 
     @classmethod
     def fields(cls):

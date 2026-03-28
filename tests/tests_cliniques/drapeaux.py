@@ -27,7 +27,7 @@ class Drapeaux(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"drapeaux","nom":"Drapeaux rouges/jaunes","tab_label":"🚩 Drapeaux",
-                "categorie":"test_clinique","description":"Drapeaux rouges (urgence) et jaunes (biopsychosocial)"}
+                "categorie":"test_clinique","tags":["lombalgie", "drapeaux", "urgence", "biopsychosocial"],"description":"Drapeaux rouges (urgence) et jaunes (biopsychosocial)"}
 
     @classmethod
     def fields(cls):

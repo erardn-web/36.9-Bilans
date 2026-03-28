@@ -23,8 +23,8 @@ class ASES(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"ases","nom":"ASES","tab_label":"🏆 ASES",
-                "categorie":"questionnaire",
-                "description":"American Shoulder and Elbow Surgeons score /100 — douleur + fonction"}
+                "categorie":"questionnaire","tags":["épaule", "membre supérieur", "fonctionnel", "douleur"],
+                "description":"American Shoulder and Elbow Surgeons score /100 — douleur + fonction épaule"}
 
     @classmethod
     def fields(cls):

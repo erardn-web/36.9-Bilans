@@ -1,4 +1,4 @@
-"""tests/tests_partages/tinetti.py — Tinetti POMA (copie fidèle v1)"""
+"""tests/tests_cliniques/tinetti.py — Tinetti POMA (copie fidèle v1)"""
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test
@@ -12,7 +12,7 @@ class Tinetti(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"tinetti","nom":"Tinetti — POMA","tab_label":"🏃 Tinetti",
-                "categorie":"test_clinique","description":"Équilibre et marche /28, seuil risque chute < 24"}
+                "categorie":"test_clinique","tags":["équilibre", "marche", "chute", "âgé"],"description":"Équilibre et marche /28, seuil risque chute < 24"}
 
     @classmethod
     def fields(cls):

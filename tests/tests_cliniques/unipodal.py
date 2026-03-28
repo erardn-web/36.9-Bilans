@@ -8,7 +8,7 @@ class Unipodal(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"unipodal","nom":"Équilibre unipodal","tab_label":"🦶 Unipodal",
-                "categorie":"test_clinique","description":"Maintien sur un pied (max 30 sec), seuil < 5 sec"}
+                "categorie":"test_clinique","tags":["équilibre", "unipodal", "chute", "âgé"],"description":"Maintien sur un pied (max 30 sec), seuil < 5 sec"}
 
     @classmethod
     def fields(cls):

@@ -30,7 +30,7 @@ class CAT(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"cat","nom":"CAT — COPD Assessment Test","tab_label":"📋 CAT",
-                "categorie":"questionnaire","description":"8 items /40, seuils 10/20/30"}
+                "categorie":"questionnaire","tags":["BPCO", "respiratoire", "qualité de vie", "symptômes"],"description":"8 items /40, seuils 10/20/30"}
 
     @classmethod
     def fields(cls):

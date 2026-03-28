@@ -37,7 +37,7 @@ class TestsEpauleSpeciaux(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"tests_epaule_speciaux","nom":"Tests spéciaux épaule",
-                "tab_label":"🔬 Tests spéciaux","categorie":"test_clinique",
+                "tab_label":"🔬 Tests spéciaux","categorie":"test_clinique","tags":["épaule", "coiffe", "conflit", "SLAP", "clinique"],
                 "description":"Coiffe (Jobe, Patte, Gerber), conflit (Neer, Hawkins), biceps/SLAP, AC"}
 
     @classmethod

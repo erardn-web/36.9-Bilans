@@ -30,7 +30,7 @@ class TestsObjectifsLombaire(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"tests_objectifs_lombaire","nom":"Tests objectifs",
-                "tab_label":"🔬 Tests objectifs","categorie":"test_clinique",
+                "tab_label":"🔬 Tests objectifs","categorie":"test_clinique","tags":["lombalgie", "neurologique", "sacro-iliaque", "clinique", "tests"],
                 "description":"Tests neurologiques, sacro-iliaques, discaux"}
 
     @classmethod

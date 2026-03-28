@@ -33,7 +33,7 @@ class BODE(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"bode","nom":"BODE Index","tab_label":"📊 BODE",
-                "categorie":"test_clinique","description":"Index pronostic BPCO /10 (VEMS, mMRC, 6MWT, IMC)"}
+                "categorie":"test_clinique","tags":["BPCO", "respiratoire", "pronostic", "mortalité"],"description":"Index pronostic BPCO /10 (VEMS, mMRC, 6MWT, IMC)"}
 
     @classmethod
     def fields(cls):

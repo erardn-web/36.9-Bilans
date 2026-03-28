@@ -18,7 +18,7 @@ class BOLT(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"bolt","nom":"Test BOLT","tab_label":"⏱️ BOLT",
-                "categorie":"test_clinique",
+                "categorie":"test_clinique","tags":["hyperventilation", "SHV", "respiratoire", "apnée", "CO2"],
                 "description":"Body Oxygen Level Test — apnée après expiration normale"}
 
     @classmethod

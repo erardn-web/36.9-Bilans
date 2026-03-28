@@ -30,7 +30,7 @@ class EVA(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"eva","nom":"EVA / Douleur","tab_label":"📊 EVA / Douleur",
-                "categorie":"test_clinique","description":"EVA repos/mouvement/nuit + caractéristiques douleur"}
+                "categorie":"test_clinique","tags":["douleur", "EVA", "EN", "toutes pathologies"],"description":"EVA repos/mouvement/nuit + caractéristiques douleur"}
 
     @classmethod
     def fields(cls):
