@@ -19,7 +19,7 @@ class HAD(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"had","nom":"HAD — Anxiété & Dépression","tab_label":"😟 HAD",
-                "categorie":"questionnaire",
+                "categorie":"questionnaire","tags":["anxiété", "dépression", "psychologique", "humeur"],
                 "description":"Hospital Anxiety and Depression Scale — 14 items /21"}
 
     @classmethod

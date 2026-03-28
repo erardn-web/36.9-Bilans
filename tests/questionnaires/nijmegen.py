@@ -15,7 +15,7 @@ class Nijmegen(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"nijmegen","nom":"Questionnaire de Nijmegen","tab_label":"📋 Nijmegen",
-                "categorie":"questionnaire",
+                "categorie":"questionnaire","tags":["hyperventilation", "SHV", "respiratoire", "dyspnée", "anxiété"],
                 "description":"16 items /64, seuil SHV ≥ 23"}
 
     @classmethod

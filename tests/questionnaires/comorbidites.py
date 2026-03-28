@@ -13,7 +13,7 @@ class Comorbidites(BaseTest):
     @classmethod
     def meta(cls):
         return {"id":"comorbidites","nom":"Comorbidités","tab_label":"🏥 Comorbidités",
-                "categorie":"questionnaire","description":"Comorbidités et traitements en cours"}
+                "categorie":"questionnaire","tags":["comorbidités", "antécédents", "contexte", "médical", "général"],"description":"Comorbidités et traitements en cours"}
 
     @classmethod
     def fields(cls):
