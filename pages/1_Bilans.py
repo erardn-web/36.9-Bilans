@@ -404,19 +404,84 @@ def render_choisir_template():
 
     # ── Étape 1 : choisir le type de cas ─────────────────────────────────────
     st.markdown("### Choisir le type de cas")
-    if S.get("_creating_cas"):
-        st.info("Création en cours…"); return
-    cols = st.columns(min(len(templates),4))
-    for i,(tid,tmpl) in enumerate(templates.items()):
-        with cols[i%4]:
-            if st.button(f"{tmpl.icone} {tmpl.nom}", key=f"tmpl_{tid}",
-                         use_container_width=True):
-                S["_creating_cas"] = True
-                with st.spinner(f"Création du cas {tmpl.nom}…"):
-                    cid      = create_cas(S.patient_id, tmpl, S.therapeute, S.cabinet_id)
-                    cas_info = get_cas(cid)
-                S["_creating_cas"] = False
-                _go("cas", cas_id=cid, cas_info=cas_info)
+
+    def _create_cas_go(tid, tmpl):
+        S["_creating_cas"] = True
+        with st.spinner(f"Création du cas {tmpl.nom}…"):
+            cid = create_cas(S.patient_id, tmpl, S.therapeute, S.cabinet_id)
+            cas_info = get_cas(cid)
+        S["_creating_cas"] = False
+        S.pop("ai_tmpl_results", None)
+        _go("cas", cas_id=cid, cas_info=cas_info)
+
+    # Neutre toujours en premier
+    tmpl_list = []
+    if "neutre" in templates:
+        tmpl_list.append(("neutre", templates["neutre"]))
+    for tid, tmpl in templates.items():
+        if tid != "neutre":
+            tmpl_list.append((tid, tmpl))
+
+    # Barres de recherche
+    sr1, sr2 = st.columns([3, 2])
+    search_tmpl = sr1.text_input("🔍 Rechercher", key="search_tmpl",
+                                  placeholder="ex: lombalgie, épaule, BPCO…")
+    ai_tmpl_q   = sr2.text_input("🤖 Décrire le patient", key="ai_search_tmpl",
+                                  placeholder="ex: douleur épaule droite")
+
+    # Recherche IA
+    if ai_tmpl_q and S.get("ai_tmpl_query_prev") != ai_tmpl_q:
+        S["ai_tmpl_query_prev"] = ai_tmpl_q
+        with st.spinner("Recherche IA…"):
+            try:
+                import anthropic as _ant, json as _aj, re as _re
+                _catalog = [{"id": tid, "nom": tmpl.nom,
+                             "description": tmpl.description}
+                            for tid, tmpl in tmpl_list]
+                _msg = _ant.Anthropic().messages.create(
+                    model="claude-haiku-4-5", max_tokens=200,
+                    system=('Tu es un assistant physiothérapeute. '
+                            'Reponds UNIQUEMENT avec un JSON {"ids":[...]} '
+                            'avec les IDs de templates les plus pertinents.'),
+                    messages=[{"role":"user","content":
+                        "Catalogue: " + _aj.dumps(_catalog, ensure_ascii=False) +
+                        "\nPatient: " + ai_tmpl_q}])
+                _m = _re.search(r'\{"ids":\s*\[[^\]]*\]\}', _msg.content[0].text)
+                S["ai_tmpl_results"] = _aj.loads(_m.group()).get("ids",[]) if _m else []
+            except Exception:
+                S["ai_tmpl_results"] = []
+
+    ai_suggested = S.get("ai_tmpl_results", [])
+    if ai_suggested:
+        st.markdown("**✨ Suggestions IA :**")
+        ai_cols = st.columns(min(len(ai_suggested), 4))
+        for i, tid in enumerate(ai_suggested):
+            tmpl = templates.get(tid)
+            if not tmpl: continue
+            with ai_cols[i % 4]:
+                if st.button(f"✨ {tmpl.icone} {tmpl.nom}",
+                             key=f"ai_tmpl_{tid}", use_container_width=True):
+                    _create_cas_go(tid, tmpl)
+        st.markdown("---")
+
+    # Filtrage textuel fuzzy
+    if search_tmpl:
+        from utils.search import search_items
+        def _tmpl_key(t):
+            return f"{t[1].nom} {t[1].description}", []
+        visible = search_items(search_tmpl, tmpl_list, _tmpl_key)
+    else:
+        visible = tmpl_list
+
+    if not visible:
+        st.caption("Aucun template trouvé.")
+    else:
+        cols = st.columns(min(len(visible), 4))
+        for i, (tid, tmpl) in enumerate(visible):
+            with cols[i % 4]:
+                if st.button(f"{tmpl.icone} {tmpl.nom}", key=f"tmpl_{tid}",
+                             use_container_width=True):
+                    _create_cas_go(tid, tmpl)
 
 # ── VUE CAS — liste bilans gauche / créer droite (v1) ─────────────────────────
 def render_cas():
