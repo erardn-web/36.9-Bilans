@@ -104,8 +104,15 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
                             model="claude-haiku-4-5", max_tokens=300,
                             system=_system,
                             messages=[{"role":"user","content":_user}])
-                        _parsed = _aj.loads(_msg.content[0].text.strip())
-                        st.session_state[ai_result_key] = _parsed.get("ids",[])
+                        _raw = _msg.content[0].text.strip()
+                        # Extraire le JSON même si entouré de texte
+                        import re as _re
+                        _match = _re.search(r'\{[^}]+\}', _raw)
+                        if _match:
+                            _parsed = _aj.loads(_match.group())
+                            st.session_state[ai_result_key] = _parsed.get("ids",[])
+                        else:
+                            st.session_state[ai_result_key] = []
                     except Exception as _e:
                         st.session_state[ai_result_key] = []
                         st.caption(f"Erreur IA : {_e}")
