@@ -496,11 +496,74 @@ def render_cas():
         f'— {nom_t}</div>', unsafe_allow_html=True)
     st.markdown("")
 
-    # Barre d'actions (copie v1)
-    col_back, _ = st.columns([1,5])
+    # Barre d'actions
+    col_back, col_evol, _ = st.columns([1,1.5,4])
     with col_back:
         if st.button("⬅️ Changer de patient"):
             _go("accueil")
+    with col_evol:
+        if st.button("📈 Voir l'évolution", type="primary"):
+            sel_key = f"sel_bilans_{S.cas_id}"
+            _go("evolution", cas_id=S.cas_id, cas_info=cas,
+                selected_bilans=S.get(sel_key,[]))
+
+    st.markdown("---")
+    col_left, col_right = st.columns(2)
+
+    # ── Gauche : bilans existants ─────────────────────────────────────────────
+    with col_left:
+        h1, h2 = st.columns([2, 1])
+        with h1:
+            st.markdown("#### 📋 Bilans existants")
+        bilans_df = get_cas_bilans_meta(S.cas_id)
+        if bilans_df.empty:
+            st.info("Aucun bilan pour ce cas.")
+        else:
+            sel_key = f"sel_bilans_{S.cas_id}"
+            if sel_key not in S:
+                S[sel_key] = []
+            for _, b in bilans_df.iterrows():
+                bid2 = b["bilan_id"]
+                d    = b.get("date_bilan","")
+                ds   = d.strftime("%d/%m/%Y") if hasattr(d,"strftime") else str(d)[:10]
+                prat = b.get("praticien","") or ""
+                bc1, bc2, bc3, bc4 = st.columns([0.3, 2.5, 1, 1])
+                with bc1:
+                    checked = st.checkbox("", value=bid2 in S[sel_key],
+                                         key=f"sel_{bid2}", label_visibility="collapsed")
+                    if checked and bid2 not in S[sel_key]:
+                        S[sel_key].append(bid2)
+                    elif not checked and bid2 in S[sel_key]:
+                        S[sel_key].remove(bid2)
+                with bc2:
+                    st.markdown(f"**{ds}** &nbsp; {prat}")
+                with bc3:
+                    if st.button("✏️", key=f"edit_{bid2}", help="Ouvrir"):
+                        donnees = get_bilan_donnees(bid2)
+                        _go("formulaire", bilan_id=bid2, bilan_data=donnees)
+                with bc4:
+                    if st.button("🗑️", key=f"del_{bid2}", help="Supprimer"):
+                        S[f"confirm_del_{bid2}"] = True
+                if S.get(f"confirm_del_{bid2}"):
+                    st.warning(f"Supprimer le bilan du {ds} ?")
+                    da, db2 = st.columns(2)
+                    if da.button("✅ Oui", key=f"yes_del_{bid2}"):
+                        from utils.db import delete_bilan
+                        delete_bilan(bid2, S.therapeute)
+                        S.pop(f"confirm_del_{bid2}", None)
+                        get_cas_bilans_meta.clear()
+                        st.rerun()
+                    if db2.button("❌ Non", key=f"no_del_{bid2}"):
+                        S.pop(f"confirm_del_{bid2}", None)
+                        st.rerun()
+
+    # ── Droite : créer un nouveau bilan ───────────────────────────────────────
+    with col_right:
+        st.markdown("#### ➕ Nouveau bilan")
+        with st.form("form_new_bilan"):
+            bilan_date = st.date_input("Date", value=date.today())
+            praticien  = st.text_input("Praticien", value=S.therapeute or "")
+            ok = st.form_submit_button("➕ Créer", type="primary")
 
     if ok:
         with st.spinner("Création du bilan…"):
