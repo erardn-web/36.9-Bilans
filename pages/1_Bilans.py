@@ -497,193 +497,10 @@ def render_cas():
     st.markdown("")
 
     # Barre d'actions (copie v1)
-    col_back, col_print, _ = st.columns([1,1.5,4])
+    col_back, _ = st.columns([1,5])
     with col_back:
         if st.button("⬅️ Changer de patient"):
             _go("accueil")
-
-    # ── Questionnaires vierges ───────────────────────────────────────────────
-    if S.get("show_print_modal"):
-        with st.container():
-            st.markdown("""
-            <div style="background:#e8f0f8; border:2px solid #1a3c5e; border-radius:10px;
-                        padding:1.2rem 1.5rem; margin-bottom:1rem;">
-                <span style="font-size:1.1rem; font-weight:700; color:#1a3c5e;">
-                🖨️ Sélectionner les questionnaires à imprimer
-                </span>
-            </div>""", unsafe_allow_html=True)
-
-            # Questionnaires disponibles selon le template du cas
-            _tmpl_id = "shv"
-            _snap_q = {}
-            try:
-                _raw_snap = S.cas_info.get("template_snapshot","{}") or "{}"
-                _snap_q = json.loads(_raw_snap)
-                _tmpl_id = (_snap_q.get("template_id","") or
-                            S.cas_info.get("template_id","") or "shv")
-            except:
-                _tmpl_id = S.cas_info.get("template_id","") or "shv"
-
-            # Mapping test_id → clé questionnaire imprimable
-            _TEST_TO_Q = {
-                "had":"had","sf12":"sf12","hvt":"hvt","bolt":"bolt",
-                "nijmegen":"nijmegen","mrc_dyspnee":"mrc","comorbidites":"comorb",
-                "testing_mi":"muscle","leg_press":"leg_press",
-                "odi":"odi","tampa":"tampa","orebro":"orebro",
-                "mmrc":"mmrc_bpco","cat":"cat_bpco",
-                "quick_dash":"quick_dash","ases":"ases",
-            }
-            # Lire les tests actifs du cas depuis le snapshot
-            try:
-                _tests_actifs = _snap_q.get("tests", [])
-            except:
-                _tests_actifs = []
-            # Construire la liste des questionnaires disponibles depuis les tests actifs
-            _avail = []
-            for _tid in _tests_actifs:
-                _qkey = _TEST_TO_Q.get(_tid)
-                if _qkey and _qkey not in _avail:
-                    _avail.append(_qkey)
-            # Toujours proposer testing_mi et leg_press si dans les tests
-            if not _avail:
-                # Fallback sur template si pas de tests actifs
-                _Q_MAP = {
-                    "shv":["had","sf12","hvt","bolt","nijmegen","mrc","comorb","muscle","leg_press"],
-                    "lombalgie":["odi","tampa","orebro","muscle","leg_press"],
-                    "bpco":["mmrc_bpco","cat_bpco","muscle","leg_press"],
-                    "equilibre":["muscle","leg_press"],
-                    "epaule_douloureuse":["quick_dash","ases","muscle","leg_press"],
-                }
-                _avail = _Q_MAP.get(_tmpl_id, ["muscle","leg_press"])
-
-            _Q_LABELS = {
-                "had":"😟 HAD","sf12":"📊 SF-12","hvt":"🌬️ Test HV","bolt":"⏱️ BOLT",
-                "nijmegen":"📋 Nijmegen","mrc":"🚶 MRC","comorb":"🏥 Comorb.",
-                "muscle":"💪 Testing","leg_press":"🦵 Leg Press",
-                "odi":"📋 ODI","tampa":"😰 Tampa","orebro":"🔮 Örebro",
-                "cat_bpco":"💨 CAT","mmrc_bpco":"😮‍💨 mMRC","eva_lomb":"📊 EVA",
-            }
-            pc = st.columns(min(len(_avail), 5))
-            checks = {
-                k: pc[i%5].checkbox(_Q_LABELS.get(k,k), value=True, key=f"pc_{k}")
-                for i,k in enumerate(_avail)
-            }
-            selected_q = [k for k,v in checks.items() if v]
-            ga, gb, _ = st.columns([1.5,1,4])
-            with ga:
-                if selected_q:
-                    with st.spinner("Génération…"):
-                        try:
-                            q_pdf = generate_questionnaires_pdf(selected_q, S.patient_info)
-                            st.download_button(
-                                label="📥 Télécharger PDF vierge",
-                                data=q_pdf,
-                                file_name=f"questionnaires_{S.patient_info.get('nom','')}_{date.today()}.pdf",
-                                mime="application/pdf",
-                                type="primary",
-                                key="dl_q",
-                            )
-                        except Exception as e:
-                            st.error(f"Erreur : {e}")
-                else:
-                    st.warning("Sélectionnez au moins un questionnaire.")
-            with gb:
-                if st.button("✖ Fermer", key="close_print"):
-                    S["show_print_modal"] = False; st.rerun()
-        st.markdown("---")
-
-    st.markdown("---")
-
-    col_left, col_right = st.columns(2)
-
-    # ── Gauche : bilans existants ─────────────────────────────────────────────
-    with col_left:
-        h1, h2 = st.columns([2, 1])
-        with h1:
-            st.markdown("#### 📋 Bilans existants")
-        with h2:
-            if st.button("📈 Évolution", type="primary", use_container_width=True):
-                sel_key = f"sel_bilans_{S.cas_id}"
-                _go("evolution", cas_id=S.cas_id, cas_info=cas,
-                    selected_bilans=S.get(sel_key,[]))
-        bilans_df = get_cas_bilans_meta(S.cas_id)
-        if bilans_df.empty:
-            st.info("Aucun bilan pour ce cas.")
-        else:
-            sel_key     = f"sel_bilans_{S.cas_id}"
-            if sel_key not in S:
-                S[sel_key] = list(bilans_df["bilan_id"])
-            # Nettoyer les IDs obsolètes
-            valid_ids   = list(bilans_df["bilan_id"])
-            S[sel_key]  = [i for i in S[sel_key] if i in valid_ids]
-
-            st.markdown(
-                "<small style='color:#888'>Cochez les bilans à inclure dans l'évolution et le PDF</small>",
-                unsafe_allow_html=True)
-
-            new_sel = []
-            for _, bilan in bilans_df.iterrows():
-                bid  = bilan["bilan_id"]
-                d    = bilan["date_bilan"]
-                dstr = d.strftime("%d/%m/%Y") if pd.notna(d) else "—"
-
-                c_chk, c_info, c_open, c_del = st.columns([0.5,3.5,0.8,0.8])
-                with c_chk:
-                    checked = st.checkbox("", value=bid in S[sel_key],
-                                          key=f"sel_{bid}", label_visibility="collapsed")
-                    if checked: new_sel.append(bid)
-                with c_info:
-                    st.markdown(
-                        f"**{dstr}**  \n"
-                        f"<small>{bilan.get('praticien','')}</small>",
-                        unsafe_allow_html=True)
-                with c_open:
-                    if st.button("✏️", key=f"op_{bid}", help="Ouvrir ce bilan"):
-                        S.pop("_bilan_unsaved", None)
-                        # Vider le cache de la ligne bilan pour forcer rechargement
-                        S.pop(f"bilan_row_{bid}", None)
-                        _go("formulaire", bilan_id=bid,
-                            bilan_data=get_bilan_donnees(bid))
-                with c_del:
-                    if st.button("🗑️", key=f"dl_{bid}", help="Supprimer"):
-                        S[f"confirm_del_{bid}"] = True
-
-                if S.get(f"confirm_del_{bid}"):
-                    st.warning(
-                        f"⚠️ Supprimer définitivement le bilan du **{dstr}** ? "
-                        "Cette action est irréversible.")
-                    ca, cb, _ = st.columns([1,1,3])
-                    with ca:
-                        if st.button("✅ Confirmer", key=f"dok_{bid}", type="primary"):
-                            with st.spinner("Suppression…"):
-                                delete_bilan(bid, S.therapeute)
-                            S.pop(f"confirm_del_{bid}", None)
-                            S[sel_key] = [i for i in S[sel_key] if i!=bid]
-                            st.rerun()
-                    with cb:
-                        if st.button("✖ Annuler", key=f"dno_{bid}"):
-                            S.pop(f"confirm_del_{bid}", None); st.rerun()
-
-            S[sel_key] = new_sel
-            n_sel = len(new_sel); n_tot = len(bilans_df)
-            if n_sel < n_tot:
-                st.markdown(
-                    f"<small style='color:#f57c00'>⚡ {n_sel}/{n_tot} bilans "
-                    f"sélectionnés pour l'évolution</small>",
-                    unsafe_allow_html=True)
-
-    # ── Droite : créer bilan ──────────────────────────────────────────────────
-    with col_right:
-        st.markdown(f"#### ➕ Nouveau bilan {snap.get('nom','')}")
-        with st.form("f_new_bilan"):
-            bilan_date = st.date_input("Date du bilan", value=date.today())
-            praticien  = st.text_input("Praticien", value=S.therapeute or "")
-            ok = st.form_submit_button("➕ Créer", type="primary")
-
-    with col_print:
-        if st.button("🖨️ Questionnaires vierges"):
-            S["show_print_modal"] = not S.get("show_print_modal", False)
-            st.rerun()
 
     if ok:
         with st.spinner("Création du bilan…"):
@@ -716,7 +533,7 @@ def render_formulaire():
         unsafe_allow_html=True)
     st.markdown("")
 
-    col_back, col_save, col_cas, _ = st.columns([1,1,1.5,4])
+    col_back, col_save, col_print_b, col_cas, _ = st.columns([1,1,1.5,1.5,2])
     with col_back:
         if st.button("⬅️ Retour"):
             if S.get("_bilan_unsaved"):
@@ -726,6 +543,10 @@ def render_formulaire():
                 _back_to_cas()
     with col_save:
         save_btn = st.button("💾 Sauvegarder", type="primary")
+    with col_print_b:
+        if st.button("🖨️ Imprimer fiches"):
+            S["show_print_bilan"] = not S.get("show_print_bilan", False)
+            st.rerun()
     with col_cas:
         if st.button("⬅️ Changer de patient"):
             if S.get("_bilan_unsaved"):
@@ -789,6 +610,65 @@ def render_formulaire():
     if bid and "_tests_actifs_list" not in S.bilan_data:
         ta = get_bilan_tests_actifs(bid, snap)
         S.bilan_data["_tests_actifs_list"] = ta
+
+    # ── Impression fiches (dynamique selon tests actifs) ─────────────────────
+    if S.get("show_print_bilan"):
+        import json as _jp
+        from utils.pdf import QUESTIONNAIRES, generate_questionnaires_pdf
+        _TEST_TO_Q = {
+            "had":"had","sf12":"sf12","hvt":"hvt","bolt":"bolt",
+            "nijmegen":"nijmegen","mrc_dyspnee":"mrc","comorbidites":"comorb",
+            "testing_mi":"muscle","leg_press":"leg_press",
+            "odi":"odi","tampa":"tampa","orebro":"orebro",
+            "mmrc":"mmrc_bpco","cat":"cat_bpco",
+            "quick_dash":"quick_dash","ases":"ases",
+        }
+        # Tests actifs du bilan courant
+        try:
+            _ta_raw = S.bilan_data.get("tests_actifs","") or ""
+            _ta = _jp.loads(_ta_raw) if _ta_raw and _ta_raw != "[]" else [cls.test_id() for cls in test_classes]
+        except:
+            _ta = [cls.test_id() for cls in test_classes]
+        # Questionnaires disponibles pour ces tests
+        _q_avail = []
+        for _tid in _ta:
+            _qk = _TEST_TO_Q.get(_tid)
+            if _qk and _qk in QUESTIONNAIRES and _qk not in _q_avail:
+                _q_avail.append(_qk)
+        _Q_LABELS = {
+            "had":"😟 HAD","sf12":"📊 SF-12","hvt":"🌬️ Test HV","bolt":"⏱️ BOLT",
+            "nijmegen":"📋 Nijmegen","mrc":"🚶 MRC Dyspnée","comorb":"🏥 Comorbidités",
+            "muscle":"💪 Testing MI","leg_press":"🦵 Leg Press",
+            "odi":"📋 ODI","tampa":"😰 Tampa","orebro":"🔮 Örebro",
+            "mmrc_bpco":"😮‍💨 mMRC","cat_bpco":"💨 CAT",
+            "quick_dash":"✋ QuickDASH","ases":"🏆 ASES",
+        }
+        with st.container():
+            st.markdown("**🖨️ Fiches à imprimer**")
+            if not _q_avail:
+                st.info("Aucune fiche disponible pour les tests actifs de ce bilan.")
+            else:
+                _pc = st.columns(min(len(_q_avail), 5))
+                _checks = {k: _pc[i%5].checkbox(_Q_LABELS.get(k,k), value=True,
+                           key=f"pbil_{k}") for i,k in enumerate(_q_avail)}
+                _sel = [k for k,v in _checks.items() if v]
+                _pa, _pb, _ = st.columns([2,1,4])
+                with _pa:
+                    if _sel:
+                        with st.spinner("Génération…"):
+                            try:
+                                _qpdf = generate_questionnaires_pdf(_sel, S.patient_info)
+                                st.download_button("📥 Télécharger",
+                                    data=_qpdf,
+                                    file_name=f"fiches_{S.patient_info.get('nom','')}_{bid}.pdf",
+                                    mime="application/pdf", type="primary",
+                                    key="dl_bilan_q")
+                            except Exception as _e:
+                                st.error(f"Erreur : {_e}")
+                with _pb:
+                    if st.button("✖ Fermer", key="close_print_bilan"):
+                        S["show_print_bilan"] = False; st.rerun()
+            st.markdown("---")
 
     collected = render_bilan_form(
         bilan_id=bid, bilan_data=S.bilan_data,
