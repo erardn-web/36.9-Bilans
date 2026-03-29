@@ -20,23 +20,74 @@ from utils.search import search_items
 
 tests_map = all_tests()
 
+# ── Sidebar ────────────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("**⚙️ Affichage**")
+    layout = st.radio("Mode d'affichage", 
+        options=["liste","cartes","tuiles","table"],
+        format_func=lambda x: {
+            "liste":"☰ Liste avec accents",
+            "cartes":"⊟ Cartes larges",
+            "tuiles":"⊞ Tuiles icône",
+            "table":"▤ Table enrichie"
+        }[x],
+        index=["liste","cartes","tuiles","table"].index(
+            st.session_state.get("bib_layout","liste")),
+        label_visibility="collapsed")
+    st.session_state["bib_layout"] = layout
+
 st.markdown("""<style>
 .bib-readonly input,.bib-readonly textarea,.bib-readonly select{pointer-events:none!important;opacity:.7}
-.card-wrap{position:relative;margin-bottom:8px}
-.test-card{border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;
-           background:var(--color-background-primary);min-height:90px;transition:border-color .15s,background .15s}
-.card-wrap:hover .test-card{border-color:var(--color-border-secondary);background:var(--color-background-secondary);cursor:pointer}
-.test-card-title{font-size:14px;font-weight:500;margin-bottom:4px}
-.test-card-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.4;margin-bottom:8px}
-.test-tag{font-size:11px;padding:1px 8px;border-radius:20px;background:var(--color-background-secondary);
-          border:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary);
-          display:inline-block;margin:1px 2px}
-.card-wrap .stButton{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0}
-.card-wrap .stButton button{width:100%;height:100%;cursor:pointer}
+.tag{font-size:11px;padding:2px 8px;border-radius:20px;background:var(--color-background-secondary);
+     border:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary);
+     display:inline-block;margin:1px 2px}
+.list-item{display:flex;align-items:center;gap:12px;padding:10px 14px;
+           border:0.5px solid var(--color-border-tertiary);border-radius:10px;
+           margin-bottom:6px;background:var(--color-background-primary)}
+.list-item:hover{border-color:var(--color-border-secondary);background:var(--color-background-secondary)}
+.list-accent{width:4px;min-height:40px;border-radius:2px;flex-shrink:0}
+.list-title{font-size:13px;font-weight:500;margin-bottom:2px}
+.list-desc{font-size:12px;color:var(--color-text-secondary)}
+.card-b{border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden;
+        background:var(--color-background-primary);margin-bottom:8px}
+.card-b:hover{border-color:var(--color-border-secondary)}
+.card-b-head{padding:12px 16px;display:flex;align-items:center;gap:12px}
+.card-b-ico{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;
+            justify-content:center;font-size:18px;flex-shrink:0}
+.card-b-title{font-size:14px;font-weight:500}
+.card-b-desc{font-size:12px;color:var(--color-text-secondary);margin-top:1px}
+.card-b-foot{padding:8px 16px;border-top:0.5px solid var(--color-border-tertiary);
+             background:var(--color-background-secondary)}
+.tile-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tile{border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:12px;
+      background:var(--color-background-primary);display:flex;flex-direction:column;gap:5px}
+.tile:hover{border-color:var(--color-border-secondary);background:var(--color-background-secondary)}
+.tile-ico{font-size:22px;line-height:1}
+.tile-title{font-size:12px;font-weight:500;line-height:1.3}
+.tile-cat{font-size:11px;color:var(--color-text-secondary)}
+.rich-table{width:100%;border-collapse:collapse}
+.rich-table th{font-size:11px;color:var(--color-text-secondary);font-weight:500;
+               padding:6px 12px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:left}
+.rich-table td{padding:9px 12px;font-size:13px;vertical-align:middle;
+               border-bottom:0.5px solid var(--color-border-tertiary)}
+.rich-table tr:hover td{background:var(--color-background-secondary)}
+.pill-green{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;background:#EAF3DE;color:#3B6D11}
+.pill-none{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;background:var(--color-background-secondary);color:var(--color-text-secondary)}
 </style>""", unsafe_allow_html=True)
 
 sel_key = "bib_selected_test"
 selected_tid = st.session_state.get(sel_key)
+
+_ACCENT_COLORS = ["#378ADD","#1D9E75","#D85A30","#7F77DD","#EF9F27","#D4537E"]
+_ICO_BG = ["#E6F1FB","#E1F5EE","#FAECE7","#EEEDFE","#FAEEDA","#FBEAF0"]
+_TEST_TO_Q = {
+    "had":"had","sf12":"sf12","hvt":"hvt","bolt":"bolt",
+    "nijmegen":"nijmegen","mrc_dyspnee":"mrc","comorbidites":"comorb",
+    "testing_mi":"muscle","leg_press":"leg_press",
+    "odi":"odi","tampa":"tampa","orebro":"orebro",
+    "mmrc":"mmrc_bpco","cat":"cat_bpco",
+    "quick_dash":"quick_dash","ases":"ases",
+}
 
 # ── Vue détail ─────────────────────────────────────────────────────────────────
 if selected_tid and selected_tid in tests_map:
@@ -59,14 +110,6 @@ if selected_tid and selected_tid in tests_map:
         st.warning(f"Aperçu non disponible : {e}")
     st.markdown('</div>', unsafe_allow_html=True)
     from utils.pdf import QUESTIONNAIRES, generate_questionnaires_pdf
-    _TEST_TO_Q = {
-        "had":"had","sf12":"sf12","hvt":"hvt","bolt":"bolt",
-        "nijmegen":"nijmegen","mrc_dyspnee":"mrc","comorbidites":"comorb",
-        "testing_mi":"muscle","leg_press":"leg_press",
-        "odi":"odi","tampa":"tampa","orebro":"orebro",
-        "mmrc":"mmrc_bpco","cat":"cat_bpco",
-        "quick_dash":"quick_dash","ases":"ases",
-    }
     _qk = _TEST_TO_Q.get(selected_tid)
     if _qk and _qk in QUESTIONNAIRES:
         st.markdown("---")
@@ -81,7 +124,7 @@ if selected_tid and selected_tid in tests_map:
                 key=f"dl_{selected_tid}")
     st.stop()
 
-# ── Vue grille ─────────────────────────────────────────────────────────────────
+# ── Recherche ─────────────────────────────────────────────────────────────────
 st.markdown("## 📚 Bibliothèque des tests")
 s1, s2 = st.columns([3, 2])
 search_q = s1.text_input("🔍 Rechercher", placeholder="ex: épaule, Berg, ODI…", key="bib_search")
@@ -124,21 +167,94 @@ else:
 st.caption(f"{len(filtered)} test(s)")
 st.markdown("")
 
-cols_per_row = 4
-for row_items in [filtered[i:i+cols_per_row] for i in range(0, len(filtered), cols_per_row)]:
-    cols = st.columns(cols_per_row)
-    for j, (tid, cls) in enumerate(row_items):
+def _open(tid):
+    st.session_state[sel_key] = tid
+    st.rerun()
+
+# ── Layout A : Liste avec accents ─────────────────────────────────────────────
+if layout == "liste":
+    for i, (tid, cls) in enumerate(filtered):
         m = cls.meta()
         tags = m.get("tags", [])[:3]
-        desc = m.get("description", "")
-        desc_short = desc[:75] + "…" if len(desc) > 75 else desc
-        with cols[j]:
-            st.markdown(f"""<div class="card-wrap"><div class="test-card">
-  <div class="test-card-title">{cls.tab_label()}</div>
-  <div class="test-card-desc">{desc_short}</div>
-  {''.join(f'<span class="test-tag">{t}</span>' for t in tags)}
+        desc = m.get("description","")[:90] + ("…" if len(m.get("description",""))>90 else "")
+        color = _ACCENT_COLORS[i % len(_ACCENT_COLORS)]
+        tag_html = "".join(f'<span class="tag">{t}</span>' for t in tags)
+        st.markdown(f"""<div class="list-item">
+  <div class="list-accent" style="background:{color}"></div>
+  <div style="flex:1;min-width:0">
+    <div class="list-title">{cls.tab_label()}</div>
+    <div class="list-desc">{desc}</div>
+  </div>
+  <div style="flex-shrink:0">{tag_html}</div>
 </div>""", unsafe_allow_html=True)
-            if st.button(" ", key=f"bib_{tid}", use_container_width=True):
-                st.session_state[sel_key] = tid
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+        if st.button("→", key=f"bib_{tid}", help=m.get("description","")):
+            _open(tid)
+
+# ── Layout B : Cartes larges 2 colonnes ───────────────────────────────────────
+elif layout == "cartes":
+    rows = [filtered[i:i+2] for i in range(0, len(filtered), 2)]
+    for row in rows:
+        cols = st.columns(2)
+        for j, (tid, cls) in enumerate(row):
+            m = cls.meta()
+            tags = m.get("tags",[])[:3]
+            desc = m.get("description","")[:70] + ("…" if len(m.get("description",""))>70 else "")
+            ico_bg = _ICO_BG[(list(tests_map.keys()).index(tid)) % len(_ICO_BG)]
+            tag_html = "".join(f'<span class="tag">{t}</span>' for t in tags)
+            with cols[j]:
+                st.markdown(f"""<div class="card-b">
+  <div class="card-b-head">
+    <div class="card-b-ico" style="background:{ico_bg}">{cls.tab_label().split()[0]}</div>
+    <div><div class="card-b-title">{" ".join(cls.tab_label().split()[1:])}</div>
+    <div class="card-b-desc">{desc}</div></div>
+  </div>
+  <div class="card-b-foot">{tag_html}</div>
+</div>""", unsafe_allow_html=True)
+                if st.button("Ouvrir", key=f"bib_{tid}", use_container_width=True):
+                    _open(tid)
+
+# ── Layout C : Tuiles icône 4 colonnes ────────────────────────────────────────
+elif layout == "tuiles":
+    rows = [filtered[i:i+4] for i in range(0, len(filtered), 4)]
+    for row in rows:
+        cols = st.columns(4)
+        for j, (tid, cls) in enumerate(row):
+            m = cls.meta()
+            tags_str = " · ".join(m.get("tags",[])[:2])
+            ico = cls.tab_label().split()[0]
+            title = " ".join(cls.tab_label().split()[1:])
+            with cols[j]:
+                st.markdown(f"""<div class="tile">
+  <div class="tile-ico">{ico}</div>
+  <div class="tile-title">{title}</div>
+  <div class="tile-cat">{tags_str}</div>
+</div>""", unsafe_allow_html=True)
+                if st.button(" ", key=f"bib_{tid}", use_container_width=True,
+                             help=m.get("description","")):
+                    _open(tid)
+
+# ── Layout D : Table enrichie ─────────────────────────────────────────────────
+elif layout == "table":
+    from utils.pdf import QUESTIONNAIRES
+    st.markdown('<table class="rich-table"><thead><tr>'
+        '<th>Test</th><th>Description</th><th>Tags</th><th>Fiche PDF</th>'
+        '</tr></thead><tbody>', unsafe_allow_html=True)
+    for tid, cls in filtered:
+        m = cls.meta()
+        tags = "".join(f'<span class="tag">{t}</span>' for t in m.get("tags",[])[:3])
+        qk = _TEST_TO_Q.get(tid)
+        pdf_badge = ('<span class="pill-green">✓ dispo</span>' if qk and qk in QUESTIONNAIRES
+                     else '<span class="pill-none">—</span>')
+        desc = m.get("description","")[:60] + ("…" if len(m.get("description",""))>60 else "")
+        st.markdown(f"""<tr><td><strong>{cls.tab_label()}</strong></td>
+<td style="color:var(--color-text-secondary);font-size:12px">{desc}</td>
+<td>{tags}</td><td>{pdf_badge}</td></tr>""", unsafe_allow_html=True)
+    st.markdown('</tbody></table>', unsafe_allow_html=True)
+    st.markdown("")
+    st.caption("Cliquez sur un test pour l'ouvrir :")
+    sel_name = st.selectbox("Sélectionner un test",
+        options=[tid for tid, _ in filtered],
+        format_func=lambda tid: tests_map[tid].tab_label() if tid in tests_map else tid,
+        label_visibility="collapsed")
+    if st.button("Ouvrir →", type="primary"):
+        _open(sel_name)
