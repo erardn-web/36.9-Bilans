@@ -514,19 +514,29 @@ def render_cas():
             </div>""", unsafe_allow_html=True)
 
             # Questionnaires disponibles selon le template du cas
-            import json as _jq
             try:
                 _snap_q = json.loads(S.cas_info.get("template_snapshot","{}") or "{}")
-                _tmpl_id = _snap_q.get("template_id","shv")
+                _tmpl_id = (S.cas_info.get("template_id","") or
+                            _snap_q.get("template_id","shv"))
             except: _tmpl_id = "shv"
 
             # Définir les questionnaires disponibles par template
-            _Q_SHV      = ["had","sf12","hvt","bolt","nijmegen","mrc","comorb","muscle","leg_press"]
-            _Q_EQUILIBRE= ["muscle","leg_press"]
-            _Q_BPCO     = ["mmrc_bpco","cat_bpco","muscle","leg_press"]
-            _Q_LOMBALGIE= ["eva_lomb","odi","tampa","orebro","muscle","leg_press"]
-            _Q_MAP = {"shv":_Q_SHV,"equilibre":_Q_EQUILIBRE,"bpco":_Q_BPCO,"lombalgie":_Q_LOMBALGIE}
-            _avail = _Q_MAP.get(_tmpl_id, _Q_SHV)
+            _Q_SHV       = ["had","sf12","hvt","bolt","nijmegen","mrc","comorb","muscle","leg_press"]
+            _Q_EQUILIBRE = ["muscle","leg_press"]
+            _Q_BPCO      = ["mmrc_bpco","cat_bpco","muscle","leg_press"]
+            _Q_LOMBALGIE = ["odi","tampa","orebro","muscle","leg_press"]
+            _Q_EPAULE    = ["quick_dash","ases","muscle","leg_press"]
+            _Q_NEUTRE    = ["muscle","leg_press"]
+            _Q_MAP = {
+                "shv":               _Q_SHV,
+                "equilibre":         _Q_EQUILIBRE,
+                "bpco":              _Q_BPCO,
+                "lombalgie":         _Q_LOMBALGIE,
+                "epaule_douloureuse":_Q_EPAULE,
+                "neutre":            _Q_NEUTRE,
+            }
+            # Fallback vide si template non mappé (pas de liste SHV par erreur)
+            _avail = _Q_MAP.get(_tmpl_id, [])
 
             _Q_LABELS = {
                 "had":"😟 HAD","sf12":"📊 SF-12","hvt":"🌬️ Test HV","bolt":"⏱️ BOLT",
