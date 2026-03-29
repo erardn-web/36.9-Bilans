@@ -67,7 +67,8 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
             with col:
                 if st.checkbox(cls.tab_label(),
                                value=cls.test_id() in current_active,
-                               key=f"{key_prefix}_active_{cls.test_id()}"):
+                               key=f"{key_prefix}_active_{cls.test_id()}",
+                               help=cls.meta().get("description","")):
                     new_active.append(cls.test_id())
 
         # Tests supplémentaires — recherche fuzzy + tags + IA
@@ -127,7 +128,8 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
                     with _col:
                         if st.checkbox(f"✨ {_ecls.tab_label()}",
                                        value=_tid in current_active,
-                                       key=f"{key_prefix}_ai_{_tid}"):
+                                       key=f"{key_prefix}_ai_{_tid}",
+                                       help=_ecls.meta().get("description","")):
                             if _tid not in new_active:
                                 new_active.append(_tid)
                 st.markdown("---")
@@ -152,7 +154,8 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
                 with col:
                     if st.checkbox(ecls.tab_label(),
                                    value=tid in current_active,
-                                   key=f"{key_prefix}_extra_{tid}"):
+                                   key=f"{key_prefix}_extra_{tid}",
+                                   help=ecls.meta().get("description","")):
                         new_active.append(tid)
             # Garder cochés les extras déjà actifs même si hors recherche
             for tid in extra_active:
