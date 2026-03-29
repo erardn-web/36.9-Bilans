@@ -18,7 +18,7 @@ LUOM_KEYS=[f"o_{t[0]}" for t in LUOM_TESTS]
 class Luomajoki(BaseTest):
     @classmethod
     def meta(cls):
-        return {"id":"luomajoki","nom":"Tests de Luomajoki","tab_label":"🔄 Luomajoki",
+        return {"id":"luomajoki","nom":"Luomajoki — Contrôle moteur","tab_label":"🔄 Luomajoki — Contrôle moteur",
                 "categorie":"test_clinique","tags":["lombalgie", "contrôle moteur", "rachis", "stabilité"],
                 "description":"Contrôle moteur lombaire /6, seuil ≥ 3 échecs significatif"}
 

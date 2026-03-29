@@ -36,8 +36,8 @@ ALL_KEYS = [t[0] for t in ALL_TESTS] + ["ep_tests_notes"]
 class TestsEpauleSpeciaux(BaseTest):
     @classmethod
     def meta(cls):
-        return {"id":"tests_epaule_speciaux","nom":"Tests spéciaux épaule",
-                "tab_label":"🔬 Tests spéciaux","categorie":"test_clinique","tags":["épaule", "coiffe", "conflit", "SLAP", "clinique"],
+        return {"id":"tests_epaule_speciaux","nom":"Tests spécifiques épaule",
+                "tab_label":"🔬 Tests spécifiques épaule","categorie":"test_clinique","tags":["épaule", "coiffe", "conflit", "SLAP", "clinique"],
                 "description":"Coiffe (Jobe, Patte, Gerber), conflit (Neer, Hawkins), biceps/SLAP, AC"}
 
     @classmethod

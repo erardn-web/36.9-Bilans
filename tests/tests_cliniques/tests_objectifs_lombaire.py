@@ -29,8 +29,8 @@ ALL_FIELDS      = ["o_posture_notes"] + ALL_TEST_FIELDS + ["o_tests_notes"]
 class TestsObjectifsLombaire(BaseTest):
     @classmethod
     def meta(cls):
-        return {"id":"tests_objectifs_lombaire","nom":"Tests objectifs",
-                "tab_label":"🔬 Tests objectifs","categorie":"test_clinique","tags":["lombalgie", "neurologique", "sacro-iliaque", "clinique", "tests"],
+        return {"id":"tests_objectifs_lombaire","nom":"Tests objectifs lombaires",
+                "tab_label":"🔬 Tests objectifs lombaires","categorie":"test_clinique","tags":["lombalgie", "neurologique", "sacro-iliaque", "clinique", "tests"],
                 "description":"Tests neurologiques, sacro-iliaques, discaux"}
 
     @classmethod

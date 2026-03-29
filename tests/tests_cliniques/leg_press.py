@@ -45,7 +45,7 @@ class LegPress(BaseTest):
 
     @classmethod
     def meta(cls):
-        return {"id":"leg_press","nom":"1RM Leg Press","tab_label":"🏋️ 1RM Presse",
+        return {"id":"leg_press","nom":"Leg Press — 1RM Brzycki/Epley","tab_label":"🏋️ Leg Press 1RM",
                 "categorie":"test_clinique","tags":["force", "membres inférieurs", "presse", "1RM", "musculaire"],"description":"Estimation 1RM par formule Brzycki/Epley"}
 
     @classmethod

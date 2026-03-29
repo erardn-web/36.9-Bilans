@@ -27,8 +27,8 @@ GROUPES_COLORS  = {"SIN":"#d32f2f","ROM":"#f57c00","EOR":"#fbc02d","MOM":"#388e3
 class ClassificationLombaire(BaseTest):
     @classmethod
     def meta(cls):
-        return {"id":"classification_lombaire","nom":"Classification & Raisonnement",
-                "tab_label":"🩺 Classification","categorie":"test_clinique","tags":["lombalgie", "classification", "SIN", "ROM", "raisonnement"],
+        return {"id":"classification_lombaire","nom":"Classification lombaire & Raisonnement",
+                "tab_label":"🩺 Classification lombaire","categorie":"test_clinique","tags":["lombalgie", "classification", "SIN", "ROM", "raisonnement"],
                 "description":"Classification SIN/ROM/EOR/MOM + raisonnement clinique + pronostic + plan"}
 
     @classmethod
