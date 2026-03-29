@@ -514,11 +514,13 @@ def render_cas():
             </div>""", unsafe_allow_html=True)
 
             # Questionnaires disponibles selon le template du cas
+            _tmpl_id = "shv"
             try:
                 _snap_q = json.loads(S.cas_info.get("template_snapshot","{}") or "{}")
-                _tmpl_id = (S.cas_info.get("template_id","") or
-                            _snap_q.get("template_id","shv"))
-            except: _tmpl_id = "shv"
+                _tmpl_id = (_snap_q.get("template_id","") or
+                            S.cas_info.get("template_id","") or "shv")
+            except:
+                _snap_q = {}
 
             # Définir les questionnaires disponibles par template
             _Q_SHV       = ["had","sf12","hvt","bolt","nijmegen","mrc","comorb","muscle","leg_press"]
@@ -537,8 +539,6 @@ def render_cas():
             }
             # Fallback vide si template non mappé (pas de liste SHV par erreur)
             _avail = _Q_MAP.get(_tmpl_id, [])
-            st.caption(f"Template détecté : {_tmpl_id} — {len(_avail)} questionnaires")
-            st.caption(f"cas template_id: '{S.cas_info.get('template_id','')}'  snap keys: {list(_snap_q.keys())[:5]}")
 
             _Q_LABELS = {
                 "had":"😟 HAD","sf12":"📊 SF-12","hvt":"🌬️ Test HV","bolt":"⏱️ BOLT",
