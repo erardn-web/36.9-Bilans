@@ -287,7 +287,19 @@ def _get_all_cas(cabinet_id="default") -> pd.DataFrame:
 
 @st.cache_data(ttl=60)
 def get_patient_cas(patient_id) -> pd.DataFrame:
-    df = _ws_to_df(_ws("Cas"), CAS_HEADERS)
+    # Lecture directe — évite le cache pour avoir template_snapshot à jour
+    ws = _ws("Cas")
+    rows = ws.get_all_values()
+    if not rows: return pd.DataFrame(columns=CAS_HEADERS)
+    actual = rows[0]
+    col_map = {h: actual.index(h) for h in CAS_HEADERS if h in actual}
+    records = []
+    for row in rows[1:]:
+        if not any(row): continue
+        rec = {h: (row[col_map[h]] if h in col_map and col_map[h] < len(row) else "")
+               for h in CAS_HEADERS}
+        records.append(rec)
+    df = pd.DataFrame(records, columns=CAS_HEADERS)
     return df[df["patient_id"] == patient_id].reset_index(drop=True)
 
 def create_cas(patient_id, template, praticien="",
