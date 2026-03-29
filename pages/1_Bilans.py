@@ -697,7 +697,9 @@ def render_formulaire():
         test_classes=test_classes, key_prefix=f"frm_{bid}",
         patient_info=S.patient_info)
 
-    if save_btn:
+    # Sauvegarde déclenchée depuis le bouton principal OU depuis l'expander tests actifs
+    _trigger_save = save_btn or st.session_state.pop(f"frm_{bid}_trigger_save", False)
+    if _trigger_save:
         with st.spinner("Enregistrement…"):
             ok = save_bilan_donnees(bid, collected, S.therapeute)
         if ok:
@@ -870,7 +872,7 @@ def render_impression():
             except Exception as _e:
                 st.error(f"Erreur : {_e}")
     else:
-        st.warning("Sélectionnez au moins une fiche.")
+        st.info("Sélectionnez au moins une fiche.")
 
 
 
