@@ -55,8 +55,13 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
     new_active = list(current_active)
     with st.expander("🔧 Tests actifs pour ce bilan", expanded=False):
         st.markdown(
-            '<div class="info-box">Décochez les tests non réalisés · '            "Cochez des tests supplémentaires depuis la bibliothèque.</div>",
+            '<div class="info-box">Décochez les tests non réalisés · '
+            "Cochez des tests supplémentaires depuis la bibliothèque.</div>",
             unsafe_allow_html=True)
+        _save_from_expander = st.button("💾 Sauvegarder", key=f"{key_prefix}_save_exp",
+                                         type="primary")
+        if _save_from_expander:
+            st.session_state[f"{key_prefix}_trigger_save"] = True
         new_active = []
 
         # Tests du template
@@ -157,10 +162,12 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
                                    key=f"{key_prefix}_extra_{tid}",
                                    help=ecls.meta().get("description","")):
                         new_active.append(tid)
-            # Garder cochés les extras déjà actifs même si hors recherche
-            for tid in extra_active:
-                if tid not in new_active and tid in _all_tests_map:
-                    new_active.append(tid)
+            # Garder cochés les extras actifs mais NON affichés dans la recherche
+            # (seulement si search est actif — sinon l'utilisateur a explicitement décoché)
+            if search:
+                for tid in extra_active:
+                    if tid not in new_active and tid not in matches and tid in _all_tests_map:
+                        new_active.append(tid)
 
     collected["tests_actifs"] = _json.dumps(new_active)
     collected["_tests_actifs_list"] = new_active  # liste temps réel pour impression
@@ -224,6 +231,8 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
 
     elif _layout == "accordeon":
         # ── Mode Accordéon : expanders verticaux ─────────────────────────────
+        st.markdown("---")
+        st.markdown("**📋 Contenu du bilan**")
         with st.expander("📝 Général", expanded=True):
             general = _render_general_tab(lv, key_prefix, patient_info=patient_info)
             collected.update(general)
