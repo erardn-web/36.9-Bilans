@@ -10,8 +10,8 @@ MOB_NUM  = {"1/3":1,"2/3":2,"3/3":3}
 class MobiliteLombaire(BaseTest):
     @classmethod
     def meta(cls):
-        return {"id":"mobilite_lombaire","nom":"Mobilité lombaire",
-                "tab_label":"📐 Mobilité lombaire","categorie":"test_clinique","tags":["lombalgie", "rachis", "mobilité", "schober"],
+        return {"id":"mobilite_lombaire","nom":"Mobilité rachis lombaire",
+                "tab_label":"📐 Mobilité rachis lombaire","categorie":"test_clinique","tags":["lombalgie", "rachis", "mobilité", "schober"],
                 "description":"Schober, amplitudes rachis lombaire (1/3, 2/3, 3/3)"}
 
     @classmethod
