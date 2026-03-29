@@ -537,6 +537,7 @@ def render_cas():
             }
             # Fallback vide si template non mappé (pas de liste SHV par erreur)
             _avail = _Q_MAP.get(_tmpl_id, [])
+            st.caption(f"Template détecté : {_tmpl_id} — {len(_avail)} questionnaires")
 
             _Q_LABELS = {
                 "had":"😟 HAD","sf12":"📊 SF-12","hvt":"🌬️ Test HV","bolt":"⏱️ BOLT",
