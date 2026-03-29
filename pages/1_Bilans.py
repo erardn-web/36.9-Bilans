@@ -608,8 +608,10 @@ def render_formulaire():
         save_btn = st.button("💾 Sauvegarder", type="primary")
     with col_print_b:
         if st.button("🖨️ Imprimer fiches"):
-            S["show_print_bilan"] = not S.get("show_print_bilan", False)
-            st.rerun()
+            # Snapshot des tests actifs au moment du clic
+            _ta_snap = (S.bilan_data.get("_tests_actifs_list")
+                        or [cls.test_id() for cls in test_classes])
+            _go("impression", bilan_id=bid, tests_actifs_snap=_ta_snap)
     with col_cas:
         if st.button("⬅️ Changer de patient"):
             if S.get("_bilan_unsaved"):
@@ -675,69 +677,6 @@ def render_formulaire():
         S.bilan_data["_tests_actifs_list"] = ta
 
     # ── Impression fiches (dynamique selon tests actifs) ─────────────────────
-    if S.get("show_print_bilan"):
-        import json as _jp
-        from utils.pdf import QUESTIONNAIRES, generate_questionnaires_pdf
-        _TEST_TO_Q = {
-            "had":"had","sf12":"sf12","hvt":"hvt","bolt":"bolt",
-            "nijmegen":"nijmegen","mrc_dyspnee":"mrc","comorbidites":"comorb",
-            "testing_mi":"muscle","leg_press":"leg_press",
-            "odi":"odi","tampa":"tampa","orebro":"orebro",
-            "mmrc":"mmrc_bpco","cat":"cat_bpco",
-            "quick_dash":"quick_dash","ases":"ases",
-        }
-        # Tests actifs — priorité : session (temps réel) > GSheets > snapshot
-        _ta = (S.bilan_data.get("_tests_actifs_list")          # mis à jour par le moteur en temps réel
-               or None)
-        if not _ta:
-            try:
-                _ta_raw = S.bilan_data.get("tests_actifs","") or ""
-                _ta = _jp.loads(_ta_raw) if _ta_raw and _ta_raw not in ("","[]") else None
-            except:
-                _ta = None
-        if not _ta:
-            _ta = [cls.test_id() for cls in test_classes]
-        # Questionnaires disponibles pour ces tests
-        _q_avail = []
-        for _tid in _ta:
-            _qk = _TEST_TO_Q.get(_tid)
-            if _qk and _qk in QUESTIONNAIRES and _qk not in _q_avail:
-                _q_avail.append(_qk)
-        _Q_LABELS = {
-            "had":"😟 HAD","sf12":"📊 SF-12","hvt":"🌬️ Test HV","bolt":"⏱️ BOLT",
-            "nijmegen":"📋 Nijmegen","mrc":"🚶 MRC Dyspnée","comorb":"🏥 Comorbidités",
-            "muscle":"💪 Testing MI","leg_press":"🦵 Leg Press",
-            "odi":"📋 ODI","tampa":"😰 Tampa","orebro":"🔮 Örebro",
-            "mmrc_bpco":"😮‍💨 mMRC","cat_bpco":"💨 CAT",
-            "quick_dash":"✋ QuickDASH","ases":"🏆 ASES",
-        }
-        with st.container():
-            st.markdown("**🖨️ Fiches à imprimer**")
-            if not _q_avail:
-                st.info("Aucune fiche disponible pour les tests actifs de ce bilan.")
-            else:
-                _pc = st.columns(min(len(_q_avail), 5))
-                _checks = {k: _pc[i%5].checkbox(_Q_LABELS.get(k,k), value=True,
-                           key=f"pbil_{k}") for i,k in enumerate(_q_avail)}
-                _sel = [k for k,v in _checks.items() if v]
-                _pa, _pb, _ = st.columns([2,1,4])
-                with _pa:
-                    if _sel:
-                        with st.spinner("Génération…"):
-                            try:
-                                _qpdf = generate_questionnaires_pdf(_sel, S.patient_info)
-                                st.download_button("📥 Télécharger",
-                                    data=_qpdf,
-                                    file_name=f"fiches_{S.patient_info.get('nom','')}_{bid}.pdf",
-                                    mime="application/pdf", type="primary",
-                                    key="dl_bilan_q")
-                            except Exception as _e:
-                                st.error(f"Erreur : {_e}")
-                with _pb:
-                    if st.button("✖ Fermer", key="close_print_bilan"):
-                        S["show_print_bilan"] = False; st.rerun()
-            st.markdown("---")
-
     collected = render_bilan_form(
         bilan_id=bid, bilan_data=S.bilan_data,
         test_classes=test_classes, key_prefix=f"frm_{bid}",
@@ -863,5 +802,6 @@ elif mode == "choisir_template": render_choisir_template()
 elif mode == "cas":              render_cas()
 elif mode == "formulaire":       render_formulaire()
 elif mode == "evolution":        render_evolution()
+elif mode == "impression":       render_impression()
 else:
     S.mode = "accueil"; st.rerun()
