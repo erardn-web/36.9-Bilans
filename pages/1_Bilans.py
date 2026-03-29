@@ -686,11 +686,16 @@ def render_formulaire():
             "mmrc":"mmrc_bpco","cat":"cat_bpco",
             "quick_dash":"quick_dash","ases":"ases",
         }
-        # Tests actifs du bilan courant
-        try:
-            _ta_raw = S.bilan_data.get("tests_actifs","") or ""
-            _ta = _jp.loads(_ta_raw) if _ta_raw and _ta_raw != "[]" else [cls.test_id() for cls in test_classes]
-        except:
+        # Tests actifs — priorité : session (temps réel) > GSheets > snapshot
+        _ta = (S.bilan_data.get("_tests_actifs_list")          # mis à jour par le moteur en temps réel
+               or None)
+        if not _ta:
+            try:
+                _ta_raw = S.bilan_data.get("tests_actifs","") or ""
+                _ta = _jp.loads(_ta_raw) if _ta_raw and _ta_raw not in ("","[]") else None
+            except:
+                _ta = None
+        if not _ta:
             _ta = [cls.test_id() for cls in test_classes]
         # Questionnaires disponibles pour ces tests
         _q_avail = []
