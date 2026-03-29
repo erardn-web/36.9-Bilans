@@ -160,6 +160,7 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
                     new_active.append(tid)
 
     collected["tests_actifs"] = _json.dumps(new_active)
+    collected["_tests_actifs_list"] = new_active  # liste temps réel pour impression
 
     # Reconstruire active_classes en incluant les extras
     _all_tests_map = _all_tests()
