@@ -873,12 +873,6 @@ def render_impression():
         st.warning("Sélectionnez au moins une fiche.")
 
 
-# ── Sidebar globale : accès bibliothèque ─────────────────────────────────────
-with st.sidebar:
-    st.markdown("---")
-    if st.button("📚 Bibliothèque des tests", use_container_width=True):
-        _go("bibliotheque")
-
 
 # ── VUE BIBLIOTHÈQUE DES TESTS ────────────────────────────────────────────────
 def render_bibliotheque():
