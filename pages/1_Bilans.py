@@ -576,6 +576,21 @@ def render_cas():
 def render_formulaire():
     import json as _j
     info = S.patient_info
+
+    # ── Sidebar : choix du mode d'affichage ──────────────────────────────────
+    with st.sidebar:
+        st.markdown("**⚙️ Affichage du bilan**")
+        _layout = st.radio(
+            "Mode",
+            options=["accordeon", "grille", "onglets"],
+            format_func=lambda x: {"accordeon":"🪗 Accordéon","grille":"⊞ Grille","onglets":"📑 Onglets"}[x],
+            index=["accordeon","grille","onglets"].index(
+                st.session_state.get("bilan_layout_mode","accordeon")),
+            key="bilan_layout_radio",
+            label_visibility="collapsed"
+        )
+        st.session_state["bilan_layout_mode"] = _layout
+        st.markdown("---")
     cas  = S.cas_info
     bid  = S.bilan_id
     try:  snap = _j.loads(cas.get("template_snapshot","{}") or "{}")
