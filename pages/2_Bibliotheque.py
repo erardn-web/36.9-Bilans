@@ -22,13 +22,17 @@ tests_map = all_tests()
 
 st.markdown("""<style>
 .bib-readonly input,.bib-readonly textarea,.bib-readonly select{pointer-events:none!important;opacity:.7}
+.card-wrap{position:relative;margin-bottom:8px}
 .test-card{border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;
-           background:var(--color-background-primary);min-height:90px}
+           background:var(--color-background-primary);min-height:90px;transition:border-color .15s,background .15s}
+.card-wrap:hover .test-card{border-color:var(--color-border-secondary);background:var(--color-background-secondary);cursor:pointer}
 .test-card-title{font-size:14px;font-weight:500;margin-bottom:4px}
 .test-card-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.4;margin-bottom:8px}
 .test-tag{font-size:11px;padding:1px 8px;border-radius:20px;background:var(--color-background-secondary);
           border:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary);
           display:inline-block;margin:1px 2px}
+.card-wrap .stButton{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0}
+.card-wrap .stButton button{width:100%;height:100%;cursor:pointer}
 </style>""", unsafe_allow_html=True)
 
 sel_key = "bib_selected_test"
@@ -129,11 +133,12 @@ for row_items in [filtered[i:i+cols_per_row] for i in range(0, len(filtered), co
         desc = m.get("description", "")
         desc_short = desc[:75] + "…" if len(desc) > 75 else desc
         with cols[j]:
-            st.markdown(f"""<div class="test-card">
+            st.markdown(f"""<div class="card-wrap"><div class="test-card">
   <div class="test-card-title">{cls.tab_label()}</div>
   <div class="test-card-desc">{desc_short}</div>
   {''.join(f'<span class="test-tag">{t}</span>' for t in tags)}
 </div>""", unsafe_allow_html=True)
-            if st.button("Ouvrir →", key=f"bib_{tid}", use_container_width=True):
+            if st.button(" ", key=f"bib_{tid}", use_container_width=True):
                 st.session_state[sel_key] = tid
                 st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
