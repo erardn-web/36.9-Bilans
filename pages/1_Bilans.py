@@ -515,12 +515,17 @@ def render_cas():
 
             # Questionnaires disponibles selon le template du cas
             _tmpl_id = "shv"
+            _snap_q = {}
             try:
-                _snap_q = json.loads(S.cas_info.get("template_snapshot","{}") or "{}")
-                _tmpl_id = (_snap_q.get("template_id","") or
-                            S.cas_info.get("template_id","") or "shv")
+                _raw_snap = S.cas_info.get("template_snapshot","{}") or "{}"
+                _snap_q = json.loads(_raw_snap)
+                # template_id depuis snapshot EN PRIORITÉ
+                _tmpl_id = _snap_q.get("template_id","")
+                if not _tmpl_id:
+                    _tmpl_id = S.cas_info.get("template_id","") or "shv"
             except:
-                _snap_q = {}
+                pass
+            st.caption(f"DEBUG — template_id: '{_tmpl_id}' | snapshot: {str(_snap_q)[:80]}")
 
             # Définir les questionnaires disponibles par template
             _Q_SHV       = ["had","sf12","hvt","bolt","nijmegen","mrc","comorb","muscle","leg_press"]
