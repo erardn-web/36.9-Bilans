@@ -873,6 +873,159 @@ def render_impression():
         st.warning("Sélectionnez au moins une fiche.")
 
 
+# ── Sidebar globale : accès bibliothèque ─────────────────────────────────────
+with st.sidebar:
+    st.markdown("---")
+    if st.button("📚 Bibliothèque des tests", use_container_width=True):
+        _go("bibliotheque")
+
+
+# ── VUE BIBLIOTHÈQUE DES TESTS ────────────────────────────────────────────────
+def render_bibliotheque():
+    from utils.search import search_items
+    _ensure_registry()
+    from core.registry import all_tests as _all_tests_reg
+    tests_map = _all_tests_reg()  # {test_id: class}
+
+    st.markdown('<div class="page-title">📚 Bibliothèque des tests</div>',
+                unsafe_allow_html=True)
+    if st.button("⬅️ Retour"):
+        _go(S.get("_prev_mode","accueil"))
+
+    st.markdown("---")
+
+    # Recherche
+    s1, s2 = st.columns([3, 2])
+    search_q  = s1.text_input("🔍 Rechercher", placeholder="ex: épaule, équilibre, Berg…",
+                               key="bib_search")
+    ai_q      = s2.text_input("🤖 Décrire", placeholder="ex: patient âgé qui chute…",
+                               key="bib_ai")
+
+    # Recherche IA
+    if ai_q and S.get("bib_ai_prev") != ai_q:
+        S["bib_ai_prev"] = ai_q
+        with st.spinner("Recherche IA…"):
+            try:
+                import anthropic as _ant, json as _aj, re as _re
+                _catalog = [{"id": tid,
+                             "nom": cls.meta().get("nom",""),
+                             "tags": cls.meta().get("tags",[]),
+                             "desc": cls.meta().get("description","")}
+                            for tid, cls in tests_map.items()]
+                _msg = _ant.Anthropic().messages.create(
+                    model="claude-haiku-4-5", max_tokens=600,
+                    system=('Tu es un assistant physiothérapeute. '
+                            'Reponds UNIQUEMENT avec un JSON {"ids":[...]} '
+                            'contenant TOUS les IDs de tests pertinents.'),
+                    messages=[{"role":"user","content":
+                        "Catalogue: " + _aj.dumps(_catalog, ensure_ascii=False) +
+                        "\nDescription: " + ai_q}])
+                _m = _re.search(r'\{"ids":\s*\[[^\]]*\]\}', _msg.content[0].text, _re.DOTALL)
+                S["bib_ai_results"] = _aj.loads(_m.group()).get("ids",[]) if _m else []
+            except Exception:
+                S["bib_ai_results"] = []
+
+    ai_ids = S.get("bib_ai_results", [])
+
+    # Filtrer la liste
+    all_items = list(tests_map.items())  # [(tid, cls), ...]
+    if search_q:
+        def _key(item):
+            m = item[1].meta()
+            return f"{m.get('nom','')} {m.get('description','')} {item[0]}", m.get("tags",[])
+        filtered = search_items(search_q, all_items, _key)
+    elif ai_ids:
+        filtered = [(tid, tests_map[tid]) for tid in ai_ids if tid in tests_map]
+        if filtered:
+            st.markdown("**✨ Suggestions IA :**")
+    else:
+        filtered = all_items
+
+    if not filtered:
+        st.info("Aucun test trouvé.")
+        return
+
+    # Affichage — test sélectionné
+    sel_key = "bib_selected_test"
+    selected_tid = S.get(sel_key)
+
+    col_list, col_detail = st.columns([1, 2])
+
+    with col_list:
+        st.markdown(f"**{len(filtered)} test(s)**")
+        for tid, cls in filtered:
+            m = cls.meta()
+            tags = m.get("tags", [])
+            is_sel = (tid == selected_tid)
+            tag_str = " ".join([f"`{t}`" for t in tags[:3]])
+            btn_label = f"{'▶ ' if is_sel else ''}{cls.tab_label()}"
+            if st.button(btn_label, key=f"bib_btn_{tid}",
+                         use_container_width=True,
+                         type="primary" if is_sel else "secondary"):
+                S[sel_key] = tid
+                st.rerun()
+            if tags:
+                st.caption(" · ".join(tags[:4]))
+
+    with col_detail:
+        if not selected_tid or selected_tid not in tests_map:
+            st.info("👈 Sélectionne un test pour le consulter.")
+        else:
+            cls = tests_map[selected_tid]
+            m = cls.meta()
+            st.markdown(f"### {cls.tab_label()}")
+            if m.get("description"):
+                st.caption(m["description"])
+            if m.get("tags"):
+                st.markdown(" ".join([f"`{t}`" for t in m["tags"]]))
+            st.markdown("---")
+
+            # Affichage read-only — render() avec données vides + disabled inputs via CSS
+            st.markdown("""<style>
+                [data-testid="stForm"] button { display: none !important; }
+                .bib-readonly input, .bib-readonly textarea, .bib-readonly select {
+                    pointer-events: none; opacity: 0.7;
+                }
+            </style>""", unsafe_allow_html=True)
+
+            def _lv_empty(k, default=""):
+                return default
+
+            st.markdown('<div class="bib-readonly">', unsafe_allow_html=True)
+            try:
+                with st.container():
+                    cls().render(_lv_empty, f"bib_{selected_tid}")
+            except Exception as _e:
+                st.warning(f"Aperçu non disponible : {_e}")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # Impression PDF si disponible
+            from utils.pdf import QUESTIONNAIRES, generate_questionnaires_pdf
+            _TEST_TO_Q = {
+                "had":"had","sf12":"sf12","hvt":"hvt","bolt":"bolt",
+                "nijmegen":"nijmegen","mrc_dyspnee":"mrc","comorbidites":"comorb",
+                "testing_mi":"muscle","leg_press":"leg_press",
+                "odi":"odi","tampa":"tampa","orebro":"orebro",
+                "mmrc":"mmrc_bpco","cat":"cat_bpco",
+                "quick_dash":"quick_dash","ases":"ases",
+            }
+            _qk = _TEST_TO_Q.get(selected_tid)
+            if _qk and _qk in QUESTIONNAIRES:
+                st.markdown("---")
+                if st.button("🖨️ Télécharger fiche PDF", type="primary",
+                             key=f"bib_pdf_{selected_tid}"):
+                    with st.spinner("Génération…"):
+                        try:
+                            _pdf = generate_questionnaires_pdf([_qk], {})
+                            st.download_button("📥 Télécharger",
+                                data=_pdf,
+                                file_name=f"fiche_{selected_tid}.pdf",
+                                mime="application/pdf",
+                                key=f"bib_dl_{selected_tid}")
+                        except Exception as _e:
+                            st.error(f"Erreur : {_e}")
+
+
 if   mode == "accueil":          render_accueil()
 elif mode == "dossier":          render_dossier()
 elif mode == "choisir_template": render_choisir_template()
@@ -880,5 +1033,6 @@ elif mode == "cas":              render_cas()
 elif mode == "formulaire":       render_formulaire()
 elif mode == "evolution":        render_evolution()
 elif mode == "impression":       render_impression()
+elif mode == "bibliotheque":     render_bibliotheque()
 else:
     S.mode = "accueil"; st.rerun()
