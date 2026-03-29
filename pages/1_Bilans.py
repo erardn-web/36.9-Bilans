@@ -524,23 +524,37 @@ def render_cas():
             except:
                 _tmpl_id = S.cas_info.get("template_id","") or "shv"
 
-            # Définir les questionnaires disponibles par template
-            _Q_SHV       = ["had","sf12","hvt","bolt","nijmegen","mrc","comorb","muscle","leg_press"]
-            _Q_EQUILIBRE = ["muscle","leg_press"]
-            _Q_BPCO      = ["mmrc_bpco","cat_bpco","muscle","leg_press"]
-            _Q_LOMBALGIE = ["odi","tampa","orebro","muscle","leg_press"]
-            _Q_EPAULE    = ["quick_dash","ases","muscle","leg_press"]
-            _Q_NEUTRE    = ["muscle","leg_press"]
-            _Q_MAP = {
-                "shv":               _Q_SHV,
-                "equilibre":         _Q_EQUILIBRE,
-                "bpco":              _Q_BPCO,
-                "lombalgie":         _Q_LOMBALGIE,
-                "epaule_douloureuse":_Q_EPAULE,
-                "neutre":            _Q_NEUTRE,
+            # Mapping test_id → clé questionnaire imprimable
+            _TEST_TO_Q = {
+                "had":"had","sf12":"sf12","hvt":"hvt","bolt":"bolt",
+                "nijmegen":"nijmegen","mrc_dyspnee":"mrc","comorbidites":"comorb",
+                "testing_mi":"muscle","leg_press":"leg_press",
+                "odi":"odi","tampa":"tampa","orebro":"orebro",
+                "mmrc":"mmrc_bpco","cat":"cat_bpco",
+                "quick_dash":"quick_dash","ases":"ases",
             }
-            # Fallback vide si template non mappé (pas de liste SHV par erreur)
-            _avail = _Q_MAP.get(_tmpl_id, [])
+            # Lire les tests actifs du cas depuis le snapshot
+            try:
+                _tests_actifs = _snap_q.get("tests", [])
+            except:
+                _tests_actifs = []
+            # Construire la liste des questionnaires disponibles depuis les tests actifs
+            _avail = []
+            for _tid in _tests_actifs:
+                _qkey = _TEST_TO_Q.get(_tid)
+                if _qkey and _qkey not in _avail:
+                    _avail.append(_qkey)
+            # Toujours proposer testing_mi et leg_press si dans les tests
+            if not _avail:
+                # Fallback sur template si pas de tests actifs
+                _Q_MAP = {
+                    "shv":["had","sf12","hvt","bolt","nijmegen","mrc","comorb","muscle","leg_press"],
+                    "lombalgie":["odi","tampa","orebro","muscle","leg_press"],
+                    "bpco":["mmrc_bpco","cat_bpco","muscle","leg_press"],
+                    "equilibre":["muscle","leg_press"],
+                    "epaule_douloureuse":["quick_dash","ases","muscle","leg_press"],
+                }
+                _avail = _Q_MAP.get(_tmpl_id, ["muscle","leg_press"])
 
             _Q_LABELS = {
                 "had":"😟 HAD","sf12":"📊 SF-12","hvt":"🌬️ Test HV","bolt":"⏱️ BOLT",
