@@ -176,17 +176,76 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
 
     _inject_tab_highlight_css(active_classes, bilan_data, key_prefix)
 
-    tab_labels = ["📝 Général"] + [cls.tab_label() for cls in active_classes]
-    tabs = st.tabs(tab_labels) if len(tab_labels) > 1 else [st.container()]
+    # Mode d'affichage choisi dans la sidebar
+    _layout = st.session_state.get("bilan_layout_mode", "accordeon")
 
-    with tabs[0]:
-        general = _render_general_tab(lv, key_prefix, patient_info=patient_info)
-        collected.update(general)
+    if _layout == "grille":
+        # ── Mode Grille : boutons + contenu à droite ──────────────────────────
+        all_classes = [None] + active_classes  # None = Général
+        _sel_key = f"{key_prefix}_grid_sel"
+        if _sel_key not in st.session_state:
+            st.session_state[_sel_key] = "__general__"
+        _sel = st.session_state[_sel_key]
 
-    for i, test_cls in enumerate(active_classes):
-        with tabs[i + 1]:
-            test_data = test_cls().render(lv, f"{key_prefix}_{test_cls.test_id()}")
-            collected.update(test_data)
+        # Grille de boutons
+        _btn_cols = st.columns(min(len(all_classes), 5))
+        for _bi, _bcls in enumerate(all_classes):
+            _tid = "__general__" if _bcls is None else _bcls.test_id()
+            _lbl = "📝 Général" if _bcls is None else _bcls.tab_label()
+            _filled = (_bcls is not None and _bcls().is_filled(bilan_data))
+            _active = (_sel == _tid)
+            _suffix = " ✓" if _filled else ""
+            with _btn_cols[_bi % 5]:
+                if st.button(f"{_lbl}{_suffix}",
+                             key=f"{key_prefix}_gbtn_{_tid}",
+                             type="primary" if _active else "secondary",
+                             use_container_width=True):
+                    st.session_state[_sel_key] = _tid
+                    st.rerun()
+
+        st.markdown("")
+        # Contenu du test sélectionné
+        with st.container():
+            if _sel == "__general__":
+                general = _render_general_tab(lv, key_prefix, patient_info=patient_info)
+                collected.update(general)
+            else:
+                for _tcls in active_classes:
+                    if _tcls.test_id() == _sel:
+                        test_data = _tcls().render(lv, f"{key_prefix}_{_tcls.test_id()}")
+                        collected.update(test_data)
+                        break
+        # Collecter tous les autres tests depuis bilan_data (non affichés)
+        for _tcls in active_classes:
+            if _tcls.test_id() != _sel:
+                for _f in _tcls.fields():
+                    if _f in bilan_data and _f not in collected:
+                        collected[_f] = bilan_data[_f]
+
+    elif _layout == "accordeon":
+        # ── Mode Accordéon : expanders verticaux ─────────────────────────────
+        with st.expander("📝 Général", expanded=True):
+            general = _render_general_tab(lv, key_prefix, patient_info=patient_info)
+            collected.update(general)
+
+        for test_cls in active_classes:
+            _filled = test_cls().is_filled(bilan_data)
+            _label = f"{'✓ ' if _filled else ''}{test_cls.tab_label()}"
+            with st.expander(_label, expanded=False):
+                test_data = test_cls().render(lv, f"{key_prefix}_{test_cls.test_id()}")
+                collected.update(test_data)
+
+    else:
+        # ── Mode Onglets (défaut original) ────────────────────────────────────
+        tab_labels = ["📝 Général"] + [cls.tab_label() for cls in active_classes]
+        tabs = st.tabs(tab_labels) if len(tab_labels) > 1 else [st.container()]
+        with tabs[0]:
+            general = _render_general_tab(lv, key_prefix, patient_info=patient_info)
+            collected.update(general)
+        for i, test_cls in enumerate(active_classes):
+            with tabs[i + 1]:
+                test_data = test_cls().render(lv, f"{key_prefix}_{test_cls.test_id()}")
+                collected.update(test_data)
 
     return collected
 
