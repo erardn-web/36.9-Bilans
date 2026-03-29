@@ -97,17 +97,17 @@ def render_bilan_form(bilan_id: str, bilan_data: dict, test_classes: list,
                         _system = ("Tu es un assistant physiothérapeute expert. "
                             "On te donne un catalogue de tests cliniques et une description de patient. "
                             "Reponds UNIQUEMENT avec un JSON {\"ids\": [\"id1\",\"id2\",...]} "
-                            "contenant les 3 a 6 IDs les plus pertinents. Rien d autre.")
+                            "contenant TOUS les IDs pertinents sans limite de nombre. Rien d autre.")
                         _user = ("Catalogue: " + _aj.dumps(_catalog, ensure_ascii=False)
                             + "\n\nDescription patient: " + ai_query)
                         _msg = _client.messages.create(
-                            model="claude-haiku-4-5", max_tokens=600,
+                            model="claude-haiku-4-5", max_tokens=1000,
                             system=_system,
                             messages=[{"role":"user","content":_user}])
                         _raw = _msg.content[0].text.strip()
                         # Extraire le JSON même si entouré de texte
                         import re as _re
-                        _match = _re.search(r'\{[^}]+\}', _raw)
+                        _match = _re.search(r'\{.*?\}', _raw, _re.DOTALL)
                         if _match:
                             _parsed = _aj.loads(_match.group())
                             st.session_state[ai_result_key] = _parsed.get("ids",[])
