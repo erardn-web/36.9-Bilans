@@ -75,3 +75,32 @@ class TestsObjectifsLombaire(BaseTest):
                     st.markdown("*"+test+"* : "+" · ".join(
                         f"{lbl}: **{v}**" for lbl,v in zip(labels,vals)
                         if v not in ("","—","None","nan")))
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("Tests Objectifs Lombaires", styles["section"]))
+        story.append(Paragraph("Tests cliniques spécifiques pour l'évaluation de la lombalgie.", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        def section(titre, tests):
+            story.append(Paragraph(titre, styles["subsection"]))
+            rows = [["Test","D","G","Bilatéral","Résultat/Notes"]] +                    [[t,"☐","☐","☐","_"*20] for t in tests]
+            tb = Table(rows, colWidths=[6*cm,1.2*cm,1.2*cm,2.2*cm,6.4*cm])
+            tb.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+                ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+                ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3),
+                ("ALIGN",(1,0),(3,-1),"CENTER")]))
+            story.append(tb); story.append(Spacer(1,0.2*cm))
+        section("Tests neurologiques", [
+            "Lasègue (SLR)", "Lasègue croisé", "Slump test",
+            "Test de Wassermann (fémoral)", "Réflexe rotulien", "Réflexe achilléen",
+            "Force L4 (extension genou)", "Force L5 (dorsiflexion pied)", "Force S1 (flexion plantaire)"])
+        section("Tests sacro-iliaques", [
+            "FABER / Patrick", "FADIR", "Compression SI", "Distraction SI",
+            "Gaenslen", "Thigh thrust", "Test de Gillet"])
+        story.append(Paragraph("Notes : "+"_"*70, styles["normal"]))
+

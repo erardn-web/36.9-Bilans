@@ -95,3 +95,41 @@ class Drapeaux(BaseTest):
                 items=[x for x in dr.split("|") if x]
                 if items:
                     st.markdown(f"**{lbl}** — Rouges : {', '.join(items)}")
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        RED = colors.HexColor("#FCEBEB"); ORANGE = colors.HexColor("#FAEEDA"); YELLOW = colors.HexColor("#FFFDE7")
+        story.append(Paragraph("Drapeaux — Identification des signaux d'alarme", styles["section"]))
+        story.append(Paragraph("Identifier les facteurs nécessitant une attention particulière ou une orientation.", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        def section(titre, items, bg):
+            story.append(Paragraph(titre, styles["subsection"]))
+            rows = [[f"☐  {item}"] for item in items]
+            t = Table(rows, colWidths=[17*cm])
+            t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("BACKGROUND",(0,0),(-1,-1),bg),
+                ("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3),
+                ("LEFTPADDING",(0,0),(-1,-1),8)]))
+            story.append(t); story.append(Spacer(1,0.2*cm))
+        section("🚩 Drapeaux ROUGES — Urgence médicale (orienter immédiatement)", [
+            "Traumatisme important récent","Perte de poids inexpliquée (> 5 kg en 3 mois)",
+            "Fièvre / frissons inexpliqués","Douleur nocturne intense non mécanique",
+            "Troubles sphinctériens (vessie/intestin)","Déficit neurologique progressif",
+            "Antécédents de cancer","Utilisation prolongée de corticoïdes","Immunosuppression / VIH",
+        ], RED)
+        section("🟠 Drapeaux ORANGES — Facteurs psychologiques à considérer", [
+            "Dépression clinique / anxiété sévère","Comportement douloureux excessif",
+            "Problèmes psychiatriques non traités","Pensées suicidaires",
+        ], ORANGE)
+        section("🟡 Drapeaux JAUNES — Facteurs psychosociaux (risque chronicisation)", [
+            "Croyances négatives sur la douleur / kinésiophobie","Catastrophisme",
+            "Attentes négatives de rétablissement","Évitement des activités par peur",
+            "Insatisfaction au travail / problèmes professionnels","Isolement social",
+            "Soutien familial insuffisant ou surimplication","Antécédents de douleur chronique",
+        ], YELLOW)
+        story.append(Paragraph("Observations : "+"_"*70, styles["normal"]))
+

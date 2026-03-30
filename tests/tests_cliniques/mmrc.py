@@ -66,3 +66,36 @@ class MMRC(BaseTest):
         rows=[{"Bilan":lbl,"mMRC Grade":row.get("mmrc_grade","—")}
               for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("Échelle mMRC — Dyspnée (Modified Medical Research Council)", styles["section"]))
+        story.append(Paragraph("Évaluation de la dyspnée dans les activités quotidiennes. Cocher le grade correspondant.", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.4*cm))
+        grades = [
+            ("0","Essoufflement uniquement lors d'efforts intenses (montée rapide d'escaliers, course)"),
+            ("1","Essoufflement en marchant vite sur terrain plat ou en montant une pente légère"),
+            ("2","Marche plus lentement que les personnes du même âge sur terrain plat, ou obligé de s'arrêter par essoufflement au rythme normal"),
+            ("3","S'arrêter par essoufflement après avoir marché ~100 m ou après quelques minutes sur terrain plat"),
+            ("4","Trop essoufflé pour quitter la maison, ou essoufflement lors de la toilette / de l'habillage"),
+        ]
+        rows = [["Grade","Description","Cocher"]] + [[g, d, "☐"] for g,d in grades]
+        t = Table(rows, colWidths=[1.5*cm,13.5*cm,2*cm])
+        t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),5),("BOTTOMPADDING",(0,0),(-1,-1),5),
+            ("ALIGN",(0,0),(0,-1),"CENTER"),("ALIGN",(2,0),(2,-1),"CENTER"),
+            ("VALIGN",(0,0),(-1,-1),"MIDDLE")]))
+        story.append(t); story.append(Spacer(1,0.3*cm))
+        sc = Table([["Grade mMRC retenu : _____"]], colWidths=[17*cm])
+        sc.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),12),("FONTNAME",(0,0),(-1,-1),"Helvetica-Bold"),
+            ("TEXTCOLOR",(0,0),(-1,-1),BLEU),("BOX",(0,0),(-1,-1),0.5,LINE),
+            ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6)]))
+        story.append(sc)
+        story.append(Paragraph("Grade ≥ 2 = dyspnée significative  ·  Grade ≥ 3 = sévère  ·  Seuil BPCO symptomatique = ≥ 1", styles["note"]))
+

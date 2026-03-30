@@ -155,3 +155,40 @@ class EVA(BaseTest):
                "Mouvement":row.get("s_eva_mouvement","—"),"Nuit":row.get("s_eva_nuit","—")}
               for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("EVA / EN — Évaluation de la Douleur", styles["section"]))
+        story.append(Paragraph("Évaluation numérique de 0 (aucune douleur) à 10 (douleur maximale imaginable).", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.4*cm))
+        # Échelle visuelle
+        story.append(Paragraph("Entourez le chiffre correspondant à votre douleur :", styles["normal"]))
+        story.append(Spacer(1,0.2*cm))
+        scale = Table([[" 0 ", " 1 ", " 2 ", " 3 ", " 4 ", " 5 ", " 6 ", " 7 ", " 8 ", " 9 ", " 10 "]],
+                      colWidths=[1.55*cm]*11)
+        scale.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),14),("FONTNAME",(0,0),(-1,-1),"Helvetica-Bold"),
+            ("ALIGN",(0,0),(-1,-1),"CENTER"),("GRID",(0,0),(-1,-1),0.5,LINE),
+            ("TOPPADDING",(0,0),(-1,-1),8),("BOTTOMPADDING",(0,0),(-1,-1),8),
+            ("BACKGROUND",(0,0),(1,0),colors.HexColor("#EAF3DE")),
+            ("BACKGROUND",(9,0),(10,0),colors.HexColor("#FCEBEB"))]))
+        story.append(scale); story.append(Spacer(1,0.1*cm))
+        legend = Table([["Aucune douleur","","","","","","","","","","Douleur maximale"]],colWidths=[1.55*cm]*11)
+        legend.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),8),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555")),
+            ("ALIGN",(0,0),(0,-1),"LEFT"),("ALIGN",(10,0),(10,-1),"RIGHT"),("TOPPADDING",(0,0),(-1,-1),2)]))
+        story.append(legend); story.append(Spacer(1,0.4*cm))
+        rows = [["Moment","EN (0–10)","Localisation","Caractère (brûlure/élancement/...)"],
+                ["Repos","_____","_____","_____"],
+                ["À l'effort","_____","_____","_____"],
+                ["Nuit","_____","_____","_____"]]
+        t = Table(rows, colWidths=[3.5*cm,3*cm,4*cm,6.5*cm])
+        t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4)]))
+        story.append(t); story.append(Spacer(1,0.3*cm))
+        story.append(Paragraph("Observations / traitements antalgiques en cours : "+"_"*40, styles["normal"]))
+

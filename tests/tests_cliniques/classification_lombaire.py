@@ -102,3 +102,40 @@ class ClassificationLombaire(BaseTest):
                "Pronostic":str(row.get("a_appreciation",""))[:80]+"..." if len(str(row.get("a_appreciation","")))>80 else row.get("a_appreciation","—")}
               for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("Classification Lombaire & Raisonnement Clinique", styles["section"]))
+        story.append(Paragraph("SIN — ROM — EOR : Classification du comportement de la douleur et orientation thérapeutique.", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        for section_title, items in [
+            ("SIN — Sévérité, Irritabilité, Nature", [
+                "Sévérité (EVN repos / effort) : _____ / _____",
+                "Irritabilité : ☐ Faible  ☐ Modérée  ☐ Élevée",
+                "Nature : ☐ Nociceptive  ☐ Neuropathique  ☐ Centrale  ☐ Mixte",
+                "Facteur aggravant principal : "+"_"*40,
+                "Facteur soulageant principal : "+"_"*40]),
+            ("ROM — Comportement des mouvements", [
+                "Direction préférentielle : ☐ Flexion  ☐ Extension  ☐ Latéroflexion  ☐ Aucune",
+                "Centralisation / périphérisation : ☐ Centralise  ☐ Périphérise  ☐ Neutre",
+                "Mouvement le plus limitant : "+"_"*40]),
+            ("EOR — End of Range / résistance", [
+                "Résistance en fin d'amplitude : ☐ Dur  ☐ Mou  ☐ Vide  ☐ Spasme",
+                "Douleur en fin d'amplitude : ☐ Oui  ☐ Non"]),
+            ("Raisonnement & Plan de traitement", [
+                "Hypothèse principale : "+"_"*50,
+                "Objectif prioritaire : "+"_"*50,
+                "Approche thérapeutique : "+"_"*50])]:
+            story.append(Paragraph(section_title, styles["subsection"]))
+            for item in items:
+                t = Table([[item]], colWidths=[17*cm])
+                t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+                    ("LINEBELOW",(0,0),(-1,-1),0.3,LINE),("BOTTOMPADDING",(0,0),(-1,-1),6),("TOPPADDING",(0,0),(-1,-1),3)]))
+                story.append(t)
+            story.append(Spacer(1,0.1*cm))
+

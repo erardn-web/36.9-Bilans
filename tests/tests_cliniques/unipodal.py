@@ -85,3 +85,30 @@ class Unipodal(BaseTest):
                  "D fermé":row.get("unipodal_d_ferme","—"),"G fermé":row.get("unipodal_g_ferme","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("Équilibre Unipodal (secondes)", styles["section"]))
+        story.append(Paragraph("Maintenir l'équilibre sur un pied — yeux ouverts puis yeux fermés. 3 essais max par côté.", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.4*cm))
+        headers = ["Condition", "Pied Droit (s)", "Pied Gauche (s)", "Interprétation"]
+        rows = [headers,
+                ["Yeux ouverts","___________","___________",""],
+                ["Yeux fermés", "___________","___________",""]]
+        t = Table(rows, colWidths=[5*cm,4*cm,4*cm,4*cm])
+        t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),10),
+            ("FONTNAME",(0,0),(3,0),"Helvetica-Bold"),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),
+            ("TOPPADDING",(0,0),(-1,-1),5),("BOTTOMPADDING",(0,0),(-1,-1),5)]))
+        story.append(t)
+        story.append(Spacer(1,0.3*cm))
+        story.append(Paragraph("Normes yeux ouverts : adulte sain > 30 s  ·  > 60 ans : > 10 s  ·  Yeux fermés : > 10 s (adulte)", styles["note"]))
+        story.append(Spacer(1,0.3*cm))
+        story.append(Paragraph("Observations : "+"_"*60, styles["normal"]))
+

@@ -118,3 +118,34 @@ class BODE(BaseTest):
                "IMC":row.get("bmi","—"),"Pronostic":row.get("bode_interpretation","—")}
               for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("BODE Index — Pronostic BPCO (0–10)", styles["section"]))
+        story.append(Paragraph("B=IMC · O=Obstruction (VEMS%) · D=Dyspnée (mMRC) · E=Exercice (6MWT)", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        # Tableau de cotation
+        rows = [
+            ["Composante","Valeur mesurée","Points 0","Points 1","Points 2","Points 3","Score"],
+            ["B — IMC (kg/m²)","_____","> 21","≤ 21","","","_____"],
+            ["O — VEMS % prédit","_____","≥ 65","50–64","36–49","≤ 35","_____"],
+            ["D — mMRC dyspnée","_____","0–1","2","3","4","_____"],
+            ["E — 6MWT (mètres)","_____","≥ 350","250–349","150–249","≤ 149","_____"],
+        ]
+        t = Table(rows, colWidths=[3.8*cm,2.8*cm,2*cm,2*cm,2*cm,2*cm,2.4*cm])
+        t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),8),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4)]))
+        story.append(t); story.append(Spacer(1,0.3*cm))
+        sc = Table([["BODE Score Total : _____ / 10"]], colWidths=[17*cm])
+        sc.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),12),("FONTNAME",(0,0),(-1,-1),"Helvetica-Bold"),
+            ("TEXTCOLOR",(0,0),(-1,-1),BLEU),("BOX",(0,0),(-1,-1),0.5,LINE),
+            ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6)]))
+        story.append(sc)
+        story.append(Paragraph("0–2 : survie 80% à 4 ans  ·  3–4 : 67%  ·  5–6 : 57%  ·  7–10 : 18%", styles["note"]))
+

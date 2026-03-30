@@ -101,3 +101,32 @@ class PatternRespi(BaseTest):
                  "Rythme":row.get("pattern_rythme","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("Pattern Respiratoire — Observation Clinique", styles["section"]))
+        story.append(Paragraph("Évaluation du mode et rythme respiratoire au repos et à l'effort.", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        for label, opts in [
+            ("Mode respiratoire :", ["☐ Costal supérieur  ☐ Diaphragmatique  ☐ Mixte  ☐ Paradoxal"]),
+            ("Rythme au repos :", ["☐ Régulier  ☐ Irrégulier  ·  FR : _____ /min"]),
+            ("Durée du cycle :", ["Inspiration : _____ s  ·  Pause : _____ s  ·  Expiration : _____ s"]),
+            ("Signes d'hyperventilation :", ["☐ Soupirs fréquents  ☐ Respiration buccale  ☐ Apnées  ☐ Tension musculaire cervicale"]),
+            ("Symétrie thoracique :", ["☐ Symétrique  ☐ Asymétrique (préciser) : "+"_"*30]),
+            ("Respiration à l'effort :", ["Mode : ☐ Nasal  ☐ Buccal  ·  Adaptation : ☐ Adéquate  ☐ Inadéquate"])]:
+            story.append(Paragraph(label, styles["normal"]))
+            for opt in opts:
+                t = Table([[opt]], colWidths=[17*cm])
+                t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+                    ("LINEBELOW",(0,0),(-1,-1),0.3,LINE),("BOTTOMPADDING",(0,0),(-1,-1),6),
+                    ("TOPPADDING",(0,0),(-1,-1),3),("LEFTPADDING",(0,0),(-1,-1),12)]))
+                story.append(t)
+            story.append(Spacer(1,0.1*cm))
+        story.append(Spacer(1,0.2*cm))
+        story.append(Paragraph("Observations complémentaires : "+"_"*55, styles["normal"]))
+

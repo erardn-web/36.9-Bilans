@@ -110,3 +110,55 @@ class ASES(BaseTest):
                  "Résultat":row.get("ases_interpretation","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle, PageBreak
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("ASES — American Shoulder and Elbow Surgeons Score", styles["section"]))
+        story.append(Paragraph("Score /100 : 50% douleur (EVA ×5) + 50% fonction (10 activités × 3 pts max).", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        # Douleur
+        story.append(Paragraph("Partie 1 — Douleur", styles["subsection"]))
+        story.append(Paragraph("Entourez le chiffre correspondant à votre douleur habituelle :", styles["normal"]))
+        scale = Table([[" 0 "," 1 "," 2 "," 3 "," 4 "," 5 "," 6 "," 7 "," 8 "," 9 "," 10 "]],colWidths=[1.55*cm]*11)
+        scale.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),13),("FONTNAME",(0,0),(-1,-1),"Helvetica-Bold"),
+            ("ALIGN",(0,0),(-1,-1),"CENTER"),("GRID",(0,0),(-1,-1),0.5,LINE),
+            ("TOPPADDING",(0,0),(-1,-1),7),("BOTTOMPADDING",(0,0),(-1,-1),7)]))
+        story.append(scale)
+        story.append(Paragraph("0 = aucune douleur   10 = douleur maximale imaginable", styles["note"]))
+        story.append(Spacer(1,0.3*cm))
+        # Fonction
+        story.append(Paragraph("Partie 2 — Fonction (0 = incapable · 1 = difficile · 2 = avec difficulté · 3 = normal)", styles["subsection"]))
+        activites = [
+            "Mettre un manteau",
+            "Dormir sur le côté atteint",
+            "Se laver le dos / attacher le soutien-gorge dans le dos",
+            "Utiliser les toilettes",
+            "Se peigner les cheveux",
+            "Atteindre une étagère haute",
+            "Soulever 500 g au-dessus de l'épaule",
+            "Lancer une balle en dessus (overarm)",
+            "Effectuer son travail habituel",
+            "Pratiquer son sport habituel",
+        ]
+        rows = [["#","Activité","0","1","2","3"]]
+        for i, a in enumerate(activites, 1):
+            rows.append([str(i), a, "☐","☐","☐","☐"])
+        t = Table(rows, colWidths=[0.8*cm,10.7*cm,1.25*cm,1.25*cm,1.25*cm,1.75*cm])
+        t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),8.5),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3),
+            ("ALIGN",(2,0),(5,-1),"CENTER")]))
+        story.append(t); story.append(Spacer(1,0.3*cm))
+        sc = Table([["Score Douleur (EVA×5) : _____ / 50","Score Fonction (Σ×1.67) : _____ / 50","ASES Total : _____ / 100"]],
+                   colWidths=[5.7*cm,5.7*cm,5.6*cm])
+        sc.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),10),("FONTNAME",(0,0),(-1,-1),"Helvetica-Bold"),
+            ("TEXTCOLOR",(0,0),(-1,-1),BLEU),("BOX",(0,0),(-1,-1),0.5,LINE),("INNERGRID",(0,0),(-1,-1),0.5,LINE),
+            ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6)]))
+        story.append(sc)
+        story.append(Paragraph("Score douleur = (10 − EVA) × 5  ·  Score fonction = Σ activités × 1.6667", styles["note"]))
+

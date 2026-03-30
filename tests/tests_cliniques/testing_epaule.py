@@ -86,3 +86,32 @@ class TestingEpaule(BaseTest):
                 r[f"{m} G"]=row.get(f"{k}_g","—")
             rows.append(r)
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("Testing Musculaire — Épaule (MRC 0–5)", styles["section"]))
+        story.append(Paragraph("Évaluation de la force musculaire selon l'échelle MRC. 0=absence · 1=contraction visible · 2=actif sans pesanteur · 3=actif contre pesanteur · 4=résistance partielle · 5=résistance complète", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        rows = [["Muscle / Mouvement","Côté D (0–5)","Côté G (0–5)","Douleur","Notes"],
+                ["Deltoïde antérieur (flexion)","_____","_____","☐",""],
+                ["Deltoïde moyen (abduction)","_____","_____","☐",""],
+                ["Deltoïde postérieur (extension)","_____","_____","☐",""],
+                ["Supra-épineux (abduction débutante)","_____","_____","☐",""],
+                ["Infra-épineux (rotation externe)","_____","_____","☐",""],
+                ["Sous-scapulaire (rotation interne)","_____","_____","☐",""],
+                ["Petit rond (rotation externe)","_____","_____","☐",""],
+                ["Grand dentelé (protraction scapulaire)","_____","_____","☐",""],
+                ["Trapèze inférieur (dépression scapulaire)","_____","_____","☐",""],
+                ["Biceps brachial (flexion coude / supination)","_____","_____","☐",""],
+                ["Triceps (extension coude)","_____","_____","☐",""]]
+        t = Table(rows, colWidths=[5.5*cm,2.2*cm,2.2*cm,1.8*cm,5.3*cm])
+        t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),8.5),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3)]))
+        story.append(t)
+

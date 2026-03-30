@@ -76,3 +76,39 @@ class Luomajoki(BaseTest):
                **{n:row.get(f"o_{LUOM_TESTS[i][0]}","—") for i,n in enumerate(LUOM_NOMS)}}
               for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("Luomajoki — Tests de Contrôle Moteur Rachidien", styles["section"]))
+        story.append(Paragraph("Évaluation de la dissociation lombopelvienne. Score /10 — plus le score est élevé, plus le contrôle moteur est altéré.", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        tests = [
+            "Flexion position debout (genoux fléchis)",
+            "Flexion position debout (genoux tendus)",
+            "Glissement pelvien latéral en position debout",
+            "Flexion du tronc en position assise sur ballon",
+            "Extension du tronc en position assise sur ballon",
+            "Rotation pelvienne en décubitus dorsal (un genou fléchi)",
+            "Rocking en quadrupédie (avant)",
+            "Rocking en quadrupédie (arrière)",
+            "Abaissement de la jambe tendue en décubitus dorsal",
+            "Flexion de la hanche en position assise",
+        ]
+        rows = [["#","Test","Réussi ?"]] + [[str(i+1), t, "☐ Oui  ☐ Non  ☐ NC"] for i,t in enumerate(tests)]
+        t = Table(rows, colWidths=[0.8*cm, 12.2*cm, 4*cm])
+        t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3)]))
+        story.append(t); story.append(Spacer(1,0.3*cm))
+        sc = Table([["Score Luomajoki : _____ / 10  (nombre d'erreurs)"]], colWidths=[17*cm])
+        sc.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),11),("FONTNAME",(0,0),(-1,-1),"Helvetica-Bold"),
+            ("TEXTCOLOR",(0,0),(-1,-1),BLEU),("BOX",(0,0),(-1,-1),0.5,LINE),
+            ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6)]))
+        story.append(sc)
+        story.append(Paragraph("0–3 : contrôle moteur adéquat  ·  4–6 : altéré  ·  > 6 : significativement altéré", styles["note"]))
+

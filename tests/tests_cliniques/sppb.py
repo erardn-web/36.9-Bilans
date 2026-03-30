@@ -104,3 +104,53 @@ class SPPB(BaseTest):
                  "Interprétation":row.get("sppb_interpretation","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("SPPB — Short Physical Performance Battery (0–12)", styles["section"]))
+        story.append(Paragraph("Trois épreuves : équilibre statique, vitesse de marche 4 m, lever de chaise ×5.", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        # Équilibre
+        story.append(Paragraph("1. Équilibre statique", styles["subsection"]))
+        eq_rows = [["Position","Tenu ≥ 10 s ?","Score"],
+                   ["Pieds joints","☐ Oui  ☐ Non","0 ou 1"],
+                   ["Semi-tandem","☐ Oui  ☐ Non","0 ou 1"],
+                   ["Tandem","☐ Oui  ☐ Non","0, 1 ou 2"]]
+        t = Table(eq_rows, colWidths=[6*cm,6*cm,5*cm])
+        t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),
+            ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4)]))
+        story.append(t); story.append(Spacer(1,0.2*cm))
+        story.append(Paragraph("Score équilibre : _____ / 4", styles["normal"]))
+        story.append(Spacer(1,0.3*cm))
+        # Marche
+        story.append(Paragraph("2. Vitesse de marche (4 mètres)", styles["subsection"]))
+        t2 = Table([["Temps (s)","Score (0–4)"],["_____","_____"]], colWidths=[8.5*cm,8.5*cm])
+        t2.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),10),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4)]))
+        story.append(t2); story.append(Spacer(1,0.2*cm))
+        story.append(Paragraph("≤ 4.82 s → 4  ·  4.83–6.20 s → 3  ·  6.21–8.70 s → 2  ·  > 8.70 s → 1  ·  incapable → 0", styles["note"]))
+        story.append(Spacer(1,0.3*cm))
+        # Lever chaise
+        story.append(Paragraph("3. Lever de chaise × 5 (sans les bras)", styles["subsection"]))
+        t3 = Table([["Temps (s)","Score (0–4)"],["_____","_____"]], colWidths=[8.5*cm,8.5*cm])
+        t3.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),10),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4)]))
+        story.append(t3); story.append(Spacer(1,0.2*cm))
+        story.append(Paragraph("≤ 11.19 s → 4  ·  11.20–13.69 s → 3  ·  13.70–16.69 s → 2  ·  > 16.70 s → 1  ·  incapable → 0", styles["note"]))
+        story.append(Spacer(1,0.3*cm))
+        sc = Table([["Score SPPB Total : _____ / 12"]], colWidths=[17*cm])
+        sc.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),12),("FONTNAME",(0,0),(-1,-1),"Helvetica-Bold"),
+            ("TEXTCOLOR",(0,0),(-1,-1),BLEU),("BOX",(0,0),(-1,-1),0.5,LINE),
+            ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6)]))
+        story.append(sc)
+        story.append(Paragraph("0–3 : limitation sévère  ·  4–6 : modérée  ·  7–9 : légère  ·  10–12 : normale", styles["note"]))
+

@@ -99,3 +99,35 @@ class MobiliteLombaire(BaseTest):
                "Rot D":row.get("o_rot_droite_mob","—"),"Rot G":row.get("o_rot_gauche_mob","—")}
               for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("Mobilité Rachis Lombaire", styles["section"]))
+        story.append(Paragraph("Mesure des amplitudes rachidiennes lombaires et test de Schober.", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        rows = [["Mouvement","Amplitude (°)","Distance doigt-sol (cm)","Observations"],
+                ["Flexion","_____","_____",""],
+                ["Extension","_____","",""],
+                ["Latéroflexion D","_____","",""],
+                ["Latéroflexion G","_____","",""],
+                ["Rotation D","_____","",""],
+                ["Rotation G","_____","",""]]
+        t = Table(rows, colWidths=[4.5*cm,3.5*cm,4.5*cm,4.5*cm])
+        t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4)]))
+        story.append(t); story.append(Spacer(1,0.3*cm))
+        story.append(Paragraph("Test de Schober", styles["subsection"]))
+        schober = Table([["Mesure initiale (S1→+10 cm) : _____ cm",
+                          "Mesure en flexion : _____ cm",
+                          "Différence : _____ cm (normal ≥ 5 cm)"]], colWidths=[5.5*cm,5.5*cm,6*cm])
+        schober.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),5),("BOTTOMPADDING",(0,0),(-1,-1),5)]))
+        story.append(schober); story.append(Spacer(1,0.2*cm))
+        story.append(Paragraph("Notes : "+"_"*70, styles["normal"]))
+

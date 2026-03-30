@@ -163,3 +163,4 @@ class Tinetti(BaseTest):
         ]))
         story.append(score_tbl)
         story.append(Paragraph("< 19 → risque élevé · 19–23 → risque modéré · ≥ 24 → risque faible", styles["note"]))
+

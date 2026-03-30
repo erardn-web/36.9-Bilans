@@ -138,3 +138,31 @@ class Gazometrie(BaseTest):
                  "Pattern":row.get("etco2_pattern","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("Capnographie / Gazométrie", styles["section"]))
+        story.append(Paragraph("Mesure du CO₂ expiré (EtCO₂) et paramètres gazométriques. Valeurs normales : EtCO₂ 35–45 mmHg, pH 7.35–7.45.", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        rows = [["Paramètre","Valeur","Norme","Interprétation"],
+                ["EtCO₂ (mmHg)","_____","35–45",""],
+                ["FR (/min)","_____","12–20",""],
+                ["SpO₂ (%)","_____","≥ 95",""],
+                ["pH","_____","7.35–7.45",""],
+                ["PaCO₂ (mmHg)","_____","35–45",""],
+                ["PaO₂ (mmHg)","_____","80–100",""],
+                ["HCO₃ (mmol/L)","_____","22–26",""]]
+        t = Table(rows, colWidths=[4.5*cm,3*cm,3*cm,6.5*cm])
+        t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4)]))
+        story.append(t); story.append(Spacer(1,0.2*cm))
+        story.append(Paragraph("Contexte (repos / effort / post-HVT) : "+"_"*45, styles["normal"]))
+        story.append(Spacer(1,0.2*cm))
+        story.append(Paragraph("Notes : "+"_"*70, styles["normal"]))
+

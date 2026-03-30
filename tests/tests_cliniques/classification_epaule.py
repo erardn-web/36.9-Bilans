@@ -142,3 +142,40 @@ class ClassificationEpaule(BaseTest):
                  "Pronostic":str(row.get("ep_appreciation",""))[:80]}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("Classification Épaule (SIN / ROM / EOR)", styles["section"]))
+        story.append(Paragraph("Raisonnement clinique et orientation thérapeutique pour l'épaule douloureuse.", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        for section_title, items in [
+            ("SIN — Sévérité, Irritabilité, Nature", [
+                "Sévérité (EVN repos / effort) : _____ / _____",
+                "Irritabilité : ☐ Faible  ☐ Modérée  ☐ Élevée",
+                "Nature : ☐ Nociceptive  ☐ Neuropathique  ☐ Centrale  ☐ Mixte",
+                "Facteur aggravant : "+"_"*50,
+                "Facteur soulageant : "+"_"*50]),
+            ("ROM — Comportement des amplitudes", [
+                "Pattern capsulaire : ☐ Oui  ☐ Non  (RE > AB > RI)",
+                "Amplitude la plus limitante : "+"_"*40,
+                "Arc douloureux : ☐ Absent  ☐ Présent (de ___°à ___°)"]),
+            ("EOR — Résistance en fin d'amplitude", [
+                "Résistance : ☐ Dur  ☐ Mou  ☐ Vide  ☐ Spasme  ☐ Normale",
+                "Douleur en EOR : ☐ Oui  ☐ Non"]),
+            ("Diagnostic clinique", [
+                "Hypothèse principale : "+"_"*50,
+                "☐ Conflit sous-acromial  ☐ Capsulite  ☐ Tendinopathie coiffe  ☐ SLAP  ☐ Instabilité  ☐ AC",
+                "Orientation : "+"_"*60])]:
+            story.append(Paragraph(section_title, styles["subsection"]))
+            for item in items:
+                t = Table([[item]], colWidths=[17*cm])
+                t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+                    ("LINEBELOW",(0,0),(-1,-1),0.3,LINE),("BOTTOMPADDING",(0,0),(-1,-1),6),("TOPPADDING",(0,0),(-1,-1),3)]))
+                story.append(t)
+            story.append(Spacer(1,0.1*cm))
+

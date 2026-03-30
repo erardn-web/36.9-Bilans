@@ -90,3 +90,34 @@ class TestsEpauleSpeciaux(BaseTest):
                 r[n] = row.get(k,"—") or "—"
             rows.append(r)
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("Tests Spécifiques Épaule", styles["section"]))
+        story.append(Paragraph("Tests orthopédiques cliniques. ☑ = positif (douleur ou résistance anormale)  ☐ = négatif", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        def section(titre, tests):
+            story.append(Paragraph(titre, styles["subsection"]))
+            rows = [["Test","D","G","Notes"]] + [[t,"☐","☐","_"*25] for t in tests]
+            tb = Table(rows, colWidths=[7*cm,1.5*cm,1.5*cm,7*cm])
+            tb.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+                ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+                ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3),
+                ("ALIGN",(1,0),(2,-1),"CENTER")]))
+            story.append(tb); story.append(Spacer(1,0.2*cm))
+        section("Conflit sous-acromial", [
+            "Neer","Hawkins-Kennedy","Yocum","Arc douloureux (60°–120°)"])
+        section("Coiffe des rotateurs", [
+            "Jobe / Empty Can (supra-épineux)","Full Can (supra-épineux)","Lift-off (sous-scapulaire)",
+            "Bear Hug (sous-scapulaire)","Belly Press","Lag sign RE (infra-épineux)","Hornblower (petit rond)"])
+        section("SLAP / Biceps / Instabilité", [
+            "Speed (biceps long)","Yergason (biceps long)","O'Brien (SLAP)",
+            "Appréhension antérieure","Recentrage (Jobe)","Sulcus sign (instabilité inférieure)"])
+        section("Acromio-claviculaire", [
+            "Cross body adduction","Paxinos sign","Compression AC"])
+

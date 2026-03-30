@@ -90,3 +90,29 @@ class Berg(BaseTest):
                  "Interprétation":row.get("berg_interpretation","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+        from tests.tests_cliniques.shared_data import BERG_ITEMS
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("Berg Balance Scale (0–56)", styles["section"]))
+        story.append(Paragraph("Évaluation de l'équilibre. Seuil risque de chute : < 45/56", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        for key, label, options in BERG_ITEMS:
+            story.append(Paragraph(label, styles["question"]))
+            opt_rows = [[f"☐  {s} — {d}"] for s,d in options]
+            t = Table(opt_rows, colWidths=[17*cm])
+            t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TOPPADDING",(0,0),(-1,-1),1),("BOTTOMPADDING",(0,0),(-1,-1),1)]))
+            story.append(t)
+        story.append(Spacer(1,0.3*cm))
+        sc = Table([["Score Total : _____ / 56"]], colWidths=[17*cm])
+        sc.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),11),("FONTNAME",(0,0),(-1,-1),"Helvetica-Bold"),
+            ("TEXTCOLOR",(0,0),(-1,-1),BLEU),("BOX",(0,0),(-1,-1),0.5,LINE),("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6)]))
+        story.append(sc)
+        story.append(Paragraph("< 45 → risque de chute  ·  < 36 → risque très élevé  ·  41–56 → risque faible", styles["note"]))
+

@@ -74,3 +74,27 @@ class STS(BaseTest):
                  "Interprétation":row.get("sts_1min_interpretation","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("STS — Sit to Stand 1 minute", styles["section"]))
+        story.append(Paragraph("Nombre de levers de chaise en 1 minute, sans aide des bras si possible.", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.5*cm))
+        for label in ["Utilisation des bras : ☐ Non  ☐ Oui (à noter)",
+                      "Incidents / arrêts : "+"_"*50,
+                      "Nombre de levers en 1 minute : _____"]:
+            t = Table([[label]],colWidths=[17*cm])
+            t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),10),("LINEBELOW",(0,0),(-1,-1),0.3,LINE),("BOTTOMPADDING",(0,0),(-1,-1),8)]))
+            story.append(t); story.append(Spacer(1,0.1*cm))
+        story.append(Spacer(1,0.3*cm))
+        sc = Table([["Résultat : _____ levers / min"]], colWidths=[17*cm])
+        sc.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),11),("FONTNAME",(0,0),(-1,-1),"Helvetica-Bold"),
+            ("TEXTCOLOR",(0,0),(-1,-1),BLEU),("BOX",(0,0),(-1,-1),0.5,LINE),("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6)]))
+        story.append(sc)
+        story.append(Paragraph("Normes (60–69 ans) : F ≥ 12  /  H ≥ 14  ·  (70–79 ans) : F ≥ 11  /  H ≥ 12", styles["note"]))
+

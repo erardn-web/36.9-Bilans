@@ -102,3 +102,53 @@ class QuickDASH(BaseTest):
                  "Incapacité":row.get("qdash_interpretation","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("QuickDASH — Disabilities of the Arm, Shoulder and Hand", styles["section"]))
+        story.append(Paragraph(
+            "11 questions sur les difficultes fonctionnelles du membre superieur durant la semaine "
+            "ecoule. Score 0-100 (100 = incapacite maximale).", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],
+                    colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+                                  ("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        questions = [
+            "1. Ouvrir un pot hermetique neuf ou visse",
+            "2. Effectuer des taches menageres lourdes (laver planchers, murs)",
+            "3. Porter un sac de provisions ou une mallette",
+            "4. Se laver le dos",
+            "5. Utiliser un couteau pour couper la nourriture",
+            "6. Loisirs necessitant effort ou chocs au bras, epaule, main",
+            "7. Douleur au bras, epaule ou main",
+            "8. Fourmillements dans bras, epaule ou main",
+            "9. Faiblesse dans bras, epaule ou main",
+            "10. Raideur dans bras, epaule ou main",
+            "11. Difficulte a dormir a cause des douleurs",
+        ]
+        cols_hdr = ["Question","1 Aucune","2 Peu","3 Moderee","4 Grande","5 Incapable"]
+        rows = [cols_hdr]
+        for q in questions:
+            rows.append([q,"O","O","O","O","O"])
+        t = Table(rows, colWidths=[7.5*cm,1.85*cm,1.85*cm,1.85*cm,1.85*cm,2.1*cm])
+        t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),8),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),
+            ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),
+            ("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3),
+            ("ALIGN",(1,0),(-1,-1),"CENTER"),("VALIGN",(0,0),(-1,-1),"MIDDLE")]))
+        story.append(t); story.append(Spacer(1,0.3*cm))
+        sc = Table([["Score QuickDASH = [(Somme/11) - 1] x 25 = _____ / 100"]], colWidths=[17*cm])
+        sc.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),11),
+            ("FONTNAME",(0,0),(-1,-1),"Helvetica-Bold"),
+            ("TEXTCOLOR",(0,0),(-1,-1),BLEU),("BOX",(0,0),(-1,-1),0.5,LINE),
+            ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6)]))
+        story.append(sc)
+        story.append(Paragraph(
+            "Formule : Score = [(Somme des 11 items / 11) - 1] x 25  |  >= 1 item manquant = invalide",
+            styles["note"]))
+

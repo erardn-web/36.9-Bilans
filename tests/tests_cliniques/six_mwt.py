@@ -132,3 +132,38 @@ class SixMWT(BaseTest):
                  "Interprétation":row.get("mwt_interpretation","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("6MWT — Test de Marche de 6 Minutes", styles["section"]))
+        story.append(Paragraph("Marcher le plus loin possible en 6 minutes sur un couloir de 30 m. Mesurer SpO₂ et FC avant/après.", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        headers = ["Paramètre","Avant","Après","Min (si BPCO)"]
+        rows = [headers,
+                ["SpO₂ (%)","_____","_____","_____"],
+                ["FC (bpm)","_____","_____",""],
+                ["Dyspnée Borg (0–10)","_____","_____",""],
+                ["Fatigue MI Borg (0–10)","_____","_____",""]]
+        t = Table(rows, colWidths=[6*cm,3.5*cm,3.5*cm,4*cm])
+        t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),10),
+            ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),
+            ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4)]))
+        story.append(t); story.append(Spacer(1,0.3*cm))
+        for label in ["Aide technique : ☐ Aucune  ☐ Canne  ☐ Déambulateur",
+                      "Incidents / arrêts (durée, raison) : "+"_"*40]:
+            story.append(Paragraph(label, styles["normal"])); story.append(Spacer(1,0.2*cm))
+        story.append(Spacer(1,0.2*cm))
+        sc = Table([["Distance parcourue : _____ mètres"]], colWidths=[17*cm])
+        sc.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),12),("FONTNAME",(0,0),(-1,-1),"Helvetica-Bold"),
+            ("TEXTCOLOR",(0,0),(-1,-1),BLEU),("BOX",(0,0),(-1,-1),0.5,LINE),
+            ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6)]))
+        story.append(sc)
+        story.append(Paragraph("Valeur prédite (Enright) = 868 − (2.99×âge) − (74.7×sexeF) ± 139 m", styles["note"]))
+

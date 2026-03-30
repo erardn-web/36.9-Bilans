@@ -95,3 +95,34 @@ class AmplitudesEpaule(BaseTest):
                 fig.update_layout(title=label,barmode="group",yaxis_title="°",
                                   height=280,plot_bgcolor="white",paper_bgcolor="white")
                 st.plotly_chart(fig,use_container_width=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("Amplitudes Articulaires — Épaule", styles["section"]))
+        story.append(Paragraph("Mesure goniométrique des amplitudes articulaires. D = côté douloureux / G = côté sain.", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        rows = [["Mouvement","Côté D (°)","Côté G (°)","Norme (°)","Douleur (0–10)"],
+                ["Flexion","_____","_____","0–180","_____"],
+                ["Extension","_____","_____","0–60","_____"],
+                ["Abduction","_____","_____","0–180","_____"],
+                ["Adduction","_____","_____","0–30","_____"],
+                ["Rotation interne (bras au corps)","_____","_____","0–80","_____"],
+                ["Rotation externe (bras au corps)","_____","_____","0–90","_____"],
+                ["Rotation interne (ABD 90°)","_____","_____","0–70","_____"],
+                ["Rotation externe (ABD 90°)","_____","_____","0–90","_____"],
+                ["Élévation plan scapulaire","_____","_____","0–180","_____"],
+                ["Main dans le dos (vertèbre)","_____","_____","T6–T8","_____"]]
+        t = Table(rows, colWidths=[5.5*cm,2.2*cm,2.2*cm,2.2*cm,2.9*cm])
+        t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3)]))
+        story.append(t); story.append(Spacer(1,0.2*cm))
+        story.append(Paragraph("Arc douloureux : ☐ Absent  ☐ Présent (de _____ ° à _____ °)", styles["normal"]))
+        story.append(Spacer(1,0.2*cm))
+        story.append(Paragraph("Notes : "+"_"*70, styles["normal"]))
+

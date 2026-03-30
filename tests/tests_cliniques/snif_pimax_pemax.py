@@ -111,3 +111,35 @@ class SNIFPimaxPemax(BaseTest):
                  "PEmax (cmH₂O)":row.get("pemax_val","—"),"PEmax %":row.get("pemax_pct","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm; from reportlab.lib import colors
+        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
+        story.append(Paragraph("SNIF — PiMax — PeMax : Force Musculaire Respiratoire", styles["section"]))
+        story.append(Paragraph("Évaluation de la force inspiratoire et expiratoire maximale. 3 essais par mesure, retenir le meilleur.", styles["intro"]))
+        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
+        story.append(hdr); story.append(Spacer(1,0.3*cm))
+        rows = [["Test","Essai 1","Essai 2","Essai 3","Retenu","Prédit","% Prédit"],
+                ["SNIF (cmH₂O)","_____","_____","_____","_____","_____","_____ %"],
+                ["PiMax (cmH₂O)","_____","_____","_____","_____","_____","_____ %"],
+                ["PeMax (cmH₂O)","_____","_____","_____","_____","_____","_____ %"]]
+        t = Table(rows, colWidths=[3.5*cm,2*cm,2*cm,2*cm,2*cm,2.5*cm,3*cm])
+        t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4)]))
+        story.append(t); story.append(Spacer(1,0.3*cm))
+        story.append(Paragraph("Valeurs de référence :", styles["subsection"]))
+        ref_rows = [["Mesure","Femmes (cmH₂O)","Hommes (cmH₂O)","Seuil pathologique"],
+                    ["SNIF","70 ± 24","122 ± 27","< 70 cmH₂O"],
+                    ["PiMax","70–80","100–120","< 70 (F) / < 80 (H)"],
+                    ["PeMax","90–100","150–160","< 80 (F) / < 100 (H)"]]
+        t2 = Table(ref_rows, colWidths=[4.25*cm]*4)
+        t2.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),8.5),
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF9")),("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("GRID",(0,0),(-1,-1),0.3,LINE),("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3)]))
+        story.append(t2); story.append(Spacer(1,0.2*cm))
+        story.append(Paragraph("Notes / conditions de mesure : "+"_"*55, styles["normal"]))
+
