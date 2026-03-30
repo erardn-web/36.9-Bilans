@@ -109,19 +109,18 @@ if selected_tid and selected_tid in tests_map:
     except Exception as e:
         st.warning(f"Aperçu non disponible : {e}")
     st.markdown('</div>', unsafe_allow_html=True)
-    from utils.pdf import QUESTIONNAIRES, generate_questionnaires_pdf
-    _qk = _TEST_TO_Q.get(selected_tid)
-    if _qk and _qk in QUESTIONNAIRES:
-        st.markdown("---")
-        _pdf_key = f"bib_pdf_{selected_tid}"
-        if st.button("🖨️ Générer fiche PDF", type="primary"):
-            with st.spinner("Génération…"):
-                try: st.session_state[_pdf_key] = generate_questionnaires_pdf([_qk], {})
-                except Exception as e: st.error(f"Erreur : {e}")
-        if st.session_state.get(_pdf_key):
-            st.download_button("📥 Télécharger", data=st.session_state[_pdf_key],
-                file_name=f"fiche_{selected_tid}.pdf", mime="application/pdf",
-                key=f"dl_{selected_tid}")
+    st.markdown("---")
+    from utils.pdf import generate_tests_pdf
+    _pdf_key = f"bib_pdf_{selected_tid}"
+    if st.button("🖨️ Générer fiche PDF", type="primary", key=f"gen_{selected_tid}"):
+        with st.spinner("Génération…"):
+            try: st.session_state[_pdf_key] = generate_tests_pdf([selected_tid], {})
+            except Exception as e: st.error(f"Erreur : {e}")
+    if st.session_state.get(_pdf_key):
+        st.download_button("📥 Télécharger",
+            data=st.session_state[_pdf_key],
+            file_name=f"fiche_{selected_tid}.pdf",
+            mime="application/pdf", key=f"dl_{selected_tid}")
     st.stop()
 
 # ── Recherche ─────────────────────────────────────────────────────────────────
