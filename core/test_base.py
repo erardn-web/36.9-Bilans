@@ -134,10 +134,86 @@ class BaseTest(ABC):
     @classmethod
     def render_print_sheet(cls, story: list, styles: dict) -> None:
         """
-        Ajoute une fiche imprimable vierge au story PDF questionnaires.
-        Par défaut n'ajoute rien — override pour créer la fiche.
+        Ajoute une fiche imprimable vierge au story PDF.
+        Version générique : titre + description + champs avec lignes à remplir.
+        Override dans le test pour une fiche sur mesure.
         """
-        pass
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_LEFT
+
+        m = cls.meta()
+        nom = m.get("nom", cls.tab_label())
+        desc = m.get("description", "")
+        ref  = m.get("reference", "")
+        fields = cls.fields()
+
+        # Titre
+        story.append(Paragraph(nom, styles["section"]))
+        if desc:
+            story.append(Paragraph(desc, styles["intro"]))
+        if ref:
+            story.append(Paragraph(f"Référence : {ref}", styles["small"]))
+        story.append(Spacer(1, 0.4*cm))
+
+        # Ligne patient / date
+        from reportlab.platypus import Table as _T, TableStyle as _TS
+        header_data = [["Patient : " + "_"*30, "Date : " + "_"*15, "Praticien : " + "_"*15]]
+        header_tbl = _T(header_data, colWidths=[8*cm, 4.5*cm, 4.5*cm])
+        header_tbl.setStyle(_TS([
+            ("FONTSIZE", (0,0), (-1,-1), 9),
+            ("TEXTCOLOR", (0,0), (-1,-1), colors.HexColor("#555555")),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 4),
+        ]))
+        story.append(header_tbl)
+        story.append(Spacer(1, 0.4*cm))
+
+        # Champs — ligne de saisie par champ
+        if fields:
+            # Formater les noms de champs en labels lisibles
+            def _label(f):
+                # Supprimer le préfixe commun (test_id_)
+                tid = m.get("id","")
+                f = f.replace(tid + "_", "").replace("_", " ")
+                return f.strip().capitalize()
+
+            # Grouper par paires pour 2 colonnes
+            pairs = [(fields[i], fields[i+1] if i+1 < len(fields) else None)
+                     for i in range(0, len(fields), 2)]
+            row_h = 0.9*cm
+            line_color = colors.HexColor("#CCCCCC")
+            col_w = 8.5*cm
+
+            for f1, f2 in pairs:
+                row = []
+                for f in [f1, f2]:
+                    if f:
+                        lbl = _label(f)
+                        row.append(f"{lbl} : {'_'*25}")
+                    else:
+                        row.append("")
+                tbl = _T([row], colWidths=[col_w, col_w])
+                tbl.setStyle(_TS([
+                    ("FONTSIZE", (0,0), (-1,-1), 9),
+                    ("TEXTCOLOR", (0,0), (-1,-1), colors.HexColor("#1A1A1A")),
+                    ("BOTTOMPADDING", (0,0), (-1,-1), 6),
+                    ("TOPPADDING", (0,0), (-1,-1), 4),
+                    ("LINEBELOW", (0,0), (-1,-1), 0.3, line_color),
+                ]))
+                story.append(tbl)
+
+        # Zone notes
+        story.append(Spacer(1, 0.5*cm))
+        story.append(Paragraph("Notes / Observations :", styles["normal"]))
+        for _ in range(3):
+            story.append(Spacer(1, 0.5*cm))
+            tbl = _T([["_"*90]], colWidths=[17*cm])
+            tbl.setStyle(_TS([
+                ("FONTSIZE", (0,0), (-1,-1), 9),
+                ("TEXTCOLOR", (0,0), (-1,-1), colors.HexColor("#CCCCCC")),
+            ]))
+            story.append(tbl)
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
