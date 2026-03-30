@@ -49,7 +49,6 @@ def _get_spreadsheet():
         ss = client.open(SPREADSHEET_NAME)
     except gspread.SpreadsheetNotFound:
         raise Exception(f"Google Sheet '{SPREADSHEET_NAME}' introuvable.")
-    # _ensure_sheet seulement au premier appel (cache_resource = une fois par session)
     _ensure_sheet(ss, "Patients",  PATIENTS_HEADERS)
     _ensure_sheet(ss, "Cas",       CAS_HEADERS)
     _ensure_sheet(ss, "Bilans",    BILANS_BASE_HEADERS + ALL_TEST_FIELDS)
@@ -71,14 +70,12 @@ CAS_HEADERS = [
     "statut","praticien_creation","date_ouverture","date_cloture","notes_cas","analyse_ia",
 ]
 
-# Colonnes de base du bilan — les champs des tests suivent directement
 BILANS_BASE_HEADERS = [
     "bilan_id","cas_id","patient_id","cabinet_id",
     "praticien","date_bilan",
     "tests_actifs","diagnostic_prescription","poids_kg","taille_cm","bmi","fc_repos","fr_repos","ta_repos","spo2_repos","notes_generales","analyse_ia",
 ]
 
-# Headers complets de la feuille Bilans
 BILANS_HEADERS = BILANS_BASE_HEADERS + ALL_TEST_FIELDS
 
 AUDIT_HEADERS = [
@@ -89,7 +86,7 @@ AUDIT_HEADERS = [
 FEEDBACK_HEADERS = [
     "id","date_creation","auteur","type","titre",
     "description","statut","deadline_vote",
-    "votes_pour","votes_contre",
+    "votes_pour","votes_contre","reponse_admin",
 ]
 
 VOTES_HEADERS = [
@@ -187,7 +184,6 @@ def _append_row(ws_name, data: dict):
 
 def _update_row(ws_name, id_col, id_val, updates: dict) -> bool:
     ws = _ws(ws_name)
-    # Toujours lire directement depuis GSheets pour avoir les vrais headers
     rows = ws.get_all_values()
     if not rows: return False
     hdr = rows[0]
@@ -195,11 +191,10 @@ def _update_row(ws_name, id_col, id_val, updates: dict) -> bool:
     col_id = hdr.index(id_col)
     for i, row in enumerate(rows[1:], start=2):
         if row and len(row) > col_id and row[col_id] == id_val:
-            # Mise à jour cellule par cellule — évite d'écraser toute la ligne
             cell_updates = []
             for k, v in updates.items():
                 if k in hdr:
-                    col_num = hdr.index(k) + 1  # 1-based
+                    col_num = hdr.index(k) + 1
                     cell_updates.append({
                         "range": f"{_col_letter(col_num)}{i}",
                         "values": [[str(v)]]
@@ -212,7 +207,6 @@ def _update_row(ws_name, id_col, id_val, updates: dict) -> bool:
 
 
 def _col_letter(n: int) -> str:
-    """Convertit un numéro de colonne (1-based) en lettre Excel (A, B, ... Z, AA...)."""
     result = ""
     while n > 0:
         n, r = divmod(n - 1, 26)
@@ -301,7 +295,6 @@ def _get_all_cas(cabinet_id="default") -> pd.DataFrame:
 
 @st.cache_data(ttl=60)
 def get_patient_cas(patient_id) -> pd.DataFrame:
-    # Lecture directe — évite le cache pour avoir template_snapshot à jour
     ws = _ws("Cas")
     rows = ws.get_all_values()
     if not rows: return pd.DataFrame(columns=CAS_HEADERS)
@@ -356,36 +349,27 @@ def get_tests_actifs(cas_id) -> list:
 
 @st.cache_data(ttl=60)
 def get_cas_bilans(cas_id) -> pd.DataFrame:
-    """Retourne tous les bilans d'un cas avec tous les champs à plat."""
     ws = _ws("Bilans")
     df = _ws_to_df(ws, BILANS_HEADERS)
     df = df[df["cas_id"] == cas_id]
     df["date_bilan"] = pd.to_datetime(df["date_bilan"], errors="coerce")
     return df.sort_values("date_bilan").reset_index(drop=True)
 
-
 @st.cache_data(ttl=60)
 def get_cas_bilans_meta(cas_id) -> pd.DataFrame:
-    """Version légère — seulement les métadonnées (pas les 163 champs de tests).
-    Utilisée pour afficher la liste des bilans sans charger toutes les données."""
     ws = _ws("Bilans")
     df = _ws_to_df(ws, BILANS_BASE_HEADERS)
     df = df[df["cas_id"] == cas_id]
     df["date_bilan"] = pd.to_datetime(df["date_bilan"], errors="coerce")
     return df.sort_values("date_bilan").reset_index(drop=True)
 
-
 def get_cas_bilans_with_donnees(cas_id) -> pd.DataFrame:
-    """Alias — en structure plate, get_cas_bilans retourne déjà tout."""
     return get_cas_bilans(cas_id)
-
 
 def create_bilan(cas_id, praticien="",
                  bilan_date=None, cabinet_id="default") -> str:
     cas = get_cas(cas_id)
     bid = _new_id("B")
-
-    # Hériter les tests_actifs du dernier bilan du même cas
     inherited_tests = ""
     try:
         bilans_existants = get_cas_bilans_meta(cas_id)
@@ -397,7 +381,6 @@ def create_bilan(cas_id, praticien="",
                 inherited_tests = ta
     except Exception:
         pass
-
     row = {
         "bilan_id":        bid,
         "cas_id":          cas_id,
@@ -409,7 +392,6 @@ def create_bilan(cas_id, praticien="",
         "notes_generales": "",
         "analyse_ia":      "",
     }
-    # Tous les champs de tests à vide
     for f in ALL_TEST_FIELDS:
         row[f] = ""
     _append_row("Bilans", row)
@@ -417,15 +399,11 @@ def create_bilan(cas_id, praticien="",
                cabinet_id, praticien, "creation_bilan")
     return bid
 
-
 @st.cache_data(ttl=60)
 def get_bilan(bilan_id) -> dict:
     return _get_row("Bilans", "bilan_id", bilan_id)
 
-
 def get_bilan_tests_actifs(bilan_id: str, snapshot: dict) -> list:
-    """Retourne les tests actifs pour CE bilan.
-    Si non défini → tous les tests du snapshot."""
     bilan = get_bilan(bilan_id)
     if not bilan:
         return list(snapshot.get("tests", []))
@@ -437,14 +415,11 @@ def get_bilan_tests_actifs(bilan_id: str, snapshot: dict) -> list:
             pass
     return list(snapshot.get("tests", []))
 
-
 def save_bilan_tests_actifs(bilan_id: str, test_ids: list) -> bool:
     return _update_row("Bilans", "bilan_id", bilan_id,
                        {"tests_actifs": json.dumps(test_ids)})
 
-
 def get_bilan_donnees(bilan_id) -> dict:
-    """Retourne les données du bilan — directement depuis la ligne plate."""
     bilan = get_bilan(bilan_id)
     if not bilan: return {}
     GENERAL_EXTRA = ["praticien","date_bilan","diagnostic_prescription",
@@ -455,7 +430,6 @@ def get_bilan_donnees(bilan_id) -> dict:
     for f in GENERAL_EXTRA + ALL_TEST_FIELDS:
         if f in bilan:
             donnees[f] = bilan[f]
-    # Compatibilité : si ancienne structure JSON encore présente
     raw_donnees = bilan.get("donnees","")
     if raw_donnees and raw_donnees not in ("{}",""):
         try:
@@ -467,15 +441,9 @@ def get_bilan_donnees(bilan_id) -> dict:
             pass
     return donnees
 
-
 def save_bilan_donnees(bilan_id, donnees: dict, therapeute="") -> bool:
-    """Sauvegarde les données du bilan directement dans les colonnes plates."""
     _invalidate_read_cache()
-
-    updates = {}
-    for k, v in donnees.items():
-        updates[k] = str(v) if v is not None else ""
-
+    updates = {k: str(v) if v is not None else "" for k, v in donnees.items()}
     ok = _update_row("Bilans", "bilan_id", bilan_id, updates)
     if ok:
         bilan = get_bilan(bilan_id)
@@ -484,7 +452,6 @@ def save_bilan_donnees(bilan_id, donnees: dict, therapeute="") -> bool:
                    bilan.get("cabinet_id","default"),
                    therapeute, "modification_bilan")
     return ok
-
 
 def delete_bilan(bilan_id: str, therapeute: str = "") -> bool:
     ws   = _ws("Bilans")
@@ -516,8 +483,7 @@ def load_analyse_ia(bilan_id) -> str:
 
 # ── Audit ─────────────────────────────────────────────────────────────────────
 
-def _log_audit(cas_id, bilan_id, patient_id, cabinet_id,
-               therapeute, action):
+def _log_audit(cas_id, bilan_id, patient_id, cabinet_id, therapeute, action):
     try:
         _append_row("Audit_Log", {
             "log_id": _new_id("L"), "cas_id": cas_id,
@@ -536,7 +502,6 @@ def get_audit_log(cas_id) -> pd.DataFrame:
 # ── Compatibilité — migration JSON → plat ─────────────────────────────────────
 
 def migrate_bilan_to_flat(bilan_id: str) -> bool:
-    """Migre un bilan de l'ancien format JSON vers le format plat."""
     ws   = _ws("Bilans")
     rows = ws.get_all_values()
     if not rows: return False
@@ -548,7 +513,7 @@ def migrate_bilan_to_flat(bilan_id: str) -> bool:
         if not row or len(row) <= col_bid: continue
         if row[col_bid] != bilan_id: continue
         raw = row[col_donnees] if col_donnees < len(row) else ""
-        if not raw or raw in ("{}",""): return True  # Déjà migré
+        if not raw or raw in ("{}",""): return True
         try:
             donnees = json.loads(raw)
         except Exception:
@@ -558,7 +523,7 @@ def migrate_bilan_to_flat(bilan_id: str) -> bool:
         for k, v in donnees.items():
             if k in hdr:
                 row[hdr.index(k)] = str(v)
-        row[col_donnees] = ""  # Vider l'ancienne colonne JSON
+        row[col_donnees] = ""
         ws.update([row], f"A{i}")
         _invalidate_read_cache()
         return True
@@ -567,8 +532,7 @@ def migrate_bilan_to_flat(bilan_id: str) -> bool:
 # ── Feedback & Votes (pages/3_Feedback.py) ───────────────────────────────────
 
 def get_sheet(sheet_name: str) -> pd.DataFrame:
-    """Lecture générique d'un onglet GSheets.
-    Utilisé par pages/3_Feedback.py pour Feedback et Votes."""
+    """Lecture générique d'un onglet GSheets."""
     ws = _ws(sheet_name)
     rows = ws.get_all_values()
     if not rows or len(rows) <= 1:
@@ -580,11 +544,57 @@ def get_sheet(sheet_name: str) -> pd.DataFrame:
 
 
 def append_row(sheet_name: str, data: dict):
-    """Ajout d'une ligne — wrapper public de _append_row."""
+    """Ajout d'une ligne — wrapper public."""
     _append_row(sheet_name, data)
 
 
 def update_row(sheet_name: str, id_val: str, updates: dict) -> bool:
-    """Mise à jour par id — wrapper public de _update_row.
-    Utilise la colonne 'id' comme clé (convention onglets Feedback/Votes)."""
+    """Mise à jour par id — wrapper public (clé = colonne 'id')."""
     return _update_row(sheet_name, "id", id_val, updates)
+
+
+def admin_update_feedback(feedback_id: str, statut: str,
+                          reponse: str, deadline_vote: str = None) -> bool:
+    """Mise à jour admin : statut + réponse + deadline optionnelle."""
+    updates = {
+        "statut":        statut,
+        "reponse_admin": reponse,
+    }
+    if deadline_vote is not None:
+        updates["deadline_vote"] = deadline_vote
+    return _update_row("Feedback", "id", feedback_id, updates)
+
+
+def admin_delete_feedback(feedback_id: str) -> bool:
+    """Supprime une ligne Feedback et tous ses votes associés."""
+    ws   = _ws("Feedback")
+    rows = ws.get_all_values()
+    if not rows: return False
+    hdr = rows[0]
+    if "id" not in hdr: return False
+    col_id  = hdr.index("id")
+    deleted = False
+    for i, row in enumerate(rows[1:], start=2):
+        if row and len(row) > col_id and row[col_id] == feedback_id:
+            ws.delete_rows(i)
+            deleted = True
+            break
+    # Supprimer les votes associés (en ordre inverse pour garder les index)
+    try:
+        ws_v   = _ws("Votes")
+        vrows  = ws_v.get_all_values()
+        if vrows and len(vrows) > 1:
+            hdr_v   = vrows[0]
+            col_fid = hdr_v.index("feedback_id") if "feedback_id" in hdr_v else None
+            if col_fid is not None:
+                to_del = [
+                    i for i, r in enumerate(vrows[1:], start=2)
+                    if r and len(r) > col_fid and r[col_fid] == feedback_id
+                ]
+                for i in reversed(to_del):
+                    ws_v.delete_rows(i)
+    except Exception:
+        pass
+    if deleted:
+        _invalidate_read_cache()
+    return deleted
