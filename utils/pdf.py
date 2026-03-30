@@ -2875,18 +2875,28 @@ def generate_questionnaires_pdf(selected: list, patient_info: dict) -> bytes:
 
 
 
+# Mapping test_id → clé QUESTIONNAIRES (fiches sur mesure existantes)
+_TEST_ID_TO_Q = {
+    "had":"had","sf12":"sf12","hvt":"hvt","bolt":"bolt",
+    "nijmegen":"nijmegen","mrc_dyspnee":"mrc","comorbidites":"comorb",
+    "testing_mi":"muscle","leg_press":"leg_press",
+    "odi":"odi","tampa":"tampa","orebro":"orebro",
+    "mmrc":"mmrc_bpco","cat":"cat_bpco","cat_bpco":"cat_bpco",
+    "quick_dash":"quick_dash","ases":"ases",
+}
+
+
 def generate_tests_pdf(test_ids: list, patient_info: dict) -> bytes:
     """
     Génère un PDF imprimable pour une liste de test_ids.
-    Utilise render_print_sheet() de chaque test :
-    - Fiche sur mesure si définie dans le test
-    - Fiche générique automatique sinon
+    Approche hybride :
+    - Si le test a une fiche sur mesure dans QUESTIONNAIRES → l'utilise
+    - Sinon → fiche générique via render_print_sheet()
     """
     import io
     from reportlab.platypus import SimpleDocTemplate, PageBreak
     from reportlab.lib.pagesizes import A4
 
-    # Import du registry pour accéder aux classes
     try:
         from core.registry import all_tests
         tests_map = all_tests()
@@ -2902,15 +2912,31 @@ def generate_tests_pdf(test_ids: list, patient_info: dict) -> bytes:
                 if patient_info else "")
         make_header_footer("36.9 Bilans — Fiches imprimables", patient_name=name)(canvas, doc)
 
-    valid = [tid for tid in test_ids if tid in tests_map]
-    for i, tid in enumerate(valid):
-        cls = tests_map[tid]
-        try:
-            cls.render_print_sheet(story, styles)
-        except Exception as e:
-            story.append(Paragraph(f"Erreur fiche {tid}: {e}", styles["normal"]))
-        if i < len(valid) - 1:
-            story.append(PageBreak())
+    added = 0
+    for tid in test_ids:
+        page_story = []
+
+        # Priorité 1 : fiche sur mesure dans QUESTIONNAIRES
+        qk = _TEST_ID_TO_Q.get(tid)
+        if qk and qk in QUESTIONNAIRES:
+            title, builder = QUESTIONNAIRES[qk]
+            page_story.append(Paragraph(title, styles["section"]))
+            page_story.append(Spacer(1, 0.3*cm))
+            builder(page_story, styles)
+
+        # Priorité 2 : render_print_sheet() du test
+        elif tid in tests_map:
+            cls = tests_map[tid]
+            try:
+                cls.render_print_sheet(page_story, styles)
+            except Exception as e:
+                page_story.append(Paragraph(f"Fiche {tid} indisponible : {e}", styles["note"]))
+
+        if page_story:
+            if added > 0:
+                story.append(PageBreak())
+            story.extend(page_story)
+            added += 1
 
     if not story:
         story.append(Paragraph("Aucune fiche disponible.", styles["normal"]))
