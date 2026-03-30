@@ -6,6 +6,8 @@ Structure :
   Cas       : un cas par pathologie par patient
   Bilans    : un bilan à plat (tous les champs en colonnes directes, comme v1)
   Audit_Log : qui a fait quoi et quand
+  Feedback  : feedback & votes communauté (pages/3_Feedback.py)
+  Votes     : historique des votes par thérapeute
 """
 
 import uuid, json
@@ -52,6 +54,8 @@ def _get_spreadsheet():
     _ensure_sheet(ss, "Cas",       CAS_HEADERS)
     _ensure_sheet(ss, "Bilans",    BILANS_BASE_HEADERS + ALL_TEST_FIELDS)
     _ensure_sheet(ss, "Audit_Log", AUDIT_HEADERS)
+    _ensure_sheet(ss, "Feedback",  FEEDBACK_HEADERS)
+    _ensure_sheet(ss, "Votes",     VOTES_HEADERS)
     return ss
 
 # ── Headers ───────────────────────────────────────────────────────────────────
@@ -80,6 +84,16 @@ BILANS_HEADERS = BILANS_BASE_HEADERS + ALL_TEST_FIELDS
 AUDIT_HEADERS = [
     "log_id","cas_id","bilan_id","patient_id",
     "cabinet_id","therapeute","action","timestamp",
+]
+
+FEEDBACK_HEADERS = [
+    "id","date_creation","auteur","type","titre",
+    "description","statut","deadline_vote",
+    "votes_pour","votes_contre",
+]
+
+VOTES_HEADERS = [
+    "feedback_id","votant","vote","date",
 ]
 
 
@@ -344,7 +358,6 @@ def get_tests_actifs(cas_id) -> list:
 def get_cas_bilans(cas_id) -> pd.DataFrame:
     """Retourne tous les bilans d'un cas avec tous les champs à plat."""
     ws = _ws("Bilans")
-    # Utilise _cached_sheet_values — une seule requête réseau pour toute la feuille
     df = _ws_to_df(ws, BILANS_HEADERS)
     df = df[df["cas_id"] == cas_id]
     df["date_bilan"] = pd.to_datetime(df["date_bilan"], errors="coerce")
@@ -434,7 +447,6 @@ def get_bilan_donnees(bilan_id) -> dict:
     """Retourne les données du bilan — directement depuis la ligne plate."""
     bilan = get_bilan(bilan_id)
     if not bilan: return {}
-    # Retourner les champs de tests + champs généraux (poids, FC, etc.)
     GENERAL_EXTRA = ["praticien","date_bilan","diagnostic_prescription",
                      "poids_kg","taille_cm","bmi",
                      "fc_repos","fr_repos","ta_repos","spo2_repos",
@@ -448,7 +460,6 @@ def get_bilan_donnees(bilan_id) -> dict:
     if raw_donnees and raw_donnees not in ("{}",""):
         try:
             old_data = json.loads(raw_donnees)
-            # Merger avec priorité aux colonnes plates
             for k, v in old_data.items():
                 if k not in donnees or not donnees[k]:
                     donnees[k] = v
@@ -459,7 +470,6 @@ def get_bilan_donnees(bilan_id) -> dict:
 
 def save_bilan_donnees(bilan_id, donnees: dict, therapeute="") -> bool:
     """Sauvegarde les données du bilan directement dans les colonnes plates."""
-    # Vider le cache pour s'assurer d'avoir les vrais headers GSheets
     _invalidate_read_cache()
 
     updates = {}
@@ -553,3 +563,28 @@ def migrate_bilan_to_flat(bilan_id: str) -> bool:
         _invalidate_read_cache()
         return True
     return False
+
+# ── Feedback & Votes (pages/3_Feedback.py) ───────────────────────────────────
+
+def get_sheet(sheet_name: str) -> pd.DataFrame:
+    """Lecture générique d'un onglet GSheets.
+    Utilisé par pages/3_Feedback.py pour Feedback et Votes."""
+    ws = _ws(sheet_name)
+    rows = ws.get_all_values()
+    if not rows or len(rows) <= 1:
+        headers = FEEDBACK_HEADERS if sheet_name == "Feedback" else VOTES_HEADERS
+        return pd.DataFrame(columns=headers)
+    headers = rows[0]
+    records = [dict(zip(headers, row)) for row in rows[1:] if any(row)]
+    return pd.DataFrame(records, columns=headers)
+
+
+def append_row(sheet_name: str, data: dict):
+    """Ajout d'une ligne — wrapper public de _append_row."""
+    _append_row(sheet_name, data)
+
+
+def update_row(sheet_name: str, id_val: str, updates: dict) -> bool:
+    """Mise à jour par id — wrapper public de _update_row.
+    Utilise la colonne 'id' comme clé (convention onglets Feedback/Votes)."""
+    return _update_row(sheet_name, "id", id_val, updates)
