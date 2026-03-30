@@ -110,3 +110,56 @@ class Tinetti(BaseTest):
                  "Interprétation":row.get("tinetti_interpretation","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+
+    @classmethod
+    def render_print_sheet(cls, story: list, styles: dict) -> None:
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+
+        story.append(Paragraph("Tinetti — POMA (Performance Oriented Mobility Assessment)", styles["section"]))
+        story.append(Paragraph("Seuil risque de chute : < 24/28  |  19–23 : risque modéré  |  < 19 : risque élevé", styles["intro"]))
+        story.append(Spacer(1, 0.2*cm))
+        hdr = Table([["Patient : " + "_"*28, "Date : " + "_"*14, "Praticien : " + "_"*14]],
+                    colWidths=[8*cm, 4.5*cm, 4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+                                  ("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555555"))]))
+        story.append(hdr)
+        story.append(Spacer(1, 0.3*cm))
+
+        LINE = colors.HexColor("#CCCCCC")
+        BLEU = colors.HexColor("#2B57A7")
+
+        def _section(titre, items, max_score):
+            story.append(Paragraph(f"{titre} (/{max_score})", styles["subsection"]))
+            for key, label, options in items:
+                story.append(Paragraph(label, styles["question"]))
+                opt_cells = [f"☐  {s} — {d}" for s, d in options]
+                if len(opt_cells) == 2:
+                    tbl = Table([opt_cells], colWidths=[8.5*cm, 8.5*cm])
+                else:
+                    tbl = Table([[o] for o in opt_cells], colWidths=[17*cm])
+                tbl.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
+                    ("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#222")),
+                    ("TOPPADDING",(0,0),(-1,-1),2),("BOTTOMPADDING",(0,0),(-1,-1),2)]))
+                story.append(tbl)
+            story.append(Spacer(1, 0.15*cm))
+
+        _section("Partie I — Équilibre", TINETTI_EQUILIBRE, TINETTI_EQ_MAX)
+        story.append(Spacer(1, 0.2*cm))
+        _section("Partie II — Marche", TINETTI_MARCHE, TINETTI_MA_MAX)
+
+        story.append(Spacer(1, 0.3*cm))
+        score_tbl = Table([[
+            "Score Équilibre : _____ / " + str(TINETTI_EQ_MAX),
+            "Score Marche : _____ / " + str(TINETTI_MA_MAX),
+            "Score Total : _____ / " + str(TINETTI_EQ_MAX + TINETTI_MA_MAX),
+        ]], colWidths=[5.5*cm, 5.5*cm, 6*cm])
+        score_tbl.setStyle(TableStyle([
+            ("FONTSIZE",(0,0),(-1,-1),10),("FONTNAME",(0,0),(-1,-1),"Helvetica-Bold"),
+            ("TEXTCOLOR",(0,0),(-1,-1),BLEU),("BOX",(0,0),(-1,-1),0.5,LINE),
+            ("INNERGRID",(0,0),(-1,-1),0.5,LINE),
+            ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),
+        ]))
+        story.append(score_tbl)
+        story.append(Paragraph("< 19 → risque élevé · 19–23 → risque modéré · ≥ 24 → risque faible", styles["note"]))
