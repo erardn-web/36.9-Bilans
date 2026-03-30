@@ -815,12 +815,14 @@ def render_evolution():
 mode = S.mode
 # ── VUE IMPRESSION ────────────────────────────────────────────────────────────
 def render_impression():
-    from utils.pdf import QUESTIONNAIRES, generate_questionnaires_pdf
+    from utils.pdf import generate_tests_pdf
+    from core.registry import all_tests as _all_tests_imp
     info = S.patient_info
     bid  = S.get("bilan_id","")
 
     st.markdown(
-        f'<div class="patient-badge">👤 {info.get("nom","")} {info.get("prenom","")} '        f'— Impression fiches</div>', unsafe_allow_html=True)
+        f'<div class="patient-badge">👤 {info.get("nom","")} {info.get("prenom","")} '
+        f'— Impression fiches</div>', unsafe_allow_html=True)
     if st.button("⬅️ Retour au bilan"):
         _go("formulaire", bilan_id=bid, bilan_data=S.bilan_data)
 
@@ -828,53 +830,39 @@ def render_impression():
     st.markdown("### 🖨️ Fiches à imprimer")
     st.caption("Basé sur les tests actifs au moment de l'ouverture de cette page.")
 
-    _TEST_TO_Q = {
-        "had":"had","sf12":"sf12","hvt":"hvt","bolt":"bolt",
-        "nijmegen":"nijmegen","mrc_dyspnee":"mrc","comorbidites":"comorb",
-        "testing_mi":"muscle","leg_press":"leg_press",
-        "odi":"odi","tampa":"tampa","orebro":"orebro",
-        "mmrc":"mmrc_bpco","cat":"cat_bpco",
-        "quick_dash":"quick_dash","ases":"ases",
-    }
-    _Q_LABELS = {
-        "had":"😟 HAD","sf12":"📊 SF-12","hvt":"🌬️ Test HV","bolt":"⏱️ BOLT",
-        "nijmegen":"📋 Nijmegen","mrc":"🚶 MRC Dyspnée","comorb":"🏥 Comorbidités",
-        "muscle":"💪 Testing MI","leg_press":"🦵 Leg Press",
-        "odi":"📋 ODI","tampa":"😰 Tampa","orebro":"🔮 Örebro",
-        "mmrc_bpco":"😮\u200d💨 mMRC","cat_bpco":"💨 CAT",
-        "quick_dash":"✋ QuickDASH","ases":"🏆 ASES",
-    }
+    _tests_map_imp = _all_tests_imp()
     _ta = S.get("tests_actifs_snap") or []
-    _q_avail = []
-    for _tid in _ta:
-        _qk = _TEST_TO_Q.get(_tid)
-        if _qk and _qk in QUESTIONNAIRES and _qk not in _q_avail:
-            _q_avail.append(_qk)
+    _q_avail = [tid for tid in _ta if tid in _tests_map_imp]
 
     if not _q_avail:
         st.info("Aucune fiche disponible pour les tests actifs de ce bilan.")
         return
 
+    st.caption("Décochez les fiches à exclure du PDF.")
     _pc = st.columns(min(len(_q_avail), 5))
-    _checks = {k: _pc[i%5].checkbox(_Q_LABELS.get(k,k), value=True,
-               key=f"imp_{k}") for i,k in enumerate(_q_avail)}
-    _sel = [k for k,v in _checks.items() if v]
+    _checks = {}
+    for _i, _tid in enumerate(_q_avail):
+        _cls = _tests_map_imp[_tid]
+        _checks[_tid] = _pc[_i % 5].checkbox(
+            _cls.tab_label(), value=True, key=f"imp_{_tid}")
+    _sel = [k for k, v in _checks.items() if v]
 
     st.markdown("")
     if _sel:
         with st.spinner("Génération du PDF…"):
             try:
-                _pdf = generate_questionnaires_pdf(_sel, info)
-                st.download_button("📥 Télécharger les fiches",
+                _pdf = generate_tests_pdf(_sel, info)
+                st.download_button(
+                    "📥 Télécharger les fiches",
                     data=_pdf,
                     file_name=f"fiches_{info.get('nom','')}_{bid}.pdf",
-                    mime="application/pdf", type="primary")
+                    mime="application/pdf",
+                    type="primary",
+                )
             except Exception as _e:
                 st.error(f"Erreur : {_e}")
     else:
         st.info("Sélectionnez au moins une fiche.")
-
-
 
 # ── VUE BIBLIOTHÈQUE DES TESTS ────────────────────────────────────────────────
 def render_bibliotheque():
