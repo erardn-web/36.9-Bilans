@@ -12,11 +12,18 @@ st.set_page_config(page_title="Feedback & Votes", page_icon="💬", layout="wide
 THERAPEUTES = [
     "— Sélectionner —",
     "Nathan",
-    "Thérapeute 2",
-    "Thérapeute 3",
-    "Thérapeute 4",
-    "Thérapeute 5",
-    # ➕ Ajouter les noms ici
+    "Alexandre",
+    "Mavi",
+    "Alexia",
+    "Gino",
+    "Odile",
+    "Sarah",
+    "Delphine",
+    "Mehdi",
+    "Ylana",
+    "Célia",
+    "Mélissa",
+    "Thais",
 ]
 
 TYPES = {
