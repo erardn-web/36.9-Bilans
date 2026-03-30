@@ -32,7 +32,7 @@ STATUTS_COULEUR = {
     "En développement": "#3B82F6",
     "Livré":            "#6366F1",
     "Refusé":           "#EF4444",
-    "En traitement":    "#F97316",  # pour les bugs
+    "En traitement":    "#F97316",
 }
 
 DELAI_VOTE = 10  # jours
@@ -93,21 +93,17 @@ def soumettre_feedback(auteur, type_, titre, description):
 
 def enregistrer_vote(feedback_id, votant, vote, df_feedback, df_votes):
     """vote = 'pour' ou 'contre'"""
-    # Trouver la ligne dans df_feedback
     idx = df_feedback.index[df_feedback["id"] == feedback_id].tolist()
     if not idx:
         return False, "Proposition introuvable."
 
     i = idx[0]
-    # Incrémenter le compteur
     col = "votes_pour" if vote == "pour" else "votes_contre"
     nouveau = int(df_feedback.at[i, col]) + 1
     df_feedback.at[i, col] = nouveau
 
-    # Mettre à jour GSheets Feedback (on passe la ligne entière)
     update_row("Feedback", feedback_id, {col: nouveau})
 
-    # Enregistrer dans Votes
     append_row("Votes", {
         "feedback_id": feedback_id,
         "votant":      votant,
@@ -147,7 +143,6 @@ if "fb_nom" not in st.session_state:
 st.title("💬 Feedback & Communauté")
 st.caption("Remonte un bug, propose une amélioration, vote sur les idées de tes collègues.")
 
-# Chargement données
 df_fb    = load_feedback()
 df_votes = load_votes()
 
@@ -193,7 +188,6 @@ with tab_vote:
     if actives.empty:
         st.info("Aucune proposition en cours de vote pour l'instant.")
     else:
-        # Trier par deadline
         actives = actives.sort_values("deadline_vote")
 
         for _, row in actives.iterrows():
@@ -206,7 +200,6 @@ with tab_vote:
                     st.markdown(f"**Description :** {row['description']}")
                     st.caption(f"Soumis le {row['date_creation']}  ·  Vote jusqu'au {row['deadline_vote']}")
 
-                    # Barre de progression
                     total = int(row["votes_pour"]) + int(row["votes_contre"])
                     pct   = int(row["votes_pour"]) / total * 100 if total > 0 else 0
                     st.markdown(
