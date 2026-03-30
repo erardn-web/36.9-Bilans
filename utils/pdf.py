@@ -2874,6 +2874,54 @@ def generate_questionnaires_pdf(selected: list, patient_info: dict) -> bytes:
     return buffer.getvalue()
 
 
+
+def generate_tests_pdf(test_ids: list, patient_info: dict) -> bytes:
+    """
+    Génère un PDF imprimable pour une liste de test_ids.
+    Utilise render_print_sheet() de chaque test :
+    - Fiche sur mesure si définie dans le test
+    - Fiche générique automatique sinon
+    """
+    import io
+    from reportlab.platypus import SimpleDocTemplate, PageBreak
+    from reportlab.lib.pagesizes import A4
+
+    # Import du registry pour accéder aux classes
+    try:
+        from core.registry import all_tests
+        tests_map = all_tests()
+    except Exception:
+        tests_map = {}
+
+    buffer = io.BytesIO()
+    styles = make_styles()
+    story  = []
+
+    def hf(canvas, doc):
+        name = (f"{patient_info.get('nom','')} {patient_info.get('prenom','')}"
+                if patient_info else "")
+        make_header_footer("36.9 Bilans — Fiches imprimables", patient_name=name)(canvas, doc)
+
+    valid = [tid for tid in test_ids if tid in tests_map]
+    for i, tid in enumerate(valid):
+        cls = tests_map[tid]
+        try:
+            cls.render_print_sheet(story, styles)
+        except Exception as e:
+            story.append(Paragraph(f"Erreur fiche {tid}: {e}", styles["normal"]))
+        if i < len(valid) - 1:
+            story.append(PageBreak())
+
+    if not story:
+        story.append(Paragraph("Aucune fiche disponible.", styles["normal"]))
+
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+        leftMargin=1.5*cm, rightMargin=1.5*cm,
+        topMargin=2.2*cm, bottomMargin=1.8*cm)
+    doc.build(story, onFirstPage=hf, onLaterPages=hf)
+    return buffer.getvalue()
+
+
 QUESTIONNAIRES["muscle"]   = ("Testing musculaire MI",        build_muscle_testing)
 QUESTIONNAIRES["leg_press"] = ("1RM Leg Press",                 build_leg_press)
 
