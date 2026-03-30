@@ -2876,13 +2876,14 @@ def generate_questionnaires_pdf(selected: list, patient_info: dict) -> bytes:
 
 
 # Mapping test_id → clé QUESTIONNAIRES (fiches sur mesure existantes)
+# Tests avec fiche sur mesure dans QUESTIONNAIRES (ancienne méthode)
 _TEST_ID_TO_Q = {
     "had":"had","sf12":"sf12","hvt":"hvt","bolt":"bolt",
     "nijmegen":"nijmegen","mrc_dyspnee":"mrc","comorbidites":"comorb",
     "testing_mi":"muscle","leg_press":"leg_press",
     "odi":"odi","tampa":"tampa","orebro":"orebro",
     "mmrc":"mmrc_bpco","cat":"cat_bpco","cat_bpco":"cat_bpco",
-    "quick_dash":"quick_dash","ases":"ases",
+    # quick_dash et ases ont maintenant render_print_sheet → pas besoin ici
 }
 
 
@@ -2897,7 +2898,13 @@ def generate_tests_pdf(test_ids: list, patient_info: dict) -> bytes:
     from reportlab.platypus import SimpleDocTemplate, PageBreak
     from reportlab.lib.pagesizes import A4
 
+    # Charger tous les templates pour que le registry soit complet
     try:
+        import importlib
+        for _m in ["templates.shv","templates.equilibre","templates.bpco",
+                   "templates.lombalgie","templates.neutre","templates.epaule_douloureuse"]:
+            try: importlib.import_module(_m)
+            except Exception: pass
         from core.registry import all_tests
         tests_map = all_tests()
     except Exception:
