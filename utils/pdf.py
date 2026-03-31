@@ -2653,9 +2653,24 @@ def _make_evolution_charts(bilans_df, n_bilans, page_w, excluded_test_ids=None):
 
     charts_png = []
     _excl_ch = set(excluded_test_ids or [])
+    _TID_TO_PFX_CH = {
+        "spirometrie": ["spiro_"], "six_mwt": ["mwt_"], "sts": ["sts_"],
+        "mmrc": ["mmrc_"], "cat": ["cat_score","cat_interpretation"],
+        "bode": ["bode_"], "tinetti": ["tinetti_"], "berg": ["berg_"],
+        "tug": ["tug_"], "unipodal": ["unipodal_"], "bolt": ["bolt_"],
+        "nijmegen": ["nij_"], "hvt": ["hvt_"], "eva": ["eva"],
+        "lombalgie": ["schober","luomajoki"], "testing_mi": ["musc_"],
+        "leg_press": ["lp_"], "vital": ["fc_repos","fr_repos","ta_repos","spo2_repos"],
+        "bmi": ["bmi"],
+    }
+    def _ch_excluded(col):
+        for tid in _excl_ch:
+            for pfx in _TID_TO_PFX_CH.get(tid, [tid + "_", tid]):
+                if col == pfx or col.startswith(pfx):
+                    return True
+        return False
     for col, label, unit, ref_val, ref_lbl, higher_ok in _CHART_SPECS:
-        # Ignorer si le test est exclu
-        if any(col == tid or col.startswith(tid + "_") for tid in _excl_ch):
+        if _ch_excluded(col):
             continue
         # Extraire les valeurs numériques
         vals = []
@@ -2940,11 +2955,38 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         # ex: {"tinetti", "mwt", "bolt"} → masquer toutes colonnes tinetti_*, mwt_*, etc.
         _excl_ids  = set(excluded_sections or [])
 
+        # Mapping test_id → préfixes de colonnes associés
+        _TID_TO_PREFIXES = {
+            "spirometrie":   ["spiro_"],
+            "six_mwt":       ["mwt_"],
+            "sts":           ["sts_"],
+            "mmrc":          ["mmrc_"],
+            "cat":           ["cat_score", "cat_interpretation"],
+            "bode":          ["bode_"],
+            "tinetti":       ["tinetti_"],
+            "berg":          ["berg_"],
+            "tug":           ["tug_"],
+            "unipodal":      ["unipodal_"],
+            "bolt":          ["bolt_"],
+            "nijmegen":      ["nij_"],
+            "hvt":           ["hvt_"],
+            "eva":           ["eva"],
+            "lombalgie":     ["schober", "luomajoki", "posture", "groupe_clinique"],
+            "testing_mi":    ["musc_"],
+            "leg_press":     ["lp_"],
+            "vital":         ["fc_repos", "fr_repos", "ta_repos", "spo2_repos"],
+            "bmi":           ["bmi"],
+            "general":       ["diagnostic_prescription", "diag_notes",
+                              "appreciation", "objectifs", "traitement", "frequence"],
+        }
+
         def _col_excluded(col):
-            """Retourne True si la colonne appartient à un test exclu (par préfixe)."""
+            """Retourne True si la colonne appartient à un test exclu."""
             for tid in _excl_ids:
-                if col == tid or col.startswith(tid + "_"):
-                    return True
+                prefixes = _TID_TO_PREFIXES.get(tid, [tid + "_", tid])
+                for pfx in prefixes:
+                    if col == pfx or col.startswith(pfx):
+                        return True
             return False
 
         # Retirer les colonnes exclues de active_set
