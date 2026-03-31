@@ -202,7 +202,6 @@ def _update_row(ws_name, id_col, id_val, updates: dict) -> bool:
                     })
             if cell_updates:
                 ws.batch_update(cell_updates)
-            _invalidate_read_cache()
             return True
     return False
 
@@ -283,8 +282,8 @@ def update_patient(patient_id: str, nom: str, prenom: str,
         "sexe": sexe,
     })
     if ok:
+        import time as _t; _t.sleep(1.2)   # laisser l'API GSheets se stabiliser
         _invalidate_read_cache()
-        get_all_patients.clear()
     return ok
 
 # ── Cas ───────────────────────────────────────────────────────────────────────
