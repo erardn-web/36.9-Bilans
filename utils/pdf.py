@@ -3015,7 +3015,7 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             story.append(Spacer(1, 0.25*cm))
 
         # Colonnes non classifiées
-        ungrouped = [col for col in active_cols if col not in seen]
+        ungrouped = [col for col in active_set if col not in seen]
         if ungrouped:
             rows = []
             for col in ungrouped:
