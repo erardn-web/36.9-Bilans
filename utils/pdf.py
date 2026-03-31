@@ -1880,7 +1880,7 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
     # ── Page templates ────────────────────────────────────────────────────────
     ia_x, ia_y, ia_w, ia_h = get_ia_frame()
     cover_frame = Frame(ia_x, ia_y, ia_w, ia_h,
-        leftPadding=0, rightPadding=0, topPadding=18, bottomPadding=0, id="cover")
+        leftPadding=0, rightPadding=0, topPadding=22, bottomPadding=0, id="cover")
     content_frame = Frame(1.5*cm, 1.8*cm,
         A4[0]-3*cm, A4[1]-3.8*cm, id="content")
 
@@ -2574,7 +2574,7 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
     # ── Page templates ────────────────────────────────────────────────────────
     ia_x, ia_y, ia_w, ia_h = get_ia_frame()
     cover_frame = Frame(ia_x, ia_y, ia_w, ia_h,
-        leftPadding=0, rightPadding=0, topPadding=18, bottomPadding=0, id="cover")
+        leftPadding=0, rightPadding=0, topPadding=22, bottomPadding=0, id="cover")
     content_frame = Frame(1.5*cm, 1.8*cm,
         A4[0]-3*cm, A4[1]-3.8*cm, id="content")
 
