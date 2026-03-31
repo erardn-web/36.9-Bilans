@@ -23,7 +23,38 @@ from reportlab.platypus import (
     Paragraph, Spacer, Table, TableStyle,
     HRFlowable, PageBreak, KeepTogether, Image,
 )
-from utils.pdf_cover import make_cover_callback
+from utils.pdf_cover import make_cover_callback, get_ia_frame, F_REG as _COVER_F_REG
+import re as _re_pdf
+
+def _clean_ai_text(text):
+    """Nettoie le Markdown pour rendu PDF propre."""
+    t = str(text or "").strip()
+    t = _re_pdf.sub(r'^#+\s*', '', t, flags=_re_pdf.MULTILINE)
+    t = _re_pdf.sub(r'\*\*(.*?)\*\*', r'\1', t)
+    t = _re_pdf.sub(r'\*(.*?)\*',       r'\1', t)
+    return t.strip()
+
+def _make_ia_flowable(analyse_text, avail_w=None):
+    """Crée le Paragraph IA justifié dans la fonte Cover."""
+    from reportlab.lib.enums import TA_JUSTIFY
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib import colors as _c
+    from reportlab.platypus import Paragraph
+    ai = _clean_ai_text(analyse_text)
+    if not ai:
+        return None
+    html = ai.replace("\n\n", "<br/><br/>").replace("\n", " ")
+    style = ParagraphStyle(
+        "ia_story",
+        fontName=_COVER_F_REG,
+        fontSize=10,
+        leading=15,
+        alignment=TA_JUSTIFY,
+        textColor=_c.HexColor("#333333"),
+        spaceAfter=6,
+    )
+    return Paragraph(html, style)
+
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -1847,8 +1878,9 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
     labels = [bilan_label(r) for _, r in bilans_df.iterrows()]
 
     # ── Page templates ────────────────────────────────────────────────────────
-    cover_frame = Frame(0, 0, A4[0], A4[1],
-        leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0, id="cover")
+    ia_x, ia_y, ia_w, ia_h = get_ia_frame()
+    cover_frame = Frame(ia_x, ia_y, ia_w, ia_h,
+        leftPadding=0, rightPadding=0, topPadding=18, bottomPadding=0, id="cover")
     content_frame = Frame(1.5*cm, 1.8*cm,
         A4[0]-3*cm, A4[1]-3.8*cm, id="content")
 
@@ -1876,8 +1908,10 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
     styles = make_styles()
     w      = A4[0] - 3*cm  # largeur utile
 
-    # Story : page 1 = couverture (canvas), page 2+ = contenu
-    story = [NextPageTemplate("Content"), PageBreak()]
+    # Story : le texte IA va dans le cover Frame (peut déborder sur page 2)
+    # puis NextPageTemplate bascule sur Content pour le reste du rapport
+    _ia_para = _make_ia_flowable(analyse_text)
+    story = [_ia_para, NextPageTemplate("Content"), PageBreak()] if _ia_para else [NextPageTemplate("Content"), PageBreak()]
 
     # ══════════════════════════════════════════════════════════════════
     #  TABLEAU DE SYNTHÈSE DES SCORES
@@ -2538,8 +2572,9 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
                  for _, r in bilans_df.iterrows()]
 
     # ── Page templates ────────────────────────────────────────────────────────
-    cover_frame = Frame(0, 0, A4[0], A4[1],
-        leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0, id="cover")
+    ia_x, ia_y, ia_w, ia_h = get_ia_frame()
+    cover_frame = Frame(ia_x, ia_y, ia_w, ia_h,
+        leftPadding=0, rightPadding=0, topPadding=18, bottomPadding=0, id="cover")
     content_frame = Frame(1.5*cm, 1.8*cm,
         A4[0]-3*cm, A4[1]-3.8*cm, id="content")
 
@@ -2565,8 +2600,9 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
     ])
 
     styles = make_styles()
-    story  = [NextPageTemplate("Content"), PageBreak()]
-    w      = A4[0] - 3*cm
+    _ia_para_gen = _make_ia_flowable(analyse_text)
+    story = [_ia_para_gen, NextPageTemplate("Content"), PageBreak()] if _ia_para_gen else [NextPageTemplate("Content"), PageBreak()]
+    w     = A4[0] - 3*cm
 
     # ── Colonnes à exclure (métadonnées, pas de données cliniques) ────────────
     SKIP = {"bilan_id","cas_id","patient_id","cabinet_id","date_bilan","praticien",
