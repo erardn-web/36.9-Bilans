@@ -1859,9 +1859,9 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
     cover_frame = Frame(ia_x, ia_y, ia_w, ia_h,
         leftPadding=0, rightPadding=0, topPadding=22, bottomPadding=0, id="cover")
     # Page 2+ IA (suite) : frame pleine hauteur de contenu
-    cont_frame = Frame(ia_x, 1.8*cm,
-        ia_w, A4[1]-3.8*cm,
-        leftPadding=0, rightPadding=0, topPadding=28, bottomPadding=0, id="covercont")
+    cont_frame = Frame(1.5*cm, 1.8*cm,
+        A4[0]-3*cm, A4[1]-3.8*cm,
+        leftPadding=int(0.42*cm), rightPadding=0, topPadding=28, bottomPadding=0, id="covercont")
     content_frame = Frame(1.5*cm, 1.8*cm,
         A4[0]-3*cm, A4[1]-3.8*cm, id="content")
 
@@ -1900,11 +1900,17 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
     _ai = _re_pdf.sub(r'\*\*(.*?)\*\*', r'\1', _ai)
     _ai = _re_pdf.sub(r'\*(.*?)\*', r'\1', _ai).strip()
     if _ai:
-        _ai_html = _ai.replace("\n\n", "<br/><br/>").replace("\n", " ")
-        _ia_para = Paragraph(_ai_html, _PS2("ia_s", fontName=_gfr(), fontSize=10,
-            leading=15, alignment=_TA_J, textColor=_cc.HexColor("#333333"), spaceAfter=6))
-        story = [NextPageTemplate("CoverCont"), _ia_para,
-                 NextPageTemplate("Content"), PageBreak()]
+        # Un Paragraph par § (KeepTogether = pas de coupure en milieu de §)
+        _ia_paras = []
+        for _pt in _ai.split("\n\n"):
+            _pt = _pt.strip().replace("\n", " ")
+            if _pt:
+                _ia_paras.append(KeepTogether(Paragraph(
+                    _pt, _PS2("ia_s", fontName=_gfr(), fontSize=10,
+                              leading=15, alignment=_TA_J,
+                              textColor=_cc.HexColor("#333333"), spaceAfter=8))))
+        # Pas de PageBreak après la synthèse → les tableaux coulent sur la même page
+        story = [NextPageTemplate("CoverCont")] + _ia_paras + [NextPageTemplate("Content")]
     else:
         story = [NextPageTemplate("Content"), PageBreak()]
 
@@ -2784,9 +2790,9 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
     ia_x, ia_y, ia_w, ia_h = _gif()
     cover_frame = Frame(ia_x, ia_y, ia_w, ia_h,
         leftPadding=0, rightPadding=0, topPadding=22, bottomPadding=0, id="cover")
-    cont_frame = Frame(ia_x, 1.8*cm,
-        ia_w, A4[1]-3.8*cm,
-        leftPadding=0, rightPadding=0, topPadding=28, bottomPadding=0, id="covercont")
+    cont_frame = Frame(1.5*cm, 1.8*cm,
+        A4[0]-3*cm, A4[1]-3.8*cm,
+        leftPadding=int(0.42*cm), rightPadding=0, topPadding=28, bottomPadding=0, id="covercont")
     content_frame = Frame(1.5*cm, 1.8*cm,
         A4[0]-3*cm, A4[1]-3.8*cm, id="content")
 
@@ -2822,11 +2828,16 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
     _ai2 = _re_pdf2.sub(r'\*\*(.*?)\*\*', r'\1', _ai2)
     _ai2 = _re_pdf2.sub(r'\*(.*?)\*', r'\1', _ai2).strip()
     if _ai2:
-        _ai2_html = _ai2.replace("\n\n", "<br/><br/>").replace("\n", " ")
-        _ia_para_gen = Paragraph(_ai2_html, _PS3("ia_sg", fontName=_gfr(), fontSize=10,
-            leading=15, alignment=_TA_J2, textColor=_cc2.HexColor("#333333"), spaceAfter=6))
-        story = [NextPageTemplate("CoverCont"), _ia_para_gen,
-                 NextPageTemplate("Content"), PageBreak()]
+        _ia_paras2 = []
+        for _pt2 in _ai2.split("\n\n"):
+            _pt2 = _pt2.strip().replace("\n", " ")
+            if _pt2:
+                _ia_paras2.append(KeepTogether(Paragraph(
+                    _pt2, _PS3("ia_sg", fontName=_gfr(), fontSize=10,
+                               leading=15, alignment=_TA_J2,
+                               textColor=_cc2.HexColor("#333333"), spaceAfter=8))))
+        # Pas de PageBreak → la synthèse des données commence sur la même page
+        story = [NextPageTemplate("CoverCont")] + _ia_paras2 + [NextPageTemplate("Content")]
     else:
         story = [NextPageTemplate("Content"), PageBreak()]
     w     = A4[0] - 3*cm
@@ -3170,23 +3181,43 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
                     vals.append(_wrap(v, _cell_style))
                 rows.append([_wrap(lbl, _cell_style, max_chars=45)] + vals)
 
+            _CARD_BG  = colors.HexColor("#F7F8FC")
+            _HDR_BG   = colors.HexColor("#EBF0FA")
+            _SEP_COL  = colors.HexColor("#E8E8E8")
+            _BORD_COL = colors.HexColor("#E0E0E0")
+            _BLEU_TXT = colors.HexColor("#2B57A7")
+
             tbl_data = header_p + rows
+            n_rows   = len(tbl_data)
             tbl = Table(tbl_data, colWidths=col_w, repeatRows=1)
-            tbl.setStyle(TableStyle([
-                ("FONTNAME",       (0,0),(-1,-1), _LS),
-                ("FONTSIZE",       (0,0),(-1,-1), 7.5),
-                ("VALIGN",         (0,0),(-1,-1), "MIDDLE"),
-                ("ROWBACKGROUNDS", (0,1),(-1,-1), [BLANC, GRIS]),
-                ("GRID",           (0,0),(-1,-1), 0.25, GRIS_BORD),
-                ("TOPPADDING",     (0,0),(-1,-1), 5),
-                ("BOTTOMPADDING",  (0,0),(-1,-1), 5),
-                ("LEFTPADDING",    (0,0),(-1,-1), 7),
-                ("BACKGROUND",     (0,0),(-1,0), BLEU),
-                ("TEXTCOLOR",      (0,0),(-1,0), BLANC),
-                ("FONTNAME",       (0,0),(-1,0), _LS_BD),
-                ("TOPPADDING",     (0,0),(-1,0), 6),
-                ("BOTTOMPADDING",  (0,0),(-1,0), 6),
-            ]))
+
+            _cmds = [
+                # Fonte et taille
+                ("FONTNAME",      (0,0),(-1,-1), _LS),
+                ("FONTSIZE",      (0,0),(-1,-1), 7.5),
+                ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+                # Padding généreux
+                ("TOPPADDING",    (0,0),(-1,-1), 6),
+                ("BOTTOMPADDING", (0,0),(-1,-1), 6),
+                ("LEFTPADDING",   (0,0),(-1,-1), 8),
+                ("RIGHTPADDING",  (0,0),(-1,-1), 8),
+                # Pas de grille — uniquement séparateurs horizontaux légers
+                ("LINEBELOW",     (0,0),(-1,-2), 0.4, _SEP_COL),
+                # Bordure extérieure fine
+                ("BOX",           (0,0),(-1,-1), 0.5, _BORD_COL),
+                # Alternance blanc / gris très clair (lignes de données)
+                ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, _CARD_BG]),
+                # Header : fond bleu très clair, texte bleu, bold
+                ("BACKGROUND",    (0,0),(-1,0), _HDR_BG),
+                ("TEXTCOLOR",     (0,0),(-1,0), _BLEU_TXT),
+                ("FONTNAME",      (0,0),(-1,0), _LS_BD),
+                ("TOPPADDING",    (0,0),(-1,0), 7),
+                ("BOTTOMPADDING", (0,0),(-1,0), 7),
+                ("LINEBELOW",     (0,0),(-1,0), 0.6, _BLEU_TXT),
+                # Première colonne (labels) légèrement plus foncée
+                ("TEXTCOLOR",     (0,1),(0,-1), colors.HexColor("#333333")),
+            ]
+            tbl.setStyle(TableStyle(_cmds))
 
             # Titre + tableau dans un KeepTogether pour éviter la coupure
             _tst_style = ParagraphStyle("tst", fontName=_LS_BD, fontSize=8.5,
@@ -3208,22 +3239,31 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
                     v = str(r.get(col,"") or "").strip()
                     vals.append(_wrap(v, _cell_style))
                 rows.append([_wrap(lbl, _cell_style, max_chars=45)] + vals)
+            _CARD_BG2  = colors.HexColor("#F7F8FC")
+            _HDR_BG2   = colors.HexColor("#EBF0FA")
+            _SEP_COL2  = colors.HexColor("#E8E8E8")
+            _BORD_COL2 = colors.HexColor("#E0E0E0")
+            _BLEU_TXT2 = colors.HexColor("#2B57A7")
             tbl_data = header_p + rows
             tbl = Table(tbl_data, colWidths=col_w, repeatRows=1)
             tbl.setStyle(TableStyle([
-                ("FONTNAME",       (0,0),(-1,-1), _LS),
-                ("FONTSIZE",       (0,0),(-1,-1), 7.5),
-                ("VALIGN",         (0,0),(-1,-1), "MIDDLE"),
-                ("ROWBACKGROUNDS", (0,1),(-1,-1), [BLANC, GRIS]),
-                ("GRID",           (0,0),(-1,-1), 0.25, GRIS_BORD),
-                ("TOPPADDING",     (0,0),(-1,-1), 5),
-                ("BOTTOMPADDING",  (0,0),(-1,-1), 5),
-                ("LEFTPADDING",    (0,0),(-1,-1), 7),
-                ("BACKGROUND",     (0,0),(-1,0), BLEU),
-                ("TEXTCOLOR",      (0,0),(-1,0), BLANC),
-                ("FONTNAME",       (0,0),(-1,0), _LS_BD),
-                ("TOPPADDING",     (0,0),(-1,0), 6),
-                ("BOTTOMPADDING",  (0,0),(-1,0), 6),
+                ("FONTNAME",      (0,0),(-1,-1), _LS),
+                ("FONTSIZE",      (0,0),(-1,-1), 7.5),
+                ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+                ("TOPPADDING",    (0,0),(-1,-1), 6),
+                ("BOTTOMPADDING", (0,0),(-1,-1), 6),
+                ("LEFTPADDING",   (0,0),(-1,-1), 8),
+                ("RIGHTPADDING",  (0,0),(-1,-1), 8),
+                ("LINEBELOW",     (0,0),(-1,-2), 0.4, _SEP_COL2),
+                ("BOX",           (0,0),(-1,-1), 0.5, _BORD_COL2),
+                ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, _CARD_BG2]),
+                ("BACKGROUND",    (0,0),(-1,0), _HDR_BG2),
+                ("TEXTCOLOR",     (0,0),(-1,0), _BLEU_TXT2),
+                ("FONTNAME",      (0,0),(-1,0), _LS_BD),
+                ("TOPPADDING",    (0,0),(-1,0), 7),
+                ("BOTTOMPADDING", (0,0),(-1,0), 7),
+                ("LINEBELOW",     (0,0),(-1,0), 0.6, _BLEU_TXT2),
+                ("TEXTCOLOR",     (0,1),(0,-1), colors.HexColor("#333333")),
             ]))
             _tst_style2 = ParagraphStyle("tst2", fontName=_LS_BD, fontSize=8.5,
                 leading=11, textColor=BLEU, spaceBefore=8, spaceAfter=3)
@@ -3241,9 +3281,13 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
                                             ordered_test_ids=ordered_test_ids,
                                             active_test_ids=_active_test_ids_all if _filter_by_tests else None)
             if charts:
-                story.append(section_band("Évolution graphique"))
-                story.append(Spacer(1, 0.3*cm))
-                story.extend(charts)
+                # Garder le titre avec au moins le premier graphique
+                story.append(KeepTogether([
+                    section_band("Évolution graphique"),
+                    Spacer(1, 0.3*cm),
+                    charts[0],
+                ]))
+                story.extend(charts[1:])
 
         # ── Notes générales ────────────────────────────────────────────────────
         any_notes = any(
