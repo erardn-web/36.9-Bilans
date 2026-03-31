@@ -815,34 +815,64 @@ def render_evolution():
     # Labels des tests actifs → noms affichés dans les options
     _active_labels = [cls.tab_label() for cls in _active_tests if hasattr(cls, "tab_label")]
 
-    _pdf_opts_key = f"pdf_opts_{cid}"
+    # ── État PDF : inclusion + ordre ─────────────────────────────────────────
+    _pdf_opts_key  = f"pdf_opts_{cid}"
+    _pdf_order_key = f"pdf_order_{cid}"
+
     # Réinitialiser si la liste des tests a changé
     _known = set(S.get(_pdf_opts_key, {}).keys()) - {"Évolution graphique"}
     if _known != set(_active_labels):
-        S[_pdf_opts_key] = {lbl: True for lbl in _active_labels}
+        S[_pdf_opts_key]  = {lbl: True for lbl in _active_labels}
         S[_pdf_opts_key]["Évolution graphique"] = True
+        S[_pdf_order_key] = list(_active_labels)
+
+    # S'assurer que _pdf_order_key est initialisé et cohérent
+    _current_order = S.get(_pdf_order_key, list(_active_labels))
+    # Ajouter éventuels nouveaux tests à la fin, retirer les disparus
+    _current_order = [l for l in _current_order if l in set(_active_labels)]
+    _current_order += [l for l in _active_labels if l not in _current_order]
+    S[_pdf_order_key] = _current_order
 
     with st.expander("⚙️ Options du rapport PDF", expanded=False):
-        st.caption("Décochez les tests à exclure du rapport.")
-        _n_cols = min(len(_active_labels) + 1, 5)
-        _opts_cols = st.columns(_n_cols)
-        for _si, _sname in enumerate(_active_labels):
+        st.caption("Décochez pour exclure · ▲▼ pour réordonner")
+        st.markdown("")
+
+        for _oi, _sname in enumerate(S[_pdf_order_key]):
+            _c1, _c2, _c3, _c4 = st.columns([3, 0.5, 0.5, 0.5])
+            # Checkbox inclusion
             _val = S[_pdf_opts_key].get(_sname, True)
-            _new = _opts_cols[_si % _n_cols].checkbox(
-                _sname, value=_val, key=f"pdfsec_{cid}_{_si}")
+            _new = _c1.checkbox(_sname, value=_val, key=f"pdfsec_{cid}_{_oi}",
+                                 label_visibility="visible")
             S[_pdf_opts_key][_sname] = _new
-        # Graphiques toujours en dernier
+            # Boutons réordonnancement
+            if _oi > 0:
+                if _c2.button("▲", key=f"pdf_up_{cid}_{_oi}", use_container_width=True):
+                    _ord = S[_pdf_order_key]
+                    _ord[_oi-1], _ord[_oi] = _ord[_oi], _ord[_oi-1]
+                    S[_pdf_order_key] = _ord
+                    st.rerun()
+            if _oi < len(S[_pdf_order_key]) - 1:
+                if _c3.button("▼", key=f"pdf_dn_{cid}_{_oi}", use_container_width=True):
+                    _ord = S[_pdf_order_key]
+                    _ord[_oi], _ord[_oi+1] = _ord[_oi+1], _ord[_oi]
+                    S[_pdf_order_key] = _ord
+                    st.rerun()
+
+        st.markdown("---")
         _gc_val = S[_pdf_opts_key].get("Évolution graphique", True)
-        _gc_new = _opts_cols[len(_active_labels) % _n_cols].checkbox(
-            "📈 Graphiques", value=_gc_val, key=f"pdfsec_{cid}_charts")
+        _gc_new = st.checkbox("📈 Graphiques d'évolution", value=_gc_val,
+                              key=f"pdfsec_{cid}_charts")
         S[_pdf_opts_key]["Évolution graphique"] = _gc_new
 
-    # Construire excluded_test_ids : test_id() des tests dont le tab_label est décoché
+    # Construire excluded_test_ids + ordered_test_ids
     _label_to_tid = {cls.tab_label(): cls.test_id()
                      for cls in _active_tests if hasattr(cls, "tab_label") and hasattr(cls, "test_id")}
-    _excluded    = {_label_to_tid[lbl] for lbl, v in S[_pdf_opts_key].items()
-                    if not v and lbl in _label_to_tid}
-    _show_charts = S[_pdf_opts_key].get("Évolution graphique", True)
+    _excluded     = {_label_to_tid[lbl] for lbl, v in S[_pdf_opts_key].items()
+                     if not v and lbl in _label_to_tid}
+    _show_charts  = S[_pdf_opts_key].get("Évolution graphique", True)
+    # Ordre souhaité (uniquement les tests inclus)
+    _ordered_tids = [_label_to_tid[lbl] for lbl in S[_pdf_order_key]
+                     if lbl in _label_to_tid and _label_to_tid[lbl] not in _excluded]
 
     with col_pdf:
         try:
@@ -853,6 +883,7 @@ def render_evolution():
                 template_id=_tid, template_nom=_tnom,
                 medecin_info=_medecin_info,
                 excluded_test_ids=_excluded,
+                ordered_test_ids=_ordered_tids,
                 show_charts=_show_charts)
         except Exception as e:
             pdf_data = None
