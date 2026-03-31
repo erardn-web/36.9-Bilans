@@ -909,15 +909,36 @@ def render_evolution():
                           or _gc_new != S.get(_pdf_charts_key, True))
         st.markdown("")
         _save_col, _reset_col = st.columns([2, 1])
-        if _save_col.button("💾 Appliquer au rapport",
+        if _save_col.button("📄 Appliquer & Exporter PDF",
                              type="primary", use_container_width=True,
                              disabled=not _draft_changed,
                              key=f"pdf_save_{cid}"):
             S[_pdf_selected_key] = list(S[_pdf_draft_key])
             S[_pdf_charts_key]   = _gc_new
-            # Invalider le cache PDF
+            # Invalider le cache PDF pour forcer la régénération
             S.pop(f"pdf_cache_{cid}", None)
             S.pop(f"pdf_sig_{cid}", None)
+            # Générer immédiatement
+            with st.spinner("Génération du PDF…"):
+                try:
+                    _excl_now = {_label_to_tid[lbl] for lbl in _active_labels
+                                 if lbl not in set(S[_pdf_selected_key]) and lbl in _label_to_tid}
+                    _ord_now  = [_label_to_tid[lbl] for lbl in S[_pdf_selected_key]
+                                 if lbl in _label_to_tid]
+                    if not S[_pdf_selected_key]:
+                        _excl_now = set(); _ord_now = []
+                    _analyse_txt   = S.get(f"analyse_text_{cid}") or load_analyse_cas(cid)
+                    _medecin_now   = get_medecin_destinataire(cid)
+                    S[f"pdf_cache_{cid}"] = generate_pdf(be, info,
+                        analyse_text=_analyse_txt,
+                        template_id=_tid, template_nom=_tnom,
+                        medecin_info=_medecin_now,
+                        excluded_test_ids=_excl_now,
+                        ordered_test_ids=_ord_now,
+                        show_charts=_gc_new)
+                    S[f"pdf_sig_{cid}"] = _current_sig
+                except Exception as _e:
+                    st.error(f"Erreur PDF : {_e}")
             st.rerun()
         if _reset_col.button("↺ Réinitialiser",
                               use_container_width=True,
