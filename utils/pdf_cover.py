@@ -308,7 +308,7 @@ def draw_cover_canvas(canvas, doc,
     y = pill_y - 1.00 * cm
 
     # 6. Carte patient
-    card_h   = 3.00 * cm
+    card_h   = 3.80 * cm
     card_w   = W - 2 * M
     hdr_h    = 0.54 * cm
     mid_x    = M + card_w / 2
@@ -333,8 +333,8 @@ def draw_cover_canvas(canvas, doc,
     row_div = card_top - hdr_h - (card_h - hdr_h) / 2
     canvas.line(M + 1, row_div, M + card_w - 1, row_div)
 
-    LABEL_OFF = 0.60 * cm
-    VALUE_OFF = 0.16 * cm
+    LABEL_OFF = 0.82 * cm
+    VALUE_OFF = 0.28 * cm
 
     def _cell(cx, cy, label, value, maxlen=30):
         v = str(value or "—")
@@ -366,8 +366,8 @@ def draw_cover_canvas(canvas, doc,
     )
     pid = str(patient_info.get("patient_id", "—"))
 
-    row1_y = row_div + 0.24 * cm
-    row2_y = card_top - card_h + 0.20 * cm
+    row1_y = row_div + 0.30 * cm
+    row2_y = card_top - card_h + 0.28 * cm
 
     _cell(M + 0.40 * cm,     row1_y, "Nom",               nom_full, maxlen=28)
     _cell(mid_x + 0.40 * cm, row1_y, "Date de naissance", age_str,  maxlen=32)
