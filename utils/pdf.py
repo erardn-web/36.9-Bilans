@@ -3016,7 +3016,7 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
 
         # Colonnes non classifiées
         ungrouped = [col for col in active_cols if col not in seen]
-        if ungrouped and "Autres" not in _excl:
+        if ungrouped:
             rows = []
             for col in ungrouped:
                 lbl = _label(col)
