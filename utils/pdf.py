@@ -2895,70 +2895,45 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         if dp:
             story.append(Paragraph(f"<b>Diagnostics prescription :</b> {dp}", styles["normal"]))
     else:
-        # ── Groupes cliniques de colonnes ──────────────────────────────────────
-        # Ordre : respiratoire → équilibre/marche → fonctionnel → autres
-        _GROUPS = [
-            ("Respiration & BPCO", [
-                "spiro_vems_pct","spiro_cvf","spiro_vems_cvf","spiro_gold",
-                "mmrc_grade","mmrc_interpretation",
-                "spo2","spo2_effort","spo2_repos",
-                "cat_score","cat_interpretation",
-                "bode_score","bode_interpretation",
-                "bolt_score","bolt_interpretation",
-                "hvt_symptomes_reproduits",
-                "nij_score","nij_interpretation",
-            ]),
-            ("Capacité fonctionnelle & 6MWT", [
-                "mwt_distance","mwt_interpretation",
-                "mwt_spo2_avant","mwt_spo2_apres","mwt_spo2_min",
-                "mwt_fc_avant","mwt_fc_apres",
-                "mwt_dyspnee_avant","mwt_dyspnee_apres",
-                "mwt_fatigue_avant","mwt_fatigue_apres",
-                "mwt_aide_technique",
-                "sts_1min_reps","sts_1min_interpretation",
-                "sts_30s_reps","sts_30s_interpretation",
-                "lp_reps","lp_interpretation",
-                "bmi","bmi_interpretation",
-                "fc_repos","fr_repos","ta_repos",
-            ]),
-            ("Équilibre & Chute", [
-                "tinetti_eq_score","tinetti_ma_score","tinetti_total","tinetti_interpretation",
-                "berg_score","berg_interpretation",
-                "unipodal_d_ouvert","unipodal_g_ouvert",
-                "unipodal_d_ferme","unipodal_g_ferme",
-                "tug_temps","tug_interpretation",
-            ]),
-            ("Force musculaire", [
-                "musc_notes",
-            ]),
-            ("Douleur & Lombalgie", [
-                "eva","schober","luomajoki",
-                "posture","groupe_clinique",
-            ]),
-            ("Données générales", [
-                "diagnostic_prescription","diag_notes",
-                "appreciation","objectifs","traitement","frequence",
-            ]),
+        # ── Un tableau par test/questionnaire ────────────────────────────────────
+        # Chaque test = une entrée (nom_affiché, [colonnes_associées])
+        _TESTS = [
+            ("Spirométrie",          ["spiro_vems_pct","spiro_cvf","spiro_vems_cvf","spiro_gold"]),
+            ("Dyspnée mMRC",         ["mmrc_grade","mmrc_interpretation"]),
+            ("CAT — COPD Assessment",["cat_score","cat_interpretation"]),
+            ("Score BODE",           ["bode_score","bode_interpretation"]),
+            ("Test de Marche 6min",  ["mwt_distance","mwt_interpretation",
+                                      "mwt_spo2_avant","mwt_spo2_apres","mwt_spo2_min",
+                                      "mwt_fc_avant","mwt_fc_apres",
+                                      "mwt_dyspnee_avant","mwt_dyspnee_apres",
+                                      "mwt_fatigue_avant","mwt_fatigue_apres",
+                                      "mwt_aide_technique"]),
+            ("STS 1 minute",         ["sts_1min_reps","sts_1min_interpretation"]),
+            ("STS 30 secondes",      ["sts_30s_reps","sts_30s_interpretation"]),
+            ("Leg Press (1RM)",      ["lp_reps","lp_interpretation"]),
+            ("Test Unipodal",        ["unipodal_d_ouvert","unipodal_g_ouvert",
+                                      "unipodal_d_ferme","unipodal_g_ferme"]),
+            ("Tinetti",              ["tinetti_eq_score","tinetti_ma_score",
+                                      "tinetti_total","tinetti_interpretation"]),
+            ("Échelle de Berg",      ["berg_score","berg_interpretation"]),
+            ("TUG",                  ["tug_temps","tug_interpretation"]),
+            ("BOLT",                 ["bolt_score","bolt_interpretation"]),
+            ("HVT / Nijmegen",       ["hvt_symptomes_reproduits",
+                                      "nij_score","nij_interpretation"]),
+            ("EVA Douleur",          ["eva"]),
+            ("Lombalgie",            ["schober","luomajoki","posture","groupe_clinique"]),
+            ("Données vitales",      ["spo2","spo2_effort","spo2_repos",
+                                      "fc_repos","fr_repos","ta_repos"]),
+            ("IMC",                  ["bmi","bmi_interpretation"]),
+            ("Général",              ["diagnostic_prescription","diag_notes",
+                                      "appreciation","objectifs","traitement","frequence",
+                                      "musc_notes"]),
         ]
 
-        # Construire un ordre groupé des colonnes actives
-        _excl = set(excluded_sections or [])
+        # Filtrer par excluded_sections (noms de tests)
+        _excl      = set(excluded_sections or [])
         active_set = set(active_cols)
-        ordered_cols = []
-        seen = set()
-        for _grp_name, _grp_cols in _GROUPS:
-            if _grp_name in _excl:
-                # Marquer quand même comme vus pour ne pas les mettre dans "Autres"
-                seen.update(c for c in _grp_cols if c in active_set)
-                continue
-            grp_active = [c for c in _grp_cols if c in active_set and c not in seen]
-            if grp_active:
-                ordered_cols.append((_grp_name, grp_active))
-                seen.update(grp_active)
-        # Colonnes non classifiées à la fin (sauf si "Autres mesures" exclu)
-        ungrouped = [c for c in active_cols if c not in seen]
-        if ungrouped and "Autres mesures" not in _excl:
-            ordered_cols.append(("Autres mesures", ungrouped))
+        seen       = set()
 
         col_w = [6*cm] + [(w - 6*cm) / n_bilans] * n_bilans
 
@@ -2966,8 +2941,6 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             leading=10, textColor=NOIR)
         _hdr_style  = ParagraphStyle("th", fontName=_LS_BD, fontSize=7.5,
             leading=10, textColor=BLANC)
-        _grp_style  = ParagraphStyle("grp", fontName=_LS_BD, fontSize=7,
-            leading=9, textColor=BLEU)
 
         def _wrap(text, style, max_chars=60):
             t = str(text or "—")
@@ -2980,12 +2953,21 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
                     [Paragraph(f"B{i+1}", _hdr_style) for i in range(n_bilans)]]
 
         story.append(section_band("Synthèse des données"))
-        story.append(Spacer(1, 0.2*cm))
+        story.append(Spacer(1, 0.3*cm))
 
-        first_group = True
-        for grp_name, grp_cols in ordered_cols:
+        for test_name, test_cols in _TESTS:
+            if test_name in _excl:
+                seen.update(test_cols)
+                continue
+            # Ne garder que les colonnes actives de ce test
+            grp_active = [col for col in test_cols if col in active_set and col not in seen]
+            seen.update(test_cols)
+            if not grp_active:
+                continue
+
+            # Titre du test (section_band sobre)
             rows = []
-            for col in grp_cols:
+            for col in grp_active:
                 lbl  = _label(col)
                 vals = []
                 for _, r in bilans_df.iterrows():
@@ -2993,21 +2975,9 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
                     vals.append(_wrap(v, _cell_style))
                 rows.append([_wrap(lbl, _cell_style, max_chars=45)] + vals)
 
-            if not rows:
-                continue
-
-            # En-tête de groupe : ligne pleine largeur bleu clair
-            grp_row = [[Paragraph(grp_name.upper(), _grp_style)] +
-                       [""] * n_bilans]
-
-            tbl_data = header_p + grp_row + rows if first_group else grp_row + rows
-            first_group = False
-
+            tbl_data = header_p + rows
             tbl = Table(tbl_data, colWidths=col_w, repeatRows=1)
-            n_data = len(tbl_data)
-            n_hdr  = 1 if not first_group else 1
-            # Style de base
-            cmds = [
+            tbl.setStyle(TableStyle([
                 ("FONTNAME",       (0,0),(-1,-1), _LS),
                 ("FONTSIZE",       (0,0),(-1,-1), 7.5),
                 ("VALIGN",         (0,0),(-1,-1), "MIDDLE"),
@@ -3016,36 +2986,53 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
                 ("TOPPADDING",     (0,0),(-1,-1), 5),
                 ("BOTTOMPADDING",  (0,0),(-1,-1), 5),
                 ("LEFTPADDING",    (0,0),(-1,-1), 7),
-            ]
-            # En-tête bleu (première ligne si header présent)
-            if len(tbl_data) > 0 and tbl_data[0] == header_p[0]:
-                cmds += [
-                    ("BACKGROUND",   (0,0),(-1,0), BLEU),
-                    ("TEXTCOLOR",    (0,0),(-1,0), BLANC),
-                    ("FONTNAME",     (0,0),(-1,0), _LS_BD),
-                    ("TOPPADDING",   (0,0),(-1,0), 6),
-                    ("BOTTOMPADDING",(0,0),(-1,0), 6),
-                ]
-                grp_row_idx = 1
-            else:
-                grp_row_idx = 0
+                ("BACKGROUND",     (0,0),(-1,0), BLEU),
+                ("TEXTCOLOR",      (0,0),(-1,0), BLANC),
+                ("FONTNAME",       (0,0),(-1,0), _LS_BD),
+                ("TOPPADDING",     (0,0),(-1,0), 6),
+                ("BOTTOMPADDING",  (0,0),(-1,0), 6),
+            ]))
 
-            # Ligne de groupe : fond bleu très clair, texte bleu
-            cmds += [
-                ("BACKGROUND",   (0,grp_row_idx),(-1,grp_row_idx), BLEU_LIGHT),
-                ("TEXTCOLOR",    (0,grp_row_idx),(-1,grp_row_idx), BLEU),
-                ("FONTNAME",     (0,grp_row_idx),(-1,grp_row_idx), _LS_BD),
-                ("FONTSIZE",     (0,grp_row_idx),(-1,grp_row_idx), 7),
-                ("TOPPADDING",   (0,grp_row_idx),(-1,grp_row_idx), 5),
-                ("BOTTOMPADDING",(0,grp_row_idx),(-1,grp_row_idx), 5),
-                ("SPAN",         (0,grp_row_idx),(-1,grp_row_idx)),
-                ("GRID",         (0,grp_row_idx),(-1,grp_row_idx), 0, BLANC),
-                ("LINEBELOW",    (0,grp_row_idx),(-1,grp_row_idx), 0.5, BLEU),
-            ]
-
-            tbl.setStyle(TableStyle(cmds))
+            # Titre du test au-dessus du tableau
+            _tst_style = ParagraphStyle("tst", fontName=_LS_BD, fontSize=8.5,
+                leading=11, textColor=BLEU, spaceBefore=8, spaceAfter=3)
+            story.append(Paragraph(test_name, _tst_style))
             story.append(tbl)
-            story.append(Spacer(1, 0.15*cm))
+            story.append(Spacer(1, 0.25*cm))
+
+        # Colonnes non classifiées
+        ungrouped = [col for col in active_cols if col not in seen]
+        if ungrouped and "Autres" not in _excl:
+            rows = []
+            for col in ungrouped:
+                lbl = _label(col)
+                vals = []
+                for _, r in bilans_df.iterrows():
+                    v = str(r.get(col,"") or "").strip()
+                    vals.append(_wrap(v, _cell_style))
+                rows.append([_wrap(lbl, _cell_style, max_chars=45)] + vals)
+            tbl_data = header_p + rows
+            tbl = Table(tbl_data, colWidths=col_w, repeatRows=1)
+            tbl.setStyle(TableStyle([
+                ("FONTNAME",       (0,0),(-1,-1), _LS),
+                ("FONTSIZE",       (0,0),(-1,-1), 7.5),
+                ("VALIGN",         (0,0),(-1,-1), "MIDDLE"),
+                ("ROWBACKGROUNDS", (0,1),(-1,-1), [BLANC, GRIS]),
+                ("GRID",           (0,0),(-1,-1), 0.25, GRIS_BORD),
+                ("TOPPADDING",     (0,0),(-1,-1), 5),
+                ("BOTTOMPADDING",  (0,0),(-1,-1), 5),
+                ("LEFTPADDING",    (0,0),(-1,-1), 7),
+                ("BACKGROUND",     (0,0),(-1,0), BLEU),
+                ("TEXTCOLOR",      (0,0),(-1,0), BLANC),
+                ("FONTNAME",       (0,0),(-1,0), _LS_BD),
+                ("TOPPADDING",     (0,0),(-1,0), 6),
+                ("BOTTOMPADDING",  (0,0),(-1,0), 6),
+            ]))
+            _tst_style2 = ParagraphStyle("tst2", fontName=_LS_BD, fontSize=8.5,
+                leading=11, textColor=BLEU, spaceBefore=8, spaceAfter=3)
+            story.append(Paragraph("Autres mesures", _tst_style2))
+            story.append(tbl)
+            story.append(Spacer(1, 0.25*cm))
 
         # ── Graphiques d'évolution ─────────────────────────────────────────────
         if show_charts and "Évolution graphique" not in (excluded_sections or set()):
