@@ -1849,7 +1849,9 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
     # ── Page templates ────────────────────────────────────────────────────────
     from utils.pdf_cover import make_cover_callback as _mcc, get_ia_frame as _gif, get_f_reg as _gfr
     ia_x, ia_y, ia_w, ia_h = _gif()
-    cover_frame = Frame(ia_x, ia_y, ia_w, ia_h,
+    # Frame depuis ia_bottom jusqu'en haut de page — permet le débordement p.2
+    _cover_full_h = A4[1] - 2.5*cm - ia_y
+    cover_frame = Frame(ia_x, ia_y, ia_w, _cover_full_h,
         leftPadding=0, rightPadding=0, topPadding=22, bottomPadding=0, id="cover")
     content_frame = Frame(1.5*cm, 1.8*cm,
         A4[0]-3*cm, A4[1]-3.8*cm, id="content")
@@ -2556,7 +2558,8 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
     # ── Page templates ────────────────────────────────────────────────────────
     from utils.pdf_cover import make_cover_callback as _mcc, get_ia_frame as _gif, get_f_reg as _gfr
     ia_x, ia_y, ia_w, ia_h = _gif()
-    cover_frame = Frame(ia_x, ia_y, ia_w, ia_h,
+    _cover_full_h = A4[1] - 2.5*cm - ia_y
+    cover_frame = Frame(ia_x, ia_y, ia_w, _cover_full_h,
         leftPadding=0, rightPadding=0, topPadding=22, bottomPadding=0, id="cover")
     content_frame = Frame(1.5*cm, 1.8*cm,
         A4[0]-3*cm, A4[1]-3.8*cm, id="content")
