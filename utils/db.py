@@ -68,6 +68,7 @@ CAS_HEADERS = [
     "cas_id","patient_id","cabinet_id",
     "template_id","template_snapshot","tests_actifs",
     "statut","praticien_creation","date_ouverture","date_cloture","notes_cas","analyse_ia",
+    "medecin_destinataire",
 ]
 
 BILANS_BASE_HEADERS = [
@@ -598,3 +599,43 @@ def admin_delete_feedback(feedback_id: str) -> bool:
     if deleted:
         _invalidate_read_cache()
     return deleted
+
+
+# ── Médecin destinataire ──────────────────────────────────────────────────────
+
+def get_medecin_destinataire(cas_id: str) -> dict:
+    """
+    Retourne le médecin destinataire d'un cas sous forme de dict.
+    Structure : {"nom": "", "specialite": "", "adresse": ""}
+    """
+    cas = get_cas(cas_id)
+    if not cas:
+        return {}
+    raw = cas.get("medecin_destinataire", "") or ""
+    if not raw.strip():
+        return {}
+    try:
+        import json as _json
+        data = _json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_medecin_destinataire(cas_id: str, medecin_info: dict) -> bool:
+    """
+    Sauvegarde le médecin destinataire d'un cas.
+    medecin_info = {"nom": "Dupont", "specialite": "Médecin de famille", "adresse": "..."}
+    """
+    import json as _json
+    clean = {
+        "nom":       str(medecin_info.get("nom", "") or "").strip(),
+        "specialite":str(medecin_info.get("specialite", "") or "").strip(),
+        "adresse":   str(medecin_info.get("adresse", "") or "").strip(),
+    }
+    ok = _update_row("Cas", "cas_id", cas_id, {
+        "medecin_destinataire": _json.dumps(clean, ensure_ascii=False),
+    })
+    if ok:
+        _invalidate_read_cache()
+    return ok
