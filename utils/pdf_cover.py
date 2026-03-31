@@ -90,7 +90,7 @@ _y        = _pill_y - 1.00 * cm        # card_top
 _card_top = _y
 _y        = _card_top - 3.00 * cm - 0.70 * cm  # timeline label
 _tl_y     = _y - 0.78 * cm
-_tl_bot   = _tl_y - 8.5 - 1.0 * cm   # 8.5 pt = circ_r
+_tl_bot   = _tl_y - 8.5 - 1.9 * cm   # 8.5 pt = circ_r
 
 _IA_X      = M + 0.38 * cm
 _IA_BOTTOM = FOOTER_H + 0.5 * cm
