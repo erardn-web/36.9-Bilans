@@ -31,32 +31,33 @@ import numpy as np
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
 
 # ─── Fontes Liberation Sans (enregistrement au niveau module) ────────────────
-def _register_ls():
-    import os
-    from reportlab.pdfbase import pdfmetrics as _pm
-    from reportlab.pdfbase.ttfonts import TTFont as _TTF
-    _candidates = {
-        "LS":    ["/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-                  "/usr/share/fonts/truetype/crosextra/Carlito-Regular.ttf"],
-        "LS-Bd": ["/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-                  "/usr/share/fonts/truetype/crosextra/Carlito-Bold.ttf"],
-        "LS-Lt": ["/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraLight.ttf",
-                  "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"],
-    }
-    for name, paths in _candidates.items():
-        for p in paths:
-            if os.path.exists(p):
-                try:
-                    _pm.registerFont(_TTF(name, p))
-                    break
-                except Exception:
-                    continue
+# ── Enregistrement direct des fontes (pas de fonction — évite les problèmes
+#    de réimport sous Streamlit). Idempotent : registerFont accepte les doublons.
+import os as _os
+from reportlab.pdfbase import pdfmetrics as _pm
+from reportlab.pdfbase.ttfonts import TTFont as _TTF
 
-_register_ls()
-# Noms de fontes utilisés dans les styles
-_LS     = "LS"       # Regular
-_LS_BD  = "LS-Bd"    # Bold
-_LS_LT  = "LS-Lt"    # Light
+def _reg(name, paths, fallback="Helvetica"):
+    """Enregistre la première fonte trouvée ; retourne le nom réussi ou fallback."""
+    for _p in paths:
+        if _os.path.exists(_p):
+            try:
+                _pm.registerFont(_TTF(name, _p))
+                return name
+            except Exception:
+                continue
+    return fallback
+
+_LS    = _reg("LS",    ["/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                         "/usr/share/fonts/truetype/crosextra/Carlito-Regular.ttf",
+                         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"])
+_LS_BD = _reg("LS-Bd", ["/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                         "/usr/share/fonts/truetype/crosextra/Carlito-Bold.ttf",
+                         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"],
+              fallback="Helvetica-Bold")
+_LS_LT = _reg("LS-Lt", ["/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraLight.ttf",
+                         "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                         "/usr/share/fonts/truetype/crosextra/Carlito-Regular.ttf"])
 
 # ─── Palette 36.9 Bilans ──────────────────────────────────────────────────────
 TERRA       = _colors.HexColor("#C4603A")
