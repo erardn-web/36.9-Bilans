@@ -2618,27 +2618,87 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
 
     # Colonnes individuelles à exclure (items bruts des questionnaires)
     # On garde les scores et valeurs significatives, pas les items individuels
+    # ── Dictionnaire de labels propres ───────────────────────────────────────
+    _LABELS = {
+        # Données générales
+        "bmi": "IMC (BMI)", "bmi_interpretation": "Interprétation IMC",
+        "diagnostic_prescription": "Diagnostic / Prescription",
+        # Respiration / BPCO
+        "spiro_vems_pct": "VEMS (% prédit)", "spiro_cvf": "CVF (L)", "spiro_vems_cvf": "Rapport VEMS/CVF",
+        "spiro_gold": "Stade GOLD",
+        "mmrc_grade": "Dyspnée mMRC (grade)", "mmrc_interpretation": "Interprétation mMRC",
+        "cat_score": "Score CAT", "cat_interpretation": "Interprétation CAT",
+        "spo2": "SpO₂ (%)", "spo2_effort": "SpO₂ effort (%)",
+        "mwt_distance": "TM6 — Distance (m)", "mwt_interpretation": "Interprétation TM6",
+        "bode_score": "Score BODE", "bode_interpretation": "Interprétation BODE",
+        # SHV / HVT
+        "bolt_score": "Score BOLT", "bolt_interpretation": "Interprétation BOLT",
+        "hvt_symptomes_reproduits": "Symptômes reproduits (HVT)",
+        "nij_score": "Score Nijmegen", "nij_interpretation": "Interprétation Nijmegen",
+        # Équilibre / Tinetti
+        "tinetti_eq_score": "Tinetti — Équilibre (/16)",
+        "tinetti_ma_score": "Tinetti — Marche (/12)",
+        "tinetti_total": "Tinetti — Total (/28)",
+        "tinetti_interpretation": "Interprétation Tinetti",
+        "berg_score": "Échelle de Berg (/56)", "berg_interpretation": "Interprétation Berg",
+        "unipodal_d_ouvert": "Unipodal D — yeux ouverts (s)",
+        "unipodal_g_ouvert": "Unipodal G — yeux ouverts (s)",
+        "unipodal_d_ferme": "Unipodal D — yeux fermés (s)",
+        "unipodal_g_ferme": "Unipodal G — yeux fermés (s)",
+        # Fonction / force
+        "sts_1min_reps": "STS 1 min (répétitions)", "sts_1min_interpretation": "Interprétation STS",
+        "sts_30s_reps": "STS 30s (répétitions)", "sts_30s_interpretation": "Interprétation STS 30s",
+        "tug_temps": "TUG (secondes)", "tug_interpretation": "Interprétation TUG",
+        # Lombalgie / BPCO divers
+        "schober": "Schober (cm)", "luomajoki": "Score Luomajoki",
+        "eva": "Douleur EVA (0-10)",
+        "mmrc_grade": "Dyspnée mMRC",
+    }
+
+    def _label(col):
+        """Retourne le label propre d'une colonne."""
+        if col in _LABELS:
+            return _LABELS[col]
+        # Nettoyage générique : supprimer préfixes redondants, capitaliser
+        lbl = col.replace("_", " ")
+        # Supprimer les mots parasites courants
+        for drop in ["interpretation", "score", "grade", "total"]:
+            pass  # on garde, c'est utile dans le label générique
+        return lbl.capitalize()
+
     def _is_score_col(col):
-        """Retourne True si la colonne est un score/valeur clinique à afficher."""
-        # Toujours garder ces types de colonnes
-        keep_patterns = ["score","total","pct","interp","grade","distance","temps",
-                         "reps","1rm","_eq_","_ma_","pf","rp","bp","gh","vt","sf",
-                         "re","mh","pcs","mcs","pattern","mode","ampl","rythme",
-                         "eva","drapeaux","localisation","type_douleur","facteurs",
-                         "schober","flexion_cm","mob","aide","incidents","classification",
-                         "groupe_clinique","diag_notes","appreciation","objectifs",
-                         "traitement","frequence","posture","luomajoki","spiro",
-                         "gold","spo2","fc_","mmrc","bode","bmi","cat_","mwt_",
-                         "diagnostic_prescription","musc_notes"]
-        if any(p in col for p in keep_patterns):
+        """Retourne True si la colonne est un score/valeur clinique à afficher.
+        Règle : les skip_prefixes sont vérifiés EN PREMIER pour éviter
+        que cat_ dans keep_patterns ne court-circuite cat_1..cat_8."""
+        # 1. Exclure TOUJOURS les items individuels de questionnaires
+        # Whitelist explicite : ces colonnes sont TOUJOURS affichées
+        always_show = ("cat_score","cat_interpretation")
+        if col in always_show:
             return True
-        # Exclure items individuels : had_a1, sf12_q3, nijmegen_1, berg_1..14,
-        # odi_s1, tampa_1, orebro_1, tin_eq_, etc.
-        skip_prefixes = ("had_a","had_d","sf12_q","nijmegen_","berg_","odi_s",
-                         "tampa_","orebro_","tin_eq_","tin_ma_","cat_","o_tol_")
+        skip_prefixes = (
+            "had_a","had_d","sf12_q","nijmegen_","berg_",
+            "odi_s","tampa_","orebro_",
+            "tin_eq_","tin_ma_",    # items Tinetti individuels
+            "cat_",                  # items CAT individuels (cat_1..cat_8)
+            "o_tol_",
+        )
         if any(col.startswith(p) for p in skip_prefixes):
             return False
-        return True
+        # 2. Garder les scores, totaux et indicateurs cliniques significatifs
+        keep_patterns = [
+            "score","total","pct","interp","grade","distance","temps","reps",
+            "pf","rp","bp","gh","vt","sf","re","mh","pcs","mcs",
+            "pattern","mode","ampl","rythme","eva","drapeaux",
+            "localisation","type_douleur","facteurs","schober","flexion_cm",
+            "mob","aide","incidents","classification","groupe_clinique",
+            "diag_notes","appreciation","objectifs","traitement","frequence",
+            "posture","luomajoki","spiro","gold","spo2","fc_","mmrc",
+            "bode","bmi","mwt_","diagnostic_prescription","musc_notes",
+            "bolt","hvt","nij","tinetti","unipodal","sts","tug","berg",
+        ]
+        if any(p in col for p in keep_patterns):
+            return True
+        return False
 
     # Trouver toutes les colonnes avec données
     all_cols = [c for c in bilans_df.columns
@@ -2674,15 +2734,31 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         header = [["Indicateur"] + [f"B{i+1}" for i in range(n_bilans)]]
         rows   = []
 
+        _cell_style = ParagraphStyle("td", fontName=_LS, fontSize=7.5,
+            leading=10, textColor=NOIR)
+        _hdr_style  = ParagraphStyle("th", fontName=_LS_BD, fontSize=7.5,
+            leading=10, textColor=BLANC)
+
+        def _wrap(text, style, max_chars=60):
+            """Wrap long text in a Paragraph to avoid overflow."""
+            t = str(text or "—")
+            if t in ("","None","nan"): t = "—"
+            if len(t) > max_chars:
+                t = t[:max_chars-1] + "…"
+            return Paragraph(t, style)
+
+        header_p = [[Paragraph("Indicateur", _hdr_style)] +
+                    [Paragraph(f"B{i+1}", _hdr_style) for i in range(n_bilans)]]
+        rows   = []
         for col in active_cols:
-            label = col.replace("_", " ").capitalize()
-            vals  = []
+            lbl  = _label(col)
+            vals = []
             for _, r in bilans_df.iterrows():
                 v = str(r.get(col,"") or "").strip()
-                vals.append("—" if v in ("","None","nan") else v)
-            rows.append([label] + vals)
+                vals.append(_wrap(v, _cell_style))
+            rows.append([_wrap(lbl, _cell_style, max_chars=45)] + vals)
 
-        tbl_data = header + rows
+        tbl_data = header_p + rows
         tbl = Table(tbl_data, colWidths=col_w, repeatRows=1)
         tbl.setStyle(TableStyle([
             ("FONTNAME",    (0,0),(-1,-1), _LS),
