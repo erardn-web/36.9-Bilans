@@ -797,8 +797,19 @@ def render_evolution():
     be = be.sort_values("date_bilan").reset_index(drop=True)
 
     # PDF — généré sur clic uniquement (évite rerun en boucle)
-    # Pré-charger la synthèse IA en session AVANT la génération PDF
-    _ai_key = f"analyse_text_{cid}"
+    # Pré-charger la synthèse IA — invalider si les bilans ont changé
+    _ai_key     = f"analyse_text_{cid}"
+    _ai_sig_key = f"analyse_sig_{cid}"
+    import json as _jj
+    # Signature = liste triée des bilan_ids + tests_actifs de chacun
+    _ai_sig_now = str(sorted([
+        (r["bilan_id"], r.get("tests_actifs",""))
+        for _, r in be.iterrows()
+    ]))
+    if S.get(_ai_sig_key) != _ai_sig_now:
+        # Bilans ou tests ont changé → effacer le cache IA en session
+        S.pop(_ai_key, None)
+        S[_ai_sig_key] = _ai_sig_now
     if _ai_key not in S:
         S[_ai_key] = load_analyse_cas(cid)
 
