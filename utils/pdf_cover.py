@@ -166,7 +166,7 @@ def draw_cover_canvas(canvas, doc,
         name_x = logo_x + logo_h + 0.35 * cm
 
     canvas.setFillColor(_BLEU)
-    canvas.setFont(F_BOLD, 11.5)
+    canvas.setFont(F_REG, 11.5)
     canvas.drawString(name_x, logo_y + 0.52 * cm, "36.9 Bilans")
     canvas.setFillColor(_GRIS_99)
     canvas.setFont(F_LIGHT, 8)
@@ -214,7 +214,7 @@ def draw_cover_canvas(canvas, doc,
     y -= 0.88 * cm
 
     canvas.setFillColor(_NOIR)
-    canvas.setFont(F_BOLD, 26)
+    canvas.setFont(F_REG, 26)
     canvas.drawString(M, y, str(template_nom or "Bilan"))
     y -= 0.62 * cm
 
@@ -291,7 +291,7 @@ def draw_cover_canvas(canvas, doc,
         canvas.setFont(F_LIGHT, 7)
         canvas.drawString(cx, cy + LABEL_OFF, label)
         canvas.setFillColor(_NOIR)
-        canvas.setFont(F_BOLD, 9.5)
+        canvas.setFont(F_REG, 9.5)
         canvas.drawString(cx, cy + VALUE_OFF, v)
 
     # Âge
@@ -468,7 +468,7 @@ def draw_cover_canvas(canvas, doc,
     canvas.setFont(F_LIGHT, 6.5)
     canvas.drawString(M, foot_y - 0.34 * cm, "Praticien responsable")
     canvas.setFillColor(_NOIR)
-    canvas.setFont(F_BOLD, 10)
+    canvas.setFont(F_REG, 10)
     canvas.drawString(M, foot_y - 0.70 * cm, praticien_nom or "—")
     canvas.setFillColor(_GRIS_55)
     canvas.setFont(F_REG, 7.5)
