@@ -1,10 +1,12 @@
 """
-utils/pdf_cover.py — Page de garde canvas-based (v3)
+utils/pdf_cover.py — Page de garde canvas-based (v4)
 
-Typographie : Liberation Sans (Regular / Bold) + DejaVu ExtraLight pour labels.
-Fallback propre sur Helvetica si les fontes système sont absentes.
-Design : blanc épuré, accents bleu/terracotta, style clinique suisse.
-Layout entièrement dynamique — le bloc IA remplit tout l'espace disponible.
+Fontes enregistrées à l'IMPORT du module (pas à l'intérieur du callback)
+pour garantir la disponibilité lors du rendu ReportLab/BaseDocTemplate.
+Fallback sur Helvetica si les TTF système sont absents.
+
+Typographie : Liberation Sans (Regular/Bold) + DejaVu ExtraLight pour labels.
+Texte IA : justifié, taille adaptative, remplit tout l'espace disponible.
 """
 
 import os
@@ -14,8 +16,11 @@ from datetime import date as _date
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.units import cm
+from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.platypus import Paragraph
 from reportlab.lib.styles import ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase.pdfmetrics import stringWidth
 
 # ── Palette ───────────────────────────────────────────────────────────────────
@@ -36,59 +41,58 @@ M        = 1.5 * cm   # marge latérale
 FOOTER_H = 3.0 * cm   # hauteur réservée au footer
 
 
-# ── Chargement des fontes ─────────────────────────────────────────────────────
+# ── Enregistrement des fontes au niveau MODULE ────────────────────────────────
+# Doit se faire ICI, pas à l'intérieur des callbacks, pour que les noms
+# soient disponibles lors du build() de BaseDocTemplate.
 
-# Noms internes utilisés dans tout le module
-F_LIGHT  = "Cover-Light"    # labels, corps léger
-F_REG    = "Cover-Regular"  # corps normal
-F_SEMI   = "Cover-Regular"  # on réutilise Regular pour demi-gras (évite trop de gras)
-F_BOLD   = "Cover-Bold"     # titres, valeurs importantes
+_FONT_CANDIDATES = {
+    "Cover-Light": [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraLight.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/crosextra/Carlito-Regular.ttf",
+    ],
+    "Cover-Regular": [
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/crosextra/Carlito-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    ],
+    "Cover-Bold": [
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/truetype/crosextra/Carlito-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    ],
+}
 
-_FONTS_REGISTERED = False
+# Noms résolus — remplacés par "Helvetica[-Bold]" si TTF introuvable
+F_LIGHT   = "Helvetica"
+F_REG     = "Helvetica"
+F_BOLD    = "Helvetica-Bold"
 
-def _register_fonts():
-    global _FONTS_REGISTERED
-    if _FONTS_REGISTERED:
-        return
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-
-    # Candidates par ordre de préférence
-    candidates = {
-        F_LIGHT: [
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraLight.ttf",
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-            "/System/Library/Fonts/Helvetica.ttc",
-        ],
-        F_REG: [
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-            "/usr/share/fonts/truetype/crosextra/Carlito-Regular.ttf",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        ],
-        F_BOLD: [
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-            "/usr/share/fonts/truetype/crosextra/Carlito-Bold.ttf",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        ],
-    }
-
-    for name, paths in candidates.items():
-        for path in paths:
-            if os.path.exists(path):
-                try:
-                    pdfmetrics.registerFont(TTFont(name, path))
-                    break
-                except Exception:
-                    continue
-        else:
-            # Aucune fonte trouvée → alias vers Helvetica
+def _try_register(internal_name, candidates):
+    """Essaie d'enregistrer la fonte ; retourne le nom réussi ou None."""
+    for path in candidates:
+        if os.path.exists(path):
             try:
-                pdfmetrics.registerFont(TTFont(name, "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"))
+                pdfmetrics.registerFont(TTFont(internal_name, path))
+                return internal_name
             except Exception:
-                pass  # Fallback ReportLab interne
+                continue
+    return None
 
-    _FONTS_REGISTERED = True
+_r = _try_register("Cover-Light",   _FONT_CANDIDATES["Cover-Light"])
+if _r:
+    F_LIGHT = _r
 
+_r = _try_register("Cover-Regular", _FONT_CANDIDATES["Cover-Regular"])
+if _r:
+    F_REG = _r
+
+_r = _try_register("Cover-Bold",    _FONT_CANDIDATES["Cover-Bold"])
+if _r:
+    F_BOLD = _r
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _find_logo():
     candidates = [
@@ -125,12 +129,14 @@ def draw_cover_canvas(canvas, doc,
                       analyse_text: str,
                       template_nom: str,
                       medecin_info: dict):
-
-    _register_fonts()
+    """
+    Dessine la page de garde complète sur le canvas ReportLab.
+    Appelé via make_cover_callback() → PageTemplate.onPage.
+    """
     canvas.saveState()
     W, H = A4
 
-    # ── 1. Accents couleur en haut ────────────────────────────────────────────
+    # ── 1. Accents couleur haut ───────────────────────────────────────────────
     canvas.setFillColor(_BLEU)
     canvas.rect(0, H - 4.5, W, 4.5, fill=1, stroke=0)
     canvas.setFillColor(_TERRA)
@@ -202,13 +208,11 @@ def draw_cover_canvas(canvas, doc,
     y = sep_y - 0.62 * cm
 
     # ── 5. Hero ───────────────────────────────────────────────────────────────
-    # Label terracotta léger
     canvas.setFillColor(_TERRA)
     canvas.setFont(F_BOLD, 7)
     canvas.drawString(M, y, "RAPPORT D'ÉVOLUTION")
     y -= 0.88 * cm
 
-    # Titre pathologie — bold mais pas excessif
     canvas.setFillColor(_NOIR)
     canvas.setFont(F_BOLD, 26)
     canvas.drawString(M, y, str(template_nom or "Bilan"))
@@ -240,59 +244,55 @@ def draw_cover_canvas(canvas, doc,
     _rrect(canvas, M, pill_y, pill_w, pill_h, 10, fill=_BLEU_BG)
     canvas.setFillColor(_BLEU)
     canvas.circle(M + 0.26 * cm, pill_y + pill_h / 2, 2.5, fill=1, stroke=0)
+    canvas.setFillColor(_BLEU)
     canvas.setFont(F_REG, pill_fs)
     canvas.drawString(M + 0.46 * cm, pill_y + 0.08 * cm, pill_txt)
 
     y = pill_y - 0.70 * cm
 
     # ── 6. Carte patient ──────────────────────────────────────────────────────
-    # On augmente la hauteur pour avoir de l'air entre label et valeur
-    card_h   = 3.00 * cm   # ← augmenté (était 2.70)
+    card_h   = 3.00 * cm
     card_w   = W - 2 * M
     hdr_h    = 0.54 * cm
     mid_x    = M + card_w / 2
     card_top = y
 
-    # Fond blanc avec bordure très fine
     _rrect(canvas, M, card_top - card_h, card_w, card_h, 6,
            fill=_WHITE, stroke=_GRIS_BORD, lw=0.4)
 
-    # En-tête colorée légère
+    # En-tête légère
     _rrect(canvas, M, card_top - hdr_h, card_w, hdr_h, 6, fill=_CARD_BG)
     canvas.setFillColor(_WHITE)
     canvas.rect(M + 1, card_top - hdr_h, card_w - 2, hdr_h * 0.45, fill=1, stroke=0)
     canvas.setStrokeColor(_GRIS_BORD)
-    canvas.setLineWidth(0.35)
+    canvas.setLineWidth(0.3)
     canvas.line(M, card_top - hdr_h, M + card_w, card_top - hdr_h)
 
     canvas.setFillColor(_BLEU)
     canvas.setFont(F_BOLD, 6.5)
     canvas.drawString(M + 0.40 * cm, card_top - 0.35 * cm, "PATIENT")
 
-    # Séparateurs internes fins
+    # Séparateurs internes
     canvas.setStrokeColor(_GRIS_BORD)
     canvas.setLineWidth(0.3)
     canvas.line(mid_x, card_top - hdr_h, mid_x, card_top - card_h + 2)
     row_div = card_top - hdr_h - (card_h - hdr_h) / 2
     canvas.line(M + 1, row_div, M + card_w - 1, row_div)
 
-    # Cellule : label léger en haut, valeur plus marquée en dessous
-    # Espace généreux entre les deux
-    LABEL_OFFSET = 0.62 * cm  # distance du bas de la cellule → label
-    VALUE_OFFSET = 0.18 * cm  # distance du bas de la cellule → valeur
+    # Offsets label / valeur dans chaque demi-cellule
+    LABEL_OFF = 0.60 * cm
+    VALUE_OFF = 0.16 * cm
 
     def _cell(cx, cy, label, value, maxlen=30):
         v = str(value or "—")
         if len(v) > maxlen:
             v = v[:maxlen - 1] + "…"
-        # Label très léger
         canvas.setFillColor(_GRIS_99)
         canvas.setFont(F_LIGHT, 7)
-        canvas.drawString(cx, cy + LABEL_OFFSET, label)
-        # Valeur nette mais pas ultra-bold
+        canvas.drawString(cx, cy + LABEL_OFF, label)
         canvas.setFillColor(_NOIR)
         canvas.setFont(F_BOLD, 9.5)
-        canvas.drawString(cx, cy + VALUE_OFFSET, v)
+        canvas.drawString(cx, cy + VALUE_OFF, v)
 
     # Âge
     age_str = "—"
@@ -314,8 +314,8 @@ def draw_cover_canvas(canvas, doc,
     )
     pid = str(patient_info.get("patient_id", "—"))
 
-    row1_y = row_div + 0.25 * cm   # base de la ligne 1 (compte à rebours)
-    row2_y = card_top - card_h + 0.22 * cm  # base de la ligne 2
+    row1_y = row_div + 0.24 * cm
+    row2_y = card_top - card_h + 0.20 * cm
 
     _cell(M + 0.40 * cm,     row1_y, "Nom",               nom_full, maxlen=28)
     _cell(mid_x + 0.40 * cm, row1_y, "Date de naissance", age_str,  maxlen=32)
@@ -370,9 +370,9 @@ def draw_cover_canvas(canvas, doc,
 
     tl_bottom = tl_y - circ_r - 1.0 * cm
 
-    # ── 8. Synthèse IA — tout l'espace disponible ─────────────────────────────
+    # ── 8. Synthèse IA — justifiée, remplit tout l'espace ────────────────────
     ai_text = str(analyse_text or "").strip()
-    # Nettoyer Markdown
+    # Nettoyer le Markdown
     ai_text = _re.sub(r'^#+\s*', '', ai_text, flags=_re.MULTILINE)
     ai_text = _re.sub(r'\*\*(.*?)\*\*', r'\1', ai_text)
     ai_text = _re.sub(r'\*(.*?)\*', r'\1', ai_text)
@@ -388,7 +388,7 @@ def draw_cover_canvas(canvas, doc,
         canvas.setFillColor(_TERRA)
         canvas.rect(M, footer_top, 2, avail_h, fill=1, stroke=0)
 
-        # Label léger
+        # Label
         canvas.setFillColor(_TERRA)
         canvas.setFont(F_BOLD, 6.5)
         canvas.drawString(M + 0.38 * cm, ai_top - 0.38 * cm,
@@ -400,30 +400,47 @@ def draw_cover_canvas(canvas, doc,
         text_top = ai_top - lbl_h - 0.18 * cm
         text_h   = text_top - footer_top - 0.12 * cm
 
-        # Taille de police adaptative — on préfère une police fine et lisible
+        # Convertir sauts de paragraphe en balises HTML
         html_text = ai_text.replace("\n\n", "<br/><br/>").replace("\n", " ")
 
+        # Taille adaptative — de la plus grande à la plus petite
+        chosen_p = None
         for font_size, leading in [
             (10.5, 16.0),
-            (10,   15.0),
+            (10.0, 15.0),
             (9.5,  14.5),
-            (9,    13.5),
+            (9.0,  13.5),
             (8.5,  13.0),
-            (8,    12.0),
+            (8.0,  12.0),
             (7.5,  11.5),
         ]:
             ai_style = ParagraphStyle(
                 "ai_cvr",
                 fontSize=font_size,
-                fontName=F_REG,       # Regular, pas bold
+                fontName=F_REG,
                 textColor=_GRIS_33,
                 leading=leading,
-                spaceAfter=leading * 0.4,
+                alignment=TA_JUSTIFY,       # ← texte justifié
+                spaceAfter=leading * 0.35,
             )
             p = Paragraph(html_text, ai_style)
             p_w, p_h = p.wrap(text_w, 9999)
             if p_h <= text_h:
+                chosen_p = p
                 break
+
+        if chosen_p is None:
+            # Tout mettre à la taille minimum et clipper
+            ai_style = ParagraphStyle(
+                "ai_cvr_min",
+                fontSize=7.5,
+                fontName=F_REG,
+                textColor=_GRIS_33,
+                leading=11.5,
+                alignment=TA_JUSTIFY,
+            )
+            chosen_p = Paragraph(html_text, ai_style)
+            chosen_p.wrap(text_w, text_h)
 
         # Clipper proprement
         canvas.saveState()
@@ -431,7 +448,7 @@ def draw_cover_canvas(canvas, doc,
         clip.rect(text_x, footer_top + 0.10 * cm,
                   text_w, text_top - footer_top)
         canvas.clipPath(clip, stroke=0, fill=0)
-        p.drawOn(canvas, text_x, text_top - p_h)
+        chosen_p.drawOn(canvas, text_x, text_top - chosen_p.height)
         canvas.restoreState()
 
     # ── 9. Footer ─────────────────────────────────────────────────────────────
