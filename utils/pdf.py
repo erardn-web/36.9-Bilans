@@ -2862,8 +2862,11 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         if not _filter_by_tests:
             return True  # pas de filtre si tests_actifs non renseigné
         # Colonnes "générales" toujours incluses
+        # Colonnes toujours incluses (onglet Général)
         _always = {"diagnostic_prescription","diag_notes","appreciation",
-                   "objectifs","traitement","frequence","poids_kg","taille_cm"}
+                   "objectifs","traitement","frequence","poids_kg","taille_cm",
+                   "bmi","bmi_interpretation","fc_repos","fr_repos","ta_repos",
+                   "spo2_repos","spo2","spo2_effort"}
         if col in _always:
             return True
         # Vérifier l'appartenance via _TID_TO_COL_PREFIXES
@@ -2956,7 +2959,7 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             "diag_notes","appreciation","objectifs","traitement","frequence",
             "posture","luomajoki","spiro","gold","spo2","fc_","mmrc",
             "bode","bmi","mwt_","diagnostic_prescription","musc_notes","fc_repos","fr_repos","ta_repos","spo2_repos",
-            "bolt","hvt","nij","tinetti","unipodal","sts","tug","berg",
+            "bolt","hvt","nij","tinetti","unipodal","sts","tug","berg","musc_",
         ]
         if any(p in col for p in keep_patterns):
             return True
@@ -2991,11 +2994,35 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
     else:
         # ── Un tableau par test/questionnaire ────────────────────────────────────
         # Chaque test = une entrée (nom_affiché, [colonnes_associées])
+        # Mapping nom de test → test_id (pour le réordonnancement)
+        _TEST_NAME_TO_TID = {
+            "Général":               "general",
+            "Spirométrie":           "spirometrie",
+            "Dyspnée mMRC":          "mmrc",
+            "CAT — COPD Assessment": "cat",
+            "Score BODE":            "bode",
+            "Test de Marche 6min":   "six_mwt",
+            "STS 1 minute":          "sts",
+            "STS 30 secondes":       "sts",
+            "Leg Press (1RM)":       "leg_press",
+            "Testing musculaire MI": "testing_mi",
+            "Test Unipodal":         "unipodal",
+            "Tinetti":               "tinetti",
+            "Échelle de Berg":       "berg",
+            "TUG":                   "tug",
+            "BOLT":                  "bolt",
+            "HVT / Nijmegen":        "hvt",
+            "EVA Douleur":           "eva",
+            "Lombalgie":             "lombalgie",
+        }
+
         _TESTS = [
+            # Général TOUJOURS EN PREMIER — colonnes toujours incluses
             ("Général",              ["diagnostic_prescription","diag_notes",
                                       "appreciation","objectifs","traitement","frequence",
                                       "poids_kg","taille_cm","bmi","bmi_interpretation",
-                                      "fc_repos","fr_repos","ta_repos","spo2_repos"]),
+                                      "fc_repos","fr_repos","ta_repos","spo2_repos",
+                                      "spo2","spo2_effort"]),
             ("Spirométrie",          ["spiro_vems_pct","spiro_cvf","spiro_vems_cvf","spiro_gold"]),
             ("Dyspnée mMRC",         ["mmrc_grade","mmrc_interpretation"]),
             ("CAT — COPD Assessment",["cat_score","cat_interpretation"]),
@@ -3009,6 +3036,12 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             ("STS 1 minute",         ["sts_1min_reps","sts_1min_interpretation"]),
             ("STS 30 secondes",      ["sts_30s_reps","sts_30s_interpretation"]),
             ("Leg Press (1RM)",      ["lp_reps","lp_interpretation"]),
+            ("Testing musculaire MI",["musc_ankle_pf_d","musc_ankle_pf_g",
+                                      "musc_ankle_df_d","musc_ankle_df_g",
+                                      "musc_knee_ext_d","musc_knee_ext_g",
+                                      "musc_knee_flex_d","musc_knee_flex_g",
+                                      "musc_hip_abd_d","musc_hip_abd_g",
+                                      "musc_notes"]),
             ("Test Unipodal",        ["unipodal_d_ouvert","unipodal_g_ouvert",
                                       "unipodal_d_ferme","unipodal_g_ferme"]),
             ("Tinetti",              ["tinetti_eq_score","tinetti_ma_score",
@@ -3020,10 +3053,6 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
                                       "nij_score","nij_interpretation"]),
             ("EVA Douleur",          ["eva"]),
             ("Lombalgie",            ["schober","luomajoki","posture","groupe_clinique"]),
-            ("Données vitales",      ["spo2","spo2_effort","spo2_repos",
-                                      "fc_repos","fr_repos","ta_repos"]),
-            ("IMC",                  ["bmi","bmi_interpretation"]),
-
         ]
 
         # excluded_sections contient des test_ids (préfixes de colonnes)
@@ -3089,30 +3118,17 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         story.append(Spacer(1, 0.3*cm))
 
         # Réordonner _TESTS selon ordered_test_ids si fourni
+        # ordered_test_ids est une liste de test_ids dans l'ordre souhaité
+        # "Général" est TOUJOURS en première position
         if ordered_test_ids:
-            # Mapping test_id → entrées _TESTS
-            _tid_to_tests = {}
-            for _tn, _tc in _TESTS:
-                # Identifier le test_id de ce bloc via ses colonnes
-                for _tid, _pfxs in _TID_TO_PREFIXES.items():
-                    if any(col.startswith(_pfxs[0]) if _pfxs else False
-                           for col in _tc):
-                        _tid_to_tests.setdefault(_tid, []).append((_tn, _tc))
-                        break
-                else:
-                    _tid_to_tests.setdefault("__other__", []).append((_tn, _tc))
-            # Construire la liste ordonnée
-            _ordered_tests = []
-            _seen_tids = set()
-            for _tid in ordered_test_ids:
-                for _entry in _tid_to_tests.get(_tid, []):
-                    _ordered_tests.append(_entry)
-                _seen_tids.add(_tid)
-            # Ajouter les tests non référencés (dans l'ordre original)
-            for _tn, _tc in _TESTS:
-                if (_tn, _tc) not in _ordered_tests:
-                    _ordered_tests.append((_tn, _tc))
-            _TESTS_ORDERED = _ordered_tests
+            _tid_rank = {tid: i for i, tid in enumerate(ordered_test_ids)}
+            def _test_sort_key(entry):
+                tn, _ = entry
+                if tn == "Général":
+                    return -1  # toujours premier
+                tid = _TEST_NAME_TO_TID.get(tn, "__other__")
+                return _tid_rank.get(tid, 999)
+            _TESTS_ORDERED = sorted(_TESTS, key=_test_sort_key)
         else:
             _TESTS_ORDERED = _TESTS
 
