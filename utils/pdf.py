@@ -2640,7 +2640,7 @@ def _make_sparkline_png(title, values, bilans_labels, unit="",
     return buf.getvalue()
 
 
-def _make_evolution_charts(bilans_df, n_bilans, page_w, excluded_test_ids=None, ordered_test_ids=None):
+def _make_evolution_charts(bilans_df, n_bilans, page_w, excluded_test_ids=None, ordered_test_ids=None, active_test_ids=None):
     """
     Génère les mini-graphiques d'évolution pour les scores numériques disponibles.
     Retourne une liste de Flowables (Table de 2 colonnes).
@@ -2670,11 +2670,29 @@ def _make_evolution_charts(bilans_df, n_bilans, page_w, excluded_test_ids=None, 
             if any(col == p or col.startswith(p) for p in pfxs):
                 return tid
         return "__other__"
+    # Recalculer les tests actifs directement depuis bilans_df
+    import json as _json_ch
+    _active_ch = set()
+    for _, _br in bilans_df.iterrows():
+        _ta = str(_br.get("tests_actifs", "") or "")
+        if _ta and _ta not in ("", "[]", "None", "nan"):
+            try:
+                _active_ch.update(_json_ch.loads(_ta))
+            except Exception:
+                pass
+    _filter_ch = len(_active_ch) > 0
+
     def _ch_excluded(col):
+        # Exclure si exclu manuellement par l'utilisateur
         for tid in _excl_ch:
             for pfx in _TID_TO_PFX_CH.get(tid, [tid + "_", tid]):
                 if col == pfx or col.startswith(pfx):
                     return True
+        # Exclure si le test n'est actif dans aucun bilan
+        if _filter_ch:
+            for tid, pfxs in _TID_TO_PFX_CH.items():
+                if any(col == p or col.startswith(p) for p in pfxs):
+                    return tid not in _active_ch
         return False
     # Réordonner _CHART_SPECS selon ordered_test_ids
     if ordered_test_ids:
@@ -3170,12 +3188,14 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
                 ("BOTTOMPADDING",  (0,0),(-1,0), 6),
             ]))
 
-            # Titre du test au-dessus du tableau
+            # Titre + tableau dans un KeepTogether pour éviter la coupure
             _tst_style = ParagraphStyle("tst", fontName=_LS_BD, fontSize=8.5,
                 leading=11, textColor=BLEU, spaceBefore=8, spaceAfter=3)
-            story.append(Paragraph(test_name, _tst_style))
-            story.append(tbl)
-            story.append(Spacer(1, 0.25*cm))
+            story.append(KeepTogether([
+                Paragraph(test_name, _tst_style),
+                tbl,
+                Spacer(1, 0.25*cm),
+            ]))
 
         # Colonnes non classifiées
         ungrouped = [col for col in active_set if col not in seen]
@@ -3207,16 +3227,19 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             ]))
             _tst_style2 = ParagraphStyle("tst2", fontName=_LS_BD, fontSize=8.5,
                 leading=11, textColor=BLEU, spaceBefore=8, spaceAfter=3)
-            story.append(Paragraph("Autres mesures", _tst_style2))
-            story.append(tbl)
-            story.append(Spacer(1, 0.25*cm))
+            story.append(KeepTogether([
+                Paragraph("Autres mesures", _tst_style2),
+                tbl,
+                Spacer(1, 0.25*cm),
+            ]))
 
         # ── Graphiques d'évolution ─────────────────────────────────────────────
         if show_charts:
             story.append(Spacer(1, 0.5*cm))
             charts = _make_evolution_charts(bilans_df, n_bilans, w,
                                             excluded_test_ids=set(excluded_sections or []),
-                                            ordered_test_ids=ordered_test_ids)
+                                            ordered_test_ids=ordered_test_ids,
+                                            active_test_ids=_active_test_ids_all if _filter_by_tests else None)
             if charts:
                 story.append(section_band("Évolution graphique"))
                 story.append(Spacer(1, 0.3*cm))
