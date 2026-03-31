@@ -1,12 +1,15 @@
 """
-utils/pdf_cover.py — Page de garde canvas-based (v4)
+utils/pdf_cover.py — Page de garde canvas-based (v5)
 
-Fontes enregistrées à l'IMPORT du module (pas à l'intérieur du callback)
-pour garantir la disponibilité lors du rendu ReportLab/BaseDocTemplate.
-Fallback sur Helvetica si les TTF système sont absents.
-
-Typographie : Liberation Sans (Regular/Bold) + DejaVu ExtraLight pour labels.
-Texte IA : justifié, taille adaptative, remplit tout l'espace disponible.
+Changements v5 :
+- Fontes : Vera (bundlées avec ReportLab, TOUJOURS disponibles) +
+           Liberation/Carlito en supplément si présentes sur le système.
+- Espacement : zone plus aérée entre le header et "RAPPORT D'ÉVOLUTION".
+- Texte IA retiré du canvas → géré comme Flowable dans le story (pdf.py),
+  ce qui permet un vrai débordement sur page 2 sans recouper le texte.
+- Le canvas dessine uniquement la bordure terracotta + label IA (décoration).
+- Export : get_ia_frame(), F_REG, F_BOLD pour que pdf.py puisse construire
+  le Paragraph IA avec la même fonte.
 """
 
 import os
@@ -16,18 +19,15 @@ from datetime import date as _date
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.units import cm
-from reportlab.lib.enums import TA_JUSTIFY
-from reportlab.platypus import Paragraph
-from reportlab.lib.styles import ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase.pdfmetrics import stringWidth
+import reportlab as _rl
 
 # ── Palette ───────────────────────────────────────────────────────────────────
 _BLEU      = colors.HexColor("#2B57A7")
 _TERRA     = colors.HexColor("#C4603A")
 _NOIR      = colors.HexColor("#1A1A1A")
-_GRIS_33   = colors.HexColor("#333333")
 _GRIS_55   = colors.HexColor("#555555")
 _GRIS_77   = colors.HexColor("#777777")
 _GRIS_99   = colors.HexColor("#999999")
@@ -37,59 +37,70 @@ _BLEU_BG   = colors.HexColor("#EBF0FA")
 _CARD_BG   = colors.HexColor("#F7F8FC")
 _WHITE     = colors.white
 
-M        = 1.5 * cm   # marge latérale
-FOOTER_H = 3.0 * cm   # hauteur réservée au footer
+M        = 1.5 * cm
+FOOTER_H = 3.0 * cm
 
 
-# ── Enregistrement des fontes au niveau MODULE ────────────────────────────────
-# Doit se faire ICI, pas à l'intérieur des callbacks, pour que les noms
-# soient disponibles lors du build() de BaseDocTemplate.
+# ── Fontes ─────────────────────────────────────────────────────────────────────
+# Vera est bundlée avec ReportLab → toujours disponible.
+# On essaie d'abord Liberation (plus fine) puis Carlito, puis Vera comme garantie.
 
-_FONT_CANDIDATES = {
-    "Cover-Light": [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraLight.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/truetype/crosextra/Carlito-Regular.ttf",
-    ],
-    "Cover-Regular": [
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/truetype/crosextra/Carlito-Regular.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    ],
-    "Cover-Bold": [
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        "/usr/share/fonts/truetype/crosextra/Carlito-Bold.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    ],
-}
+_RL_FONTS = os.path.dirname(_rl.__file__) + "/fonts/"
 
-# Noms résolus — remplacés par "Helvetica[-Bold]" si TTF introuvable
-F_LIGHT   = "Helvetica"
-F_REG     = "Helvetica"
-F_BOLD    = "Helvetica-Bold"
-
-def _try_register(internal_name, candidates):
-    """Essaie d'enregistrer la fonte ; retourne le nom réussi ou None."""
-    for path in candidates:
-        if os.path.exists(path):
+def _reg(name, paths, fallback="Helvetica"):
+    for p in paths:
+        if os.path.exists(p):
             try:
-                pdfmetrics.registerFont(TTFont(internal_name, path))
-                return internal_name
+                pdfmetrics.registerFont(TTFont(name, p))
+                return name
             except Exception:
                 continue
-    return None
+    return fallback
 
-_r = _try_register("Cover-Light",   _FONT_CANDIDATES["Cover-Light"])
-if _r:
-    F_LIGHT = _r
+F_LIGHT = _reg("CV-Lt", [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraLight.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    _RL_FONTS + "Vera.ttf",
+])
 
-_r = _try_register("Cover-Regular", _FONT_CANDIDATES["Cover-Regular"])
-if _r:
-    F_REG = _r
+F_REG = _reg("CV-Rg", [
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    "/usr/share/fonts/truetype/crosextra/Carlito-Regular.ttf",
+    _RL_FONTS + "Vera.ttf",
+])
 
-_r = _try_register("Cover-Bold",    _FONT_CANDIDATES["Cover-Bold"])
-if _r:
-    F_BOLD = _r
+F_BOLD = _reg("CV-Bd", [
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    "/usr/share/fonts/truetype/crosextra/Carlito-Bold.ttf",
+    _RL_FONTS + "VeraBd.ttf",
+], fallback="Helvetica-Bold")
+
+
+# ── Coordonnées de la zone IA (exportées pour pdf.py) ─────────────────────────
+_W, _H = A4
+
+# Reproduire le layout de draw_cover_canvas pour calculer tl_bottom
+_logo_y   = _H - 2.15 * cm
+_sep_y    = _logo_y - 0.46 * cm
+_y        = _sep_y - 1.8 * cm          # gap aéré vers le hero
+_y       -= 0.88 * cm                  # label RAPPORT
+_y       -= 0.75 * cm                  # titre pathologie
+_pill_y   = _y - 0.10 * cm
+_y        = _pill_y - 1.00 * cm        # card_top
+_card_top = _y
+_y        = _card_top - 3.00 * cm - 0.70 * cm  # timeline label
+_tl_y     = _y - 0.78 * cm
+_tl_bot   = _tl_y - 8.5 - 1.0 * cm   # 8.5 pt = circ_r
+
+_IA_X      = M + 0.38 * cm
+_IA_BOTTOM = FOOTER_H + 0.5 * cm
+_IA_W      = _W - 2 * M - 0.48 * cm
+_IA_TOP    = _tl_bot
+
+
+def get_ia_frame():
+    """Retourne (x, y, w, h) du Frame à utiliser pour le texte IA dans le story."""
+    return (_IA_X, _IA_BOTTOM, _IA_W, _IA_TOP - _IA_BOTTOM)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -120,29 +131,75 @@ def _rrect(canvas, x, y, w, h, r, fill=None, stroke=None, lw=0.4):
     canvas.restoreState()
 
 
-# ── Dessin principal ──────────────────────────────────────────────────────────
+# ── Canvas cover ──────────────────────────────────────────────────────────────
 
 def draw_cover_canvas(canvas, doc,
                       patient_info: dict,
                       bilans_df: pd.DataFrame,
                       labels: list,
-                      analyse_text: str,
                       template_nom: str,
                       medecin_info: dict):
     """
-    Dessine la page de garde complète sur le canvas ReportLab.
-    Appelé via make_cover_callback() → PageTemplate.onPage.
+    Dessine la page de garde (tout SAUF le texte IA).
+    Le texte IA est rendu comme Flowable dans le story de pdf.py,
+    ce qui permet un débordement propre sur la page suivante.
+
+    Sur page > 1 (débordement IA), dessine un en-tête minimal.
     """
     canvas.saveState()
     W, H = A4
 
-    # ── 1. Accents couleur haut ───────────────────────────────────────────────
+    # ── Page 2+ : continuation IA ─────────────────────────────────────────────
+    if doc.page > 1:
+        # Barre bleue haut
+        canvas.setFillColor(_BLEU)
+        canvas.rect(0, H - 4.5, W, 4.5, fill=1, stroke=0)
+        canvas.setFillColor(_TERRA)
+        canvas.rect(0, H - 7, W * 0.26, 2.5, fill=1, stroke=0)
+
+        # Logo et titre compact
+        logo_path = _find_logo()
+        name_x = M
+        if logo_path:
+            try:
+                canvas.drawImage(logo_path, M, H - 1.9 * cm,
+                                 width=1.8 * cm, height=0.65 * cm,
+                                 preserveAspectRatio=True, mask="auto")
+                name_x = M + 2.0 * cm
+            except Exception:
+                pass
+        canvas.setFillColor(_GRIS_77)
+        canvas.setFont(F_REG, 9)
+        canvas.drawString(name_x, H - 1.55 * cm, "36.9 Bilans — Synthèse (suite)")
+
+        # Barre latérale terracotta (continuité visuelle)
+        ia_x, ia_bottom, ia_w, ia_h = get_ia_frame()
+        canvas.setFillColor(_TERRA)
+        canvas.rect(M, ia_bottom, 2, H - 2.5 * cm - ia_bottom, fill=1, stroke=0)
+
+        # Footer
+        canvas.setStrokeColor(_GRIS_BORD)
+        canvas.setLineWidth(0.4)
+        canvas.line(M, FOOTER_H - 0.10 * cm, W - M, FOOTER_H - 0.10 * cm)
+        canvas.setFillColor(_GRIS_99)
+        canvas.setFont(F_LIGHT, 6.5)
+        canvas.drawRightString(W - M, FOOTER_H - 0.44 * cm,
+                               "Document confidentiel · Usage médical exclusif")
+        canvas.setFillColor(_BLEU)
+        canvas.rect(0, 0, W, 4.5, fill=1, stroke=0)
+
+        canvas.restoreState()
+        return
+
+    # ── Page 1 : page de garde complète ──────────────────────────────────────
+
+    # 1. Accents couleur haut
     canvas.setFillColor(_BLEU)
     canvas.rect(0, H - 4.5, W, 4.5, fill=1, stroke=0)
     canvas.setFillColor(_TERRA)
     canvas.rect(0, H - 7, W * 0.26, 2.5, fill=1, stroke=0)
 
-    # ── 2. Logo + cabinet ─────────────────────────────────────────────────────
+    # 2. Logo + cabinet
     logo_h  = 0.85 * cm
     logo_y  = H - 2.15 * cm
     logo_x  = M
@@ -172,7 +229,7 @@ def draw_cover_canvas(canvas, doc,
     canvas.setFont(F_LIGHT, 8)
     canvas.drawString(name_x, logo_y + 0.16 * cm, "Physiothérapie")
 
-    # ── 3. Destinataire (haut droite) ─────────────────────────────────────────
+    # 3. Destinataire
     nom_med  = (medecin_info or {}).get("nom", "").strip()
     spec_med = (medecin_info or {}).get("specialite", "").strip()
     adr_med  = (medecin_info or {}).get("adresse", "").strip()
@@ -199,26 +256,26 @@ def draw_cover_canvas(canvas, doc,
             canvas.setFont(F_LIGHT, 7.5)
             canvas.drawRightString(dx, dy, adr_med)
 
-    # ── 4. Séparateur ─────────────────────────────────────────────────────────
+    # 4. Séparateur
     sep_y = logo_y - 0.46 * cm
     canvas.setStrokeColor(_GRIS_BORD)
     canvas.setLineWidth(0.4)
     canvas.line(M, sep_y, W - M, sep_y)
 
-    y = sep_y - 0.62 * cm
+    # 5. Hero — ZONE AÉRÉE ↓
+    y = sep_y - 1.8 * cm      # ← espace généreux
 
-    # ── 5. Hero ───────────────────────────────────────────────────────────────
     canvas.setFillColor(_TERRA)
     canvas.setFont(F_BOLD, 7)
     canvas.drawString(M, y, "RAPPORT D'ÉVOLUTION")
     y -= 0.88 * cm
 
     canvas.setFillColor(_NOIR)
-    canvas.setFont(F_REG, 26)
+    canvas.setFont(F_REG, 26)   # Regular, pas Bold
     canvas.drawString(M, y, str(template_nom or "Bilan"))
-    y -= 0.62 * cm
+    y -= 0.75 * cm
 
-    # Pill badge
+    # Pill
     n_bilans = len(bilans_df)
     try:
         dates_ok = bilans_df["date_bilan"].dropna()
@@ -248,9 +305,9 @@ def draw_cover_canvas(canvas, doc,
     canvas.setFont(F_REG, pill_fs)
     canvas.drawString(M + 0.46 * cm, pill_y + 0.08 * cm, pill_txt)
 
-    y = pill_y - 0.70 * cm
+    y = pill_y - 1.00 * cm
 
-    # ── 6. Carte patient ──────────────────────────────────────────────────────
+    # 6. Carte patient
     card_h   = 3.00 * cm
     card_w   = W - 2 * M
     hdr_h    = 0.54 * cm
@@ -259,8 +316,6 @@ def draw_cover_canvas(canvas, doc,
 
     _rrect(canvas, M, card_top - card_h, card_w, card_h, 6,
            fill=_WHITE, stroke=_GRIS_BORD, lw=0.4)
-
-    # En-tête légère
     _rrect(canvas, M, card_top - hdr_h, card_w, hdr_h, 6, fill=_CARD_BG)
     canvas.setFillColor(_WHITE)
     canvas.rect(M + 1, card_top - hdr_h, card_w - 2, hdr_h * 0.45, fill=1, stroke=0)
@@ -272,14 +327,12 @@ def draw_cover_canvas(canvas, doc,
     canvas.setFont(F_BOLD, 6.5)
     canvas.drawString(M + 0.40 * cm, card_top - 0.35 * cm, "PATIENT")
 
-    # Séparateurs internes
     canvas.setStrokeColor(_GRIS_BORD)
     canvas.setLineWidth(0.3)
     canvas.line(mid_x, card_top - hdr_h, mid_x, card_top - card_h + 2)
     row_div = card_top - hdr_h - (card_h - hdr_h) / 2
     canvas.line(M + 1, row_div, M + card_w - 1, row_div)
 
-    # Offsets label / valeur dans chaque demi-cellule
     LABEL_OFF = 0.60 * cm
     VALUE_OFF = 0.16 * cm
 
@@ -291,10 +344,9 @@ def draw_cover_canvas(canvas, doc,
         canvas.setFont(F_LIGHT, 7)
         canvas.drawString(cx, cy + LABEL_OFF, label)
         canvas.setFillColor(_NOIR)
-        canvas.setFont(F_REG, 9.5)
+        canvas.setFont(F_REG, 9.5)     # Regular, pas Bold
         canvas.drawString(cx, cy + VALUE_OFF, v)
 
-    # Âge
     age_str = "—"
     try:
         ddn_raw = patient_info.get("date_naissance", "")
@@ -324,7 +376,7 @@ def draw_cover_canvas(canvas, doc,
 
     y = card_top - card_h - 0.70 * cm
 
-    # ── 7. Timeline ───────────────────────────────────────────────────────────
+    # 7. Timeline
     canvas.setFillColor(_GRIS_77)
     canvas.setFont(F_BOLD, 6.5)
     canvas.drawString(M, y, "BILANS INCLUS")
@@ -368,90 +420,17 @@ def draw_cover_canvas(canvas, doc,
                 canvas.setFont(F_LIGHT, 7)
                 canvas.drawCentredString(cx, tl_y - circ_r - 0.62 * cm, praticien)
 
-    tl_bottom = tl_y - circ_r - 1.0 * cm
+    # 8. Zone IA — barre décorative + label uniquement (le texte est dans le story)
+    ia_x, ia_bottom, ia_w, ia_h = get_ia_frame()
 
-    # ── 8. Synthèse IA — justifiée, remplit tout l'espace ────────────────────
-    ai_text = str(analyse_text or "").strip()
-    # Nettoyer le Markdown
-    ai_text = _re.sub(r'^#+\s*', '', ai_text, flags=_re.MULTILINE)
-    ai_text = _re.sub(r'\*\*(.*?)\*\*', r'\1', ai_text)
-    ai_text = _re.sub(r'\*(.*?)\*', r'\1', ai_text)
-    ai_text = ai_text.strip()
+    canvas.setFillColor(_TERRA)
+    canvas.rect(M, ia_bottom, 2, ia_h, fill=1, stroke=0)
 
-    footer_top = FOOTER_H + 0.5 * cm
-    ai_top     = tl_bottom
+    canvas.setFillColor(_TERRA)
+    canvas.setFont(F_BOLD, 6.5)
+    canvas.drawString(ia_x, _IA_TOP - 0.38 * cm, "SYNTHÈSE PHYSIOTHÉRAPEUTIQUE")
 
-    if ai_text and ai_top > footer_top + 1.5 * cm:
-        avail_h = ai_top - footer_top
-
-        # Barre latérale terracotta fine
-        canvas.setFillColor(_TERRA)
-        canvas.rect(M, footer_top, 2, avail_h, fill=1, stroke=0)
-
-        # Label
-        canvas.setFillColor(_TERRA)
-        canvas.setFont(F_BOLD, 6.5)
-        canvas.drawString(M + 0.38 * cm, ai_top - 0.38 * cm,
-                          "SYNTHÈSE PHYSIOTHÉRAPEUTIQUE")
-
-        lbl_h    = 0.52 * cm
-        text_x   = M + 0.38 * cm
-        text_w   = W - 2 * M - 0.48 * cm
-        text_top = ai_top - lbl_h - 0.18 * cm
-        text_h   = text_top - footer_top - 0.12 * cm
-
-        # Convertir sauts de paragraphe en balises HTML
-        html_text = ai_text.replace("\n\n", "<br/><br/>").replace("\n", " ")
-
-        # Taille adaptative — de la plus grande à la plus petite
-        chosen_p = None
-        for font_size, leading in [
-            (10.5, 16.0),
-            (10.0, 15.0),
-            (9.5,  14.5),
-            (9.0,  13.5),
-            (8.5,  13.0),
-            (8.0,  12.0),
-            (7.5,  11.5),
-        ]:
-            ai_style = ParagraphStyle(
-                "ai_cvr",
-                fontSize=font_size,
-                fontName=F_REG,
-                textColor=_GRIS_33,
-                leading=leading,
-                alignment=TA_JUSTIFY,       # ← texte justifié
-                spaceAfter=leading * 0.35,
-            )
-            p = Paragraph(html_text, ai_style)
-            p_w, p_h = p.wrap(text_w, 9999)
-            if p_h <= text_h:
-                chosen_p = p
-                break
-
-        if chosen_p is None:
-            # Tout mettre à la taille minimum et clipper
-            ai_style = ParagraphStyle(
-                "ai_cvr_min",
-                fontSize=7.5,
-                fontName=F_REG,
-                textColor=_GRIS_33,
-                leading=11.5,
-                alignment=TA_JUSTIFY,
-            )
-            chosen_p = Paragraph(html_text, ai_style)
-            chosen_p.wrap(text_w, text_h)
-
-        # Clipper proprement
-        canvas.saveState()
-        clip = canvas.beginPath()
-        clip.rect(text_x, footer_top + 0.10 * cm,
-                  text_w, text_top - footer_top)
-        canvas.clipPath(clip, stroke=0, fill=0)
-        chosen_p.drawOn(canvas, text_x, text_top - chosen_p.height)
-        canvas.restoreState()
-
-    # ── 9. Footer ─────────────────────────────────────────────────────────────
+    # 9. Footer
     foot_y = FOOTER_H - 0.10 * cm
     canvas.setStrokeColor(_GRIS_BORD)
     canvas.setLineWidth(0.4)
@@ -463,7 +442,6 @@ def draw_cover_canvas(canvas, doc,
     except Exception:
         pass
 
-    # Gauche
     canvas.setFillColor(_GRIS_99)
     canvas.setFont(F_LIGHT, 6.5)
     canvas.drawString(M, foot_y - 0.34 * cm, "Praticien responsable")
@@ -474,7 +452,6 @@ def draw_cover_canvas(canvas, doc,
     canvas.setFont(F_REG, 7.5)
     canvas.drawString(M, foot_y - 0.98 * cm, "Physiothérapeute diplômé")
 
-    # Droite
     canvas.setFillColor(_GRIS_99)
     canvas.setFont(F_LIGHT, 6.5)
     canvas.drawRightString(W - M, foot_y - 0.34 * cm, "Généré le")
@@ -487,7 +464,7 @@ def draw_cover_canvas(canvas, doc,
     canvas.drawRightString(W - M, foot_y - 0.98 * cm,
                            "Document confidentiel · Usage médical exclusif")
 
-    # ── 10. Bande bleue bas ───────────────────────────────────────────────────
+    # 10. Bande bleue bas
     canvas.setFillColor(_BLEU)
     canvas.rect(0, 0, W, 4.5, fill=1, stroke=0)
 
@@ -497,14 +474,16 @@ def draw_cover_canvas(canvas, doc,
 def make_cover_callback(patient_info: dict, bilans_df: pd.DataFrame,
                         labels: list, analyse_text: str,
                         template_nom: str, medecin_info: dict):
-    """Retourne la fonction onPage à passer au PageTemplate de couverture."""
+    """
+    Retourne la fonction onPage pour le PageTemplate de couverture.
+    Note : analyse_text n'est PLUS utilisé ici — il est géré dans le story (pdf.py).
+    """
     def _draw(canvas, doc):
         draw_cover_canvas(
             canvas, doc,
             patient_info = patient_info,
             bilans_df    = bilans_df,
             labels       = labels,
-            analyse_text = analyse_text,
             template_nom = template_nom,
             medecin_info = medecin_info,
         )
