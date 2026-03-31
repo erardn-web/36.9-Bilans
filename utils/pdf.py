@@ -2541,6 +2541,165 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
 #  PDF générique — fonctionne pour tous les templates
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# ── Mini-graphiques d'évolution ───────────────────────────────────────────────
+# Scores avec leurs métadonnées cliniques :
+# (colonne, label, unité, seuil_val, seuil_label, higher_is_better)
+_CHART_SPECS = [
+    ("mwt_distance",    "TM6 — Distance",       "m",   400,  "≥ 400 m",   True),
+    ("tinetti_total",   "Tinetti Total",         "/28", 19,   "≥ 19",      True),
+    ("tinetti_eq_score","Tinetti Équilibre",     "/16", 12,   "≥ 12",      True),
+    ("tinetti_ma_score","Tinetti Marche",        "/12", 9,    "≥ 9",       True),
+    ("cat_score",       "Score CAT",             "",    10,   "seuil 10",  False),
+    ("bode_score",      "Score BODE",            "",    None, None,        False),
+    ("spiro_vems_pct",  "VEMS",                  "%",   80,   "80%",       True),
+    ("sts_1min_reps",   "STS 1 min",             "rép", 14,   "≥ 14",      True),
+    ("sts_30s_reps",    "STS 30s",               "rép", None, None,        True),
+    ("tug_temps",       "TUG",                   "s",   12,   "≤ 12 s",    False),
+    ("bolt_score",      "Score BOLT",            "",    20,   "≥ 20",      True),
+    ("nij_score",       "Score Nijmegen",        "",    23,   "seuil 23",  False),
+    ("eva",             "Douleur EVA",           "/10", 3,    "≤ 3",       False),
+    ("berg_score",      "Berg",                  "/56", 45,   "≥ 45",      True),
+    ("unipodal_d_ouvert","Unipodal D",           "s",   10,   "≥ 10 s",    True),
+    ("unipodal_g_ouvert","Unipodal G",           "s",   10,   "≥ 10 s",    True),
+]
+
+def _make_sparkline_png(title, values, bilans_labels, unit="",
+                        ref_line=None, higher_is_better=True):
+    """Génère un sparkline matplotlib en bytes PNG."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import io
+
+    x_valid = [i for i, v in enumerate(values) if v is not None]
+    y_valid  = [values[i] for i in x_valid]
+    if not y_valid:
+        return None
+
+    fig, ax = plt.subplots(figsize=(3.0, 1.55))
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("#F7F8FC")
+
+    C_BLEU  = "#2B57A7"
+    C_TERRA = "#C4603A"
+    C_GREY  = "#AAAAAA"
+
+    if len(x_valid) > 1:
+        ax.plot(x_valid, y_valid, color=C_BLEU, linewidth=1.6,
+                solid_capstyle="round", zorder=3)
+
+    for k, (x, y) in enumerate(zip(x_valid, y_valid)):
+        is_last = (k == len(x_valid) - 1)
+        dc = C_TERRA if is_last else C_BLEU
+        ax.scatter([x], [y], color=dc, s=35, zorder=4)
+        val_str = str(int(y)) if y == int(y) else f"{y:.1f}"
+        ax.annotate(val_str, (x, y),
+                    textcoords="offset points", xytext=(0, 7),
+                    ha="center", fontsize=7, color=dc, fontweight="bold")
+
+    if ref_line:
+        rv, rl = ref_line
+        ymin, ymax = min(y_valid), max(y_valid)
+        if ymin <= rv <= ymax * 1.5:
+            ax.axhline(rv, color=C_GREY, linewidth=0.7, linestyle="--", zorder=2)
+            ax.text(len(bilans_labels) - 0.5, rv, f" {rl}",
+                    fontsize=5.5, color=C_GREY, va="bottom")
+
+    ax.set_xticks(range(len(bilans_labels)))
+    ax.set_xticklabels(bilans_labels, fontsize=7, color="#555555")
+    ax.tick_params(axis="y", labelsize=6.5, colors="#999999", length=2)
+    ax.yaxis.set_major_locator(plt.MaxNLocator(4, integer=True))
+
+    full_title = title + (f" ({unit})" if unit else "")
+    ax.set_title(full_title, fontsize=8, color="#1A1A1A",
+                 fontweight="bold", pad=3, loc="left")
+
+    for sp in ["top", "right"]:
+        ax.spines[sp].set_visible(False)
+    ax.spines["left"].set_color("#DEDEDE")
+    ax.spines["bottom"].set_color("#DEDEDE")
+    ax.margins(x=0.18)
+
+    pad = max((max(y_valid) - min(y_valid)) * 0.35, 1)
+    ax.set_ylim(min(y_valid) - pad, max(y_valid) + pad * 2.5)
+
+    try:
+        plt.tight_layout(pad=0.3)
+    except Exception:
+        pass
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    buf.seek(0)
+    return buf.getvalue()
+
+
+def _make_evolution_charts(bilans_df, n_bilans, page_w):
+    """
+    Génère les mini-graphiques d'évolution pour les scores numériques disponibles.
+    Retourne une liste de Flowables (Table de 2 colonnes).
+    """
+    from reportlab.platypus import Table, TableStyle, Image, Spacer
+    from reportlab.lib import colors as _rc
+    import io
+
+    bilans_labels = [f"B{i+1}" for i in range(n_bilans)]
+    chart_w = (page_w - 0.4*cm) / 2   # 2 graphiques par ligne
+    chart_h = chart_w * 0.55           # ratio hauteur
+
+    charts_png = []
+    for col, label, unit, ref_val, ref_lbl, higher_ok in _CHART_SPECS:
+        # Extraire les valeurs numériques
+        vals = []
+        for _, row in bilans_df.iterrows():
+            raw = str(row.get(col, "") or "").strip()
+            if raw in ("", "None", "nan", "—"):
+                vals.append(None)
+            else:
+                try:
+                    vals.append(float(raw))
+                except ValueError:
+                    vals.append(None)
+
+        # Ne faire un graphique que si ≥ 2 valeurs non-nulles OU 1 valeur avec contexte
+        n_vals = sum(1 for v in vals if v is not None)
+        if n_vals < 1:
+            continue
+
+        ref = (ref_val, ref_lbl) if ref_val is not None else None
+        png = _make_sparkline_png(label, vals, bilans_labels,
+                                  unit=unit, ref_line=ref,
+                                  higher_is_better=higher_ok)
+        if png:
+            charts_png.append(png)
+
+    if not charts_png:
+        return []
+
+    # Disposition en grille 2 colonnes
+    flowables = []
+    for i in range(0, len(charts_png), 2):
+        row_imgs = charts_png[i:i+2]
+        cells = []
+        for png in row_imgs:
+            img = Image(io.BytesIO(png), width=chart_w, height=chart_h)
+            cells.append(img)
+        while len(cells) < 2:
+            cells.append("")  # cellule vide si nombre impair
+
+        tbl = Table([cells], colWidths=[chart_w + 0.2*cm, chart_w + 0.2*cm])
+        tbl.setStyle(TableStyle([
+            ("VALIGN",       (0,0),(-1,-1), "TOP"),
+            ("LEFTPADDING",  (0,0),(-1,-1), 0),
+            ("RIGHTPADDING", (0,0),(-1,-1), 8),
+            ("TOPPADDING",   (0,0),(-1,-1), 0),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 8),
+        ]))
+        flowables.append(tbl)
+
+    return flowables
+
+
 def generate_pdf_generic(bilans_df, patient_info: dict,
                           analyse_text: str = "",
                           template_nom: str = "Bilan",
@@ -2777,6 +2936,14 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             ("BOTTOMPADDING",(0,0),(-1,0), 6),
         ]))
         story.append(tbl)
+
+        # ── Graphiques d'évolution ─────────────────────────────────────────────
+        story.append(Spacer(1, 0.5*cm))
+        charts = _make_evolution_charts(bilans_df, n_bilans, w)
+        if charts:
+            story.append(section_band("Évolution graphique"))
+            story.append(Spacer(1, 0.3*cm))
+            story.extend(charts)
 
         # ── Notes générales ────────────────────────────────────────────────────
         any_notes = any(
