@@ -18,9 +18,12 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+    SimpleDocTemplate, BaseDocTemplate, PageTemplate, Frame,
+    NextPageTemplate,
+    Paragraph, Spacer, Table, TableStyle,
     HRFlowable, PageBreak, KeepTogether, Image,
 )
+from utils.pdf_cover import make_cover_callback
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -1785,7 +1788,8 @@ def build_leg_press(story, styles):
 
 
 def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
-                  template_id: str = "shv", template_nom: str = "Bilan") -> bytes:
+                  template_id: str = "shv", template_nom: str = "Bilan",
+                  medecin_info: dict = None) -> bytes:
     """
     Génère le PDF d'évolution.
     Utilise le PDF SHV détaillé pour SHV, le PDF générique pour les autres.
@@ -1796,20 +1800,10 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
     if template_id not in ("shv", "", None):
         return generate_pdf_generic(bilans_df, patient_info,
                                     analyse_text=analyse_text,
-                                    template_nom=template_nom)
+                                    template_nom=template_nom,
+                                    medecin_info=medecin_info)
 
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        leftMargin=1.5*cm, rightMargin=1.5*cm,
-        topMargin=2.0*cm, bottomMargin=1.8*cm,
-        title=f"Bilan SHV – {patient_info.get('nom')} {patient_info.get('prenom')}",
-    )
-
-    styles = make_styles()
-    story  = []
-    w      = A4[0] - 3*cm  # largeur utile
 
     # Trier bilans par date
     bilans_df = bilans_df.copy()
@@ -1823,11 +1817,38 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
 
     labels = [bilan_label(r) for _, r in bilans_df.iterrows()]
 
-    # ══════════════════════════════════════════════════════════════════
-    #  PAGE DE GARDE — moderne
-    # ══════════════════════════════════════════════════════════════════
-    make_cover(story, title="Rapport d'évolution", subtitle="Syndrome d'Hyperventilation (SHV)", patient_info=patient_info, bilans_df=bilans_df, labels=labels, styles=styles, analyse_text=analyse_text)
-    story.append(PageBreak())
+    # ── Page templates ────────────────────────────────────────────────────────
+    cover_frame = Frame(0, 0, A4[0], A4[1],
+        leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0, id="cover")
+    content_frame = Frame(1.5*cm, 1.8*cm,
+        A4[0]-3*cm, A4[1]-3.8*cm, id="content")
+
+    cover_cb = make_cover_callback(
+        patient_info, bilans_df, labels,
+        analyse_text, "Syndrome d'Hyperventilation (SHV)",
+        medecin_info or {},
+    )
+    content_cb = make_header_footer(
+        "36.9 Bilans — Rapport SHV",
+        f"{patient_info.get('nom','')} {patient_info.get('prenom','')}",
+    )
+
+    doc = BaseDocTemplate(
+        buffer, pagesize=A4,
+        leftMargin=1.5*cm, rightMargin=1.5*cm,
+        topMargin=2.0*cm, bottomMargin=1.8*cm,
+        title=f"Bilan SHV – {patient_info.get('nom')} {patient_info.get('prenom')}",
+    )
+    doc.addPageTemplates([
+        PageTemplate(id="Cover",   frames=[cover_frame],   onPage=cover_cb),
+        PageTemplate(id="Content", frames=[content_frame], onPage=content_cb),
+    ])
+
+    styles = make_styles()
+    w      = A4[0] - 3*cm  # largeur utile
+
+    # Story : page 1 = couverture (canvas), page 2+ = contenu
+    story = [NextPageTemplate("Content"), PageBreak()]
 
     # ══════════════════════════════════════════════════════════════════
     #  TABLEAU DE SYNTHÈSE DES SCORES
@@ -2461,10 +2482,7 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
     # ══════════════════════════════════════════════════════════════════
     #  BUILD
     # ══════════════════════════════════════════════════════════════════
-    hf = make_header_footer("36.9 Bilans — Rapport SHV", f"{patient_info.get('nom','')} {patient_info.get('prenom','')}")
-
-
-    doc.build(story, onFirstPage=hf, onLaterPages=hf)
+    doc.build(story)
     return buffer.getvalue()
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2473,7 +2491,8 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
 
 def generate_pdf_generic(bilans_df, patient_info: dict,
                           analyse_text: str = "",
-                          template_nom: str = "Bilan") -> bytes:
+                          template_nom: str = "Bilan",
+                          medecin_info: dict = None) -> bytes:
     """
     PDF d'évolution générique — affiche tous les champs non vides,
     groupés par test. Fonctionne pour n'importe quel template.
@@ -2481,14 +2500,6 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
     import pandas as pd, math
 
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4,
-        leftMargin=1.5*cm, rightMargin=1.5*cm,
-        topMargin=2.0*cm, bottomMargin=1.8*cm,
-        title=f"{template_nom} – {patient_info.get('nom','')} {patient_info.get('prenom','')}")
-
-    styles = make_styles()
-    story  = []
-    w      = A4[0] - 3*cm
 
     bilans_df = bilans_df.copy()
     bilans_df["date_bilan"] = pd.to_datetime(bilans_df["date_bilan"], errors="coerce")
@@ -2497,11 +2508,36 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
     labels    = [r["date_bilan"].strftime("%d/%m/%Y") if pd.notna(r["date_bilan"]) else "—"
                  for _, r in bilans_df.iterrows()]
 
-    # ── Page de garde ─────────────────────────────────────────────────────────
-    make_cover(story, title="Rapport d'évolution", subtitle=template_nom,
-               patient_info=patient_info, bilans_df=bilans_df,
-               labels=labels, styles=styles, analyse_text=analyse_text)
-    story.append(PageBreak())
+    # ── Page templates ────────────────────────────────────────────────────────
+    cover_frame = Frame(0, 0, A4[0], A4[1],
+        leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0, id="cover")
+    content_frame = Frame(1.5*cm, 1.8*cm,
+        A4[0]-3*cm, A4[1]-3.8*cm, id="content")
+
+    cover_cb = make_cover_callback(
+        patient_info, bilans_df, labels,
+        analyse_text, template_nom,
+        medecin_info or {},
+    )
+    content_cb = make_header_footer(
+        f"36.9 Bilans — {template_nom}",
+        f"{patient_info.get('nom','')} {patient_info.get('prenom','')}",
+    )
+
+    doc = BaseDocTemplate(
+        buffer, pagesize=A4,
+        leftMargin=1.5*cm, rightMargin=1.5*cm,
+        topMargin=2.0*cm, bottomMargin=1.8*cm,
+        title=f"{template_nom} – {patient_info.get('nom','')} {patient_info.get('prenom','')}",
+    )
+    doc.addPageTemplates([
+        PageTemplate(id="Cover",   frames=[cover_frame],   onPage=cover_cb),
+        PageTemplate(id="Content", frames=[content_frame], onPage=content_cb),
+    ])
+
+    styles = make_styles()
+    story  = [NextPageTemplate("Content"), PageBreak()]
+    w      = A4[0] - 3*cm
 
     # ── Colonnes à exclure (métadonnées, pas de données cliniques) ────────────
     SKIP = {"bilan_id","cas_id","patient_id","cabinet_id","date_bilan","praticien",
@@ -2604,10 +2640,7 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
                     story.append(Paragraph(f"<b>{lbl}</b>", styles["bold"]))
                     story.append(Paragraph(notes, styles["normal"]))
 
-    hf = make_header_footer(
-        f"36.9 Bilans — {template_nom}",
-        f"{patient_info.get('nom','')} {patient_info.get('prenom','')}")
-    doc.build(story, onFirstPage=hf, onLaterPages=hf)
+    doc.build(story)
     return buffer.getvalue()
 
 
