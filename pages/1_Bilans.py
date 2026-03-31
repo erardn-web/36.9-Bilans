@@ -961,7 +961,7 @@ def render_evolution():
         tuple(sorted(_excluded)),
         tuple(_ordered_tids),
         _show_charts,
-        S.get(f"analyse_text_{cid}", "")[:50],
+        (S.get(f"ta_{cid}") or S.get(f"analyse_text_{cid}", ""))[:50],
     ))
     # Invalider le cache si la signature a changé (bilans, options…)
     if S.get(_pdf_sig_key) != _current_sig:
@@ -974,7 +974,11 @@ def render_evolution():
                          type="primary", key=f"gen_pdf_{cid}"):
                 with st.spinner("Génération du PDF…"):
                     try:
-                        analyse_txt   = S.get(f"analyse_text_{cid}") or load_analyse_cas(cid)
+                        # Priorité : valeur du widget text_area (ce que l'UI affiche)
+                        # → puis session_state → puis GSheets
+                        analyse_txt = (S.get(f"ta_{cid}")
+                                       or S.get(f"analyse_text_{cid}")
+                                       or load_analyse_cas(cid))
                         _medecin_info = get_medecin_destinataire(cid)
                         S[_pdf_cache_key] = generate_pdf(be, info,
                             analyse_text=analyse_txt,
