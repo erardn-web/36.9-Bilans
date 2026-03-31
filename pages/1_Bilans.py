@@ -844,6 +844,12 @@ def render_evolution():
                     if not v and lbl in _label_to_tid}
     _show_charts = S[_pdf_opts_key].get("Évolution graphique", True)
 
+    # DEBUG temporaire — à retirer après validation
+    with st.expander("🔍 Debug exclusions", expanded=False):
+        st.write("label_to_tid:", _label_to_tid)
+        st.write("pdf_opts:", S[_pdf_opts_key])
+        st.write("excluded:", _excluded)
+
     with col_pdf:
         try:
             analyse_txt   = S.get(f"analyse_text_{cid}") or load_analyse_cas(cid)
