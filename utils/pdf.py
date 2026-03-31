@@ -1849,10 +1849,13 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
     # ── Page templates ────────────────────────────────────────────────────────
     from utils.pdf_cover import make_cover_callback as _mcc, get_ia_frame as _gif, get_f_reg as _gfr
     ia_x, ia_y, ia_w, ia_h = _gif()
-    # Frame depuis ia_bottom jusqu'en haut de page — permet le débordement p.2
-    _cover_full_h = A4[1] - 2.5*cm - ia_y
-    cover_frame = Frame(ia_x, ia_y, ia_w, _cover_full_h,
+    # Page 1 : frame = zone IA uniquement
+    cover_frame = Frame(ia_x, ia_y, ia_w, ia_h,
         leftPadding=0, rightPadding=0, topPadding=22, bottomPadding=0, id="cover")
+    # Page 2+ IA (suite) : frame pleine hauteur de contenu
+    cont_frame = Frame(1.5*cm, 1.8*cm,
+        A4[0]-3*cm, A4[1]-3.8*cm,
+        leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0, id="covercont")
     content_frame = Frame(1.5*cm, 1.8*cm,
         A4[0]-3*cm, A4[1]-3.8*cm, id="content")
 
@@ -1873,8 +1876,9 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
         title=f"Bilan SHV – {patient_info.get('nom')} {patient_info.get('prenom')}",
     )
     doc.addPageTemplates([
-        PageTemplate(id="Cover",   frames=[cover_frame],   onPage=cover_cb),
-        PageTemplate(id="Content", frames=[content_frame], onPage=content_cb),
+        PageTemplate(id="Cover",     frames=[cover_frame], onPage=cover_cb),
+        PageTemplate(id="CoverCont", frames=[cont_frame],  onPage=cover_cb),
+        PageTemplate(id="Content",   frames=[content_frame], onPage=content_cb),
     ])
 
     styles = make_styles()
@@ -1893,7 +1897,8 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
         _ai_html = _ai.replace("\n\n", "<br/><br/>").replace("\n", " ")
         _ia_para = Paragraph(_ai_html, _PS2("ia_s", fontName=_gfr(), fontSize=10,
             leading=15, alignment=_TA_J, textColor=_cc.HexColor("#333333"), spaceAfter=6))
-        story = [_ia_para, NextPageTemplate("Content"), PageBreak()]
+        story = [NextPageTemplate("CoverCont"), _ia_para,
+                 NextPageTemplate("Content"), PageBreak()]
     else:
         story = [NextPageTemplate("Content"), PageBreak()]
 
@@ -2558,9 +2563,11 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
     # ── Page templates ────────────────────────────────────────────────────────
     from utils.pdf_cover import make_cover_callback as _mcc, get_ia_frame as _gif, get_f_reg as _gfr
     ia_x, ia_y, ia_w, ia_h = _gif()
-    _cover_full_h = A4[1] - 2.5*cm - ia_y
-    cover_frame = Frame(ia_x, ia_y, ia_w, _cover_full_h,
+    cover_frame = Frame(ia_x, ia_y, ia_w, ia_h,
         leftPadding=0, rightPadding=0, topPadding=22, bottomPadding=0, id="cover")
+    cont_frame = Frame(1.5*cm, 1.8*cm,
+        A4[0]-3*cm, A4[1]-3.8*cm,
+        leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0, id="covercont")
     content_frame = Frame(1.5*cm, 1.8*cm,
         A4[0]-3*cm, A4[1]-3.8*cm, id="content")
 
@@ -2581,8 +2588,9 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         title=f"{template_nom} – {patient_info.get('nom','')} {patient_info.get('prenom','')}",
     )
     doc.addPageTemplates([
-        PageTemplate(id="Cover",   frames=[cover_frame],   onPage=cover_cb),
-        PageTemplate(id="Content", frames=[content_frame], onPage=content_cb),
+        PageTemplate(id="Cover",     frames=[cover_frame], onPage=cover_cb),
+        PageTemplate(id="CoverCont", frames=[cont_frame],  onPage=cover_cb),
+        PageTemplate(id="Content",   frames=[content_frame], onPage=content_cb),
     ])
 
     styles = make_styles()
@@ -2598,7 +2606,8 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         _ai2_html = _ai2.replace("\n\n", "<br/><br/>").replace("\n", " ")
         _ia_para_gen = Paragraph(_ai2_html, _PS3("ia_sg", fontName=_gfr(), fontSize=10,
             leading=15, alignment=_TA_J2, textColor=_cc2.HexColor("#333333"), spaceAfter=6))
-        story = [_ia_para_gen, NextPageTemplate("Content"), PageBreak()]
+        story = [NextPageTemplate("CoverCont"), _ia_para_gen,
+                 NextPageTemplate("Content"), PageBreak()]
     else:
         story = [NextPageTemplate("Content"), PageBreak()]
     w     = A4[0] - 3*cm
