@@ -553,6 +553,10 @@ def render_cas():
                         delete_bilan(bid2, S.therapeute)
                         S.pop(f"confirm_del_{bid2}", None)
                         get_cas_bilans_meta.clear()
+                        get_cas_bilans.clear()
+                        # Invalider le cache IA — les bilans ont changé
+                        S.pop(f"analyse_text_{S.cas_id}", None)
+                        S.pop(f"analyse_sig_{S.cas_id}", None)
                         st.rerun()
                     if db2.button("❌ Non", key=f"no_del_{bid2}"):
                         S.pop(f"confirm_del_{bid2}", None)
