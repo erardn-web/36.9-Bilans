@@ -807,13 +807,26 @@ def render_evolution():
 
     # ── Options du rapport PDF ────────────────────────────────────────────────
     _ALL_SECTIONS = [
-        "Respiration & BPCO",
-        "Capacité fonctionnelle & 6MWT",
-        "Équilibre & Chute",
-        "Force musculaire",
-        "Douleur & Lombalgie",
-        "Données générales",
-        "Autres mesures",
+        "Spirométrie",
+        "Dyspnée mMRC",
+        "CAT — COPD Assessment",
+        "Score BODE",
+        "Test de Marche 6min",
+        "STS 1 minute",
+        "STS 30 secondes",
+        "Leg Press (1RM)",
+        "Test Unipodal",
+        "Tinetti",
+        "Échelle de Berg",
+        "TUG",
+        "BOLT",
+        "HVT / Nijmegen",
+        "EVA Douleur",
+        "Lombalgie",
+        "Données vitales",
+        "IMC",
+        "Général",
+        "Autres",
         "Évolution graphique",
     ]
     _pdf_opts_key = f"pdf_opts_{cid}"
@@ -822,7 +835,7 @@ def render_evolution():
 
     with st.expander("⚙️ Options du rapport PDF", expanded=False):
         st.caption("Décochez les sections à exclure du rapport.")
-        _opts_cols = st.columns(4)
+        _opts_cols = st.columns(5)
         for _si, _sname in enumerate(_ALL_SECTIONS):
             _val = S[_pdf_opts_key].get(_sname, True)
             _new = _opts_cols[_si % 4].checkbox(_sname, value=_val, key=f"pdfsec_{cid}_{_si}")
