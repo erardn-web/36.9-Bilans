@@ -2817,6 +2817,61 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
     SKIP = {"bilan_id","cas_id","patient_id","cabinet_id","date_bilan","praticien",
             "notes_generales","analyse_ia","tests_actifs","donnees","type_bilan"}
 
+    # ── Collecter les test_ids actifs sur l'ensemble des bilans ───────────────
+    # Seules les colonnes appartenant à un test actif dans AU MOINS UN bilan
+    # seront affichées. Cela évite d'imprimer un test désactivé après saisie.
+    import json as _json_pdf
+    _active_test_ids_all = set()
+    for _, _br in bilans_df.iterrows():
+        _ta_raw = str(_br.get("tests_actifs","") or "")
+        if _ta_raw and _ta_raw not in ("","[]","None","nan"):
+            try:
+                _active_test_ids_all.update(_json_pdf.loads(_ta_raw))
+            except Exception:
+                pass
+    # Si aucun bilan n'a tests_actifs stocké → pas de filtrage (rétro-compatibilité)
+    _filter_by_tests = len(_active_test_ids_all) > 0
+
+    # Mapping test_id → préfixes de colonnes (partagé avec _col_excluded)
+    _TID_TO_COL_PREFIXES = {
+        "spirometrie":   ["spiro_"],
+        "six_mwt":       ["mwt_"],
+        "sts":           ["sts_"],
+        "mmrc":          ["mmrc_"],
+        "cat":           ["cat_score","cat_interpretation"],
+        "bode":          ["bode_"],
+        "tinetti":       ["tinetti_"],
+        "berg":          ["berg_"],
+        "tug":           ["tug_"],
+        "unipodal":      ["unipodal_"],
+        "bolt":          ["bolt_"],
+        "nijmegen":      ["nij_"],
+        "hvt":           ["hvt_"],
+        "eva":           ["eva"],
+        "lombalgie":     ["schober","luomajoki","posture","groupe_clinique"],
+        "testing_mi":    ["musc_"],
+        "leg_press":     ["lp_"],
+        "vital":         ["fc_repos","fr_repos","ta_repos","spo2_repos"],
+        "bmi":           ["bmi"],
+        "general":       ["diagnostic_prescription","diag_notes","appreciation",
+                          "objectifs","traitement","frequence"],
+    }
+
+    def _col_belongs_to_active_test(col):
+        """Retourne True si la colonne appartient à un test actif dans au moins un bilan."""
+        if not _filter_by_tests:
+            return True  # pas de filtre si tests_actifs non renseigné
+        # Colonnes "générales" toujours incluses
+        _always = {"diagnostic_prescription","diag_notes","appreciation",
+                   "objectifs","traitement","frequence","poids_kg","taille_cm"}
+        if col in _always:
+            return True
+        # Vérifier l'appartenance via _TID_TO_COL_PREFIXES
+        for tid, pfxs in _TID_TO_COL_PREFIXES.items():
+            if any(col == p or col.startswith(p) for p in pfxs):
+                return tid in _active_test_ids_all or tid == "general"
+        return True  # colonnes non mappées → inclure par défaut
+
     # Colonnes individuelles à exclure (items bruts des questionnaires)
     # On garde les scores et valeurs significatives, pas les items individuels
     # ── Dictionnaire de labels propres ───────────────────────────────────────
@@ -2907,9 +2962,10 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             return True
         return False
 
-    # Trouver toutes les colonnes avec données
+    # Trouver toutes les colonnes avec données (filtrées par tests actifs)
     all_cols = [c for c in bilans_df.columns
-                if c not in SKIP and _is_score_col(c)]
+                if c not in SKIP and _is_score_col(c)
+                and _col_belongs_to_active_test(c)]
 
     def _has_data(col):
         for _, r in bilans_df.iterrows():
@@ -2936,6 +2992,10 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         # ── Un tableau par test/questionnaire ────────────────────────────────────
         # Chaque test = une entrée (nom_affiché, [colonnes_associées])
         _TESTS = [
+            ("Général",              ["diagnostic_prescription","diag_notes",
+                                      "appreciation","objectifs","traitement","frequence",
+                                      "poids_kg","taille_cm","bmi","bmi_interpretation",
+                                      "fc_repos","fr_repos","ta_repos","spo2_repos"]),
             ("Spirométrie",          ["spiro_vems_pct","spiro_cvf","spiro_vems_cvf","spiro_gold"]),
             ("Dyspnée mMRC",         ["mmrc_grade","mmrc_interpretation"]),
             ("CAT — COPD Assessment",["cat_score","cat_interpretation"]),
@@ -2963,9 +3023,7 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             ("Données vitales",      ["spo2","spo2_effort","spo2_repos",
                                       "fc_repos","fr_repos","ta_repos"]),
             ("IMC",                  ["bmi","bmi_interpretation"]),
-            ("Général",              ["diagnostic_prescription","diag_notes",
-                                      "appreciation","objectifs","traitement","frequence",
-                                      "musc_notes"]),
+
         ]
 
         # excluded_sections contient des test_ids (préfixes de colonnes)
