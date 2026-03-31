@@ -1818,7 +1818,9 @@ def build_leg_press(story, styles):
 
 def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
                   template_id: str = "shv", template_nom: str = "Bilan",
-                  medecin_info: dict = None) -> bytes:
+                  medecin_info: dict = None,
+                  excluded_sections: set = None,
+                  show_charts: bool = True) -> bytes:
     """
     Génère le PDF d'évolution.
     Utilise le PDF SHV détaillé pour SHV, le PDF générique pour les autres.
