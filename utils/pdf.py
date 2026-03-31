@@ -30,6 +30,34 @@ import matplotlib.patches as mpatches
 import numpy as np
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
 
+# ─── Fontes Liberation Sans (enregistrement au niveau module) ────────────────
+def _register_ls():
+    import os
+    from reportlab.pdfbase import pdfmetrics as _pm
+    from reportlab.pdfbase.ttfonts import TTFont as _TTF
+    _candidates = {
+        "LS":    ["/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                  "/usr/share/fonts/truetype/crosextra/Carlito-Regular.ttf"],
+        "LS-Bd": ["/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                  "/usr/share/fonts/truetype/crosextra/Carlito-Bold.ttf"],
+        "LS-Lt": ["/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraLight.ttf",
+                  "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"],
+    }
+    for name, paths in _candidates.items():
+        for p in paths:
+            if os.path.exists(p):
+                try:
+                    _pm.registerFont(_TTF(name, p))
+                    break
+                except Exception:
+                    continue
+
+_register_ls()
+# Noms de fontes utilisés dans les styles
+_LS     = "LS"       # Regular
+_LS_BD  = "LS-Bd"    # Bold
+_LS_LT  = "LS-Lt"    # Light
+
 # ─── Palette 36.9 Bilans ──────────────────────────────────────────────────────
 TERRA       = _colors.HexColor("#C4603A")
 TERRA_LIGHT = _colors.HexColor("#FAEEE9")
@@ -122,13 +150,13 @@ def make_header_footer(report_title, patient_name=""):
 
         # Titre centré
         canvas.setFillColor(GRIS_TEXTE)
-        canvas.setFont("Helvetica", 8)
+        canvas.setFont(_LS, 8)
         canvas.drawCentredString(w/2, h - 1.1*_cm, report_title)
 
         # Patient à droite en bleu
         if patient_name:
             canvas.setFillColor(BLEU)
-            canvas.setFont("Helvetica-Bold", 8)
+            canvas.setFont(_LS_BD, 8)
             canvas.drawRightString(w - MARGIN, h - 1.1*_cm, patient_name)
 
         # Ligne séparatrice fine bleu clair
@@ -154,21 +182,21 @@ def make_styles():
     from reportlab.lib.enums import TA_CENTER
     base = getSampleStyleSheet()
     return {
-        "title": _PS("title", fontSize=26, fontName="Helvetica-Bold", textColor=BLEU,
+        "title": _PS("title", fontSize=26, fontName=_LS, textColor=BLEU,
             spaceAfter=4, alignment=TA_CENTER),
-        "subtitle": _PS("subtitle", fontSize=12, fontName="Helvetica", textColor=GRIS_TEXTE,
+        "subtitle": _PS("subtitle", fontSize=12, fontName=_LS, textColor=GRIS_TEXTE,
             spaceAfter=2, alignment=TA_CENTER),
-        "section": _PS("section369", fontSize=11, fontName="Helvetica-Bold", textColor=BLEU,
+        "section": _PS("section369", fontSize=11, fontName=_LS_BD, textColor=BLEU,
             spaceBefore=14, spaceAfter=4),
-        "subsection": _PS("subsection369", fontSize=10, fontName="Helvetica-Bold",
+        "subsection": _PS("subsection369", fontSize=10, fontName=_LS_BD,
             textColor=TERRA, spaceBefore=10, spaceAfter=4),
-        "normal": _PS("normal369", fontSize=9, fontName="Helvetica",
+        "normal": _PS("normal369", fontSize=9, fontName=_LS,
             textColor=NOIR, spaceAfter=2),
-        "small": _PS("small369", fontSize=7.5, fontName="Helvetica", textColor=GRIS_TEXTE),
-        "bold": _PS("bold369", fontSize=9, fontName="Helvetica-Bold", textColor=BLEU),
-        "note": _PS("note369", fontSize=8, fontName="Helvetica",
+        "small": _PS("small369", fontSize=7.5, fontName=_LS_LT, textColor=GRIS_TEXTE),
+        "bold": _PS("bold369", fontSize=9, fontName=_LS_BD, textColor=BLEU),
+        "note": _PS("note369", fontSize=8, fontName=_LS,
             textColor=GRIS_TEXTE, leftIndent=8, spaceAfter=4),
-        "center": _PS("center369", fontSize=9, fontName="Helvetica", alignment=TA_CENTER),
+        "center": _PS("center369", fontSize=9, fontName=_LS, alignment=TA_CENTER),
         # Styles questionnaires imprimables
         "intro":    _PS("intro369", fontSize=9, fontName="Helvetica-Oblique",
             textColor=_colors.HexColor("#444"), spaceAfter=6, leftIndent=4),
@@ -180,12 +208,12 @@ def make_styles():
 
 def section_band(title, accent=None):
     """Titre de section : texte bleu gras, filet bleu en bas, sans fond."""
-    row = [[_Para(f"<b>{title}</b>",
-        _PS("sh369", fontSize=11, fontName="Helvetica-Bold", textColor=BLEU, leading=15))]]
+    row = [[_Para(title,
+        _PS("sh369", fontSize=10, fontName=_LS_BD, textColor=BLEU, leading=14))]]
     tbl = _Table(row, colWidths=[USEFUL_W])
     tbl.setStyle(_TableStyle([
         ("BACKGROUND",    (0,0),(-1,-1), BLANC),
-        ("LINEBELOW",     (0,0),(-1,-1), 1.2, BLEU),
+        ("LINEBELOW",     (0,0),(-1,-1), 0.8, BLEU),
         ("TOPPADDING",    (0,0),(-1,-1), 8),
         ("BOTTOMPADDING", (0,0),(-1,-1), 4),
         ("LEFTPADDING",   (0,0),(-1,-1), 0),
@@ -197,7 +225,7 @@ def make_table(data, col_widths=None, header=True, accent=None):
     if accent is None: accent = BLEU
     t = _Table(data, colWidths=col_widths, repeatRows=1 if header else 0)
     cmds = [
-        ("FONTNAME",      (0,0),(-1,-1), "Helvetica"),
+        ("FONTNAME",      (0,0),(-1,-1), _LS),
         ("FONTSIZE",      (0,0),(-1,-1), 8),
         ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
         ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
@@ -211,7 +239,7 @@ def make_table(data, col_widths=None, header=True, accent=None):
         cmds += [
             ("BACKGROUND",   (0,0),(-1,0), BLEU_LIGHT),
             ("TEXTCOLOR",    (0,0),(-1,0), BLEU),
-            ("FONTNAME",     (0,0),(-1,0), "Helvetica-Bold"),
+            ("FONTNAME",     (0,0),(-1,0), _LS_BD),
             ("FONTSIZE",     (0,0),(-1,0), 8),
             ("TOPPADDING",   (0,0),(-1,0), 7),
             ("BOTTOMPADDING",(0,0),(-1,0), 7),
@@ -2612,17 +2640,20 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         tbl_data = header + rows
         tbl = Table(tbl_data, colWidths=col_w, repeatRows=1)
         tbl.setStyle(TableStyle([
-            ("FONTNAME",    (0,0),(-1,-1), "Helvetica"),
-            ("FONTSIZE",    (0,0),(-1,-1), 7),
+            ("FONTNAME",    (0,0),(-1,-1), _LS),
+            ("FONTSIZE",    (0,0),(-1,-1), 7.5),
             ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
             ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
-            ("GRID",        (0,0),(-1,-1), 0.3, GRIS_BORD),
-            ("TOPPADDING",  (0,0),(-1,-1), 4),
-            ("BOTTOMPADDING",(0,0),(-1,-1), 4),
-            ("LEFTPADDING", (0,0),(-1,-1), 6),
+            ("GRID",        (0,0),(-1,-1), 0.25, GRIS_BORD),
+            ("TOPPADDING",  (0,0),(-1,-1), 5),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 5),
+            ("LEFTPADDING", (0,0),(-1,-1), 7),
             ("BACKGROUND",  (0,0),(-1,0), BLEU),
             ("TEXTCOLOR",   (0,0),(-1,0), BLANC),
-            ("FONTNAME",    (0,0),(-1,0), "Helvetica-Bold"),
+            ("FONTNAME",    (0,0),(-1,0), _LS_BD),
+            ("FONTSIZE",    (0,0),(-1,0), 7.5),
+            ("TOPPADDING",  (0,0),(-1,0), 6),
+            ("BOTTOMPADDING",(0,0),(-1,0), 6),
         ]))
         story.append(tbl)
 
