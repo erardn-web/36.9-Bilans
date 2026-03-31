@@ -38,6 +38,33 @@ MODULE_CONTEXT = {
 }
 
 
+# Mapping test_id → préfixes de colonnes (pour filtrage par tests_actifs)
+_TID_PREFIXES = {
+    "spirometrie": ["spiro_"], "six_mwt": ["mwt_"], "sts": ["sts_"],
+    "mmrc": ["mmrc_"], "cat": ["cat_score","cat_interpretation"],
+    "bode": ["bode_"], "tinetti": ["tinetti_"], "berg": ["berg_"],
+    "tug": ["tug_"], "unipodal": ["unipodal_"], "bolt": ["bolt_"],
+    "nijmegen": ["nij_"], "hvt": ["hvt_"], "eva": ["eva"],
+    "lombalgie": ["schober","luomajoki","posture","groupe_clinique"],
+    "testing_mi": ["musc_"], "leg_press": ["lp_"],
+    "had": ["had_"], "sf12": ["sf12_"], "comorbidites": ["comorb_"],
+}
+
+def _col_in_active_tests(col: str, active_test_ids: set) -> bool:
+    """Retourne True si la colonne appartient à un test actif."""
+    if not active_test_ids:
+        return True
+    _always = {"diagnostic_prescription","diag_notes","appreciation","objectifs",
+               "traitement","frequence","poids_kg","taille_cm","bmi",
+               "fc_repos","fr_repos","ta_repos","spo2_repos","spo2","spo2_effort"}
+    if col in _always:
+        return True
+    for tid, pfxs in _TID_PREFIXES.items():
+        if any(col == p or col.startswith(p) for p in pfxs):
+            return tid in active_test_ids
+    return True
+
+
 def _format_bilans(bilans_df, module: str) -> str:
     import pandas as pd
     bilans_df = bilans_df.copy()
@@ -51,13 +78,25 @@ def _format_bilans(bilans_df, module: str) -> str:
         type_b  = row.get("type_bilan","") or ""
         lines.append(f"\n--- Bilan {i+1} — {dstr} ({type_b}) ---")
 
+        # Lire les tests actifs de CE bilan
+        import json as _j
+        _ta_raw = str(row.get("tests_actifs","") or "")
+        try:
+            _active_ids = set(_j.loads(_ta_raw)) if _ta_raw not in ("","[]","None","nan") else set()
+        except Exception:
+            _active_ids = set()
+
         skip = {"bilan_id","cas_id","patient_id","cabinet_id","date_bilan",
                 "type_bilan","praticien","notes_generales","date_creation",
-                "donnees","analyse_ia"}
+                "donnees","analyse_ia","tests_actifs"}
         for col in bilans_df.columns:
-            if col in skip: continue
+            if col in skip:
+                continue
+            if not _col_in_active_tests(col, _active_ids):
+                continue  # test désactivé → ignorer
             val = row.get(col,"")
-            if val is None or str(val).strip() in ("","0","0.0","None","nan"): continue
+            if val is None or str(val).strip() in ("","0","0.0","None","nan"):
+                continue
             # Exclure les items individuels (had_a1, sf12_q1…)
             if any(col.endswith(f"_{x}") for x in
                    list("abcdefghij") + [str(i) for i in range(1,20)]):
@@ -166,12 +205,8 @@ def render_analyse_section(bilans_df, patient_info: dict, module: str, cas_id: s
                 st.session_state[confirm_key] = True
             else:
                 with st.spinner("Analyse en cours…"):
-                    from utils.db import get_cas_bilans, _invalidate_read_cache
-                    _invalidate_read_cache()
-                    get_cas_bilans.clear()
-                    fresh_bilans = get_cas_bilans(cas_id)
-                    new_text = generate_analyse(fresh_bilans if not fresh_bilans.empty else bilans_df,
-                                                patient_info, module)
+                    # Utiliser le bilans_df déjà filtré (bilans sélectionnés + tests actifs)
+                    new_text = generate_analyse(bilans_df, patient_info, module)
                 st.session_state[session_key] = new_text
                 save_analyse_cas(cas_id, new_text)
                 st.session_state.pop(stale_key, None)
@@ -183,12 +218,8 @@ def render_analyse_section(bilans_df, patient_info: dict, module: str, cas_id: s
             ca, cb = st.columns(2)
             if ca.button("✅ Regénérer quand même", key=f"confirm_yes_{cas_id}"):
                 with st.spinner("Analyse en cours…"):
-                    from utils.db import get_cas_bilans, _invalidate_read_cache
-                    _invalidate_read_cache()
-                    get_cas_bilans.clear()
-                    fresh_bilans = get_cas_bilans(cas_id)
-                    new_text = generate_analyse(fresh_bilans if not fresh_bilans.empty else bilans_df,
-                                                patient_info, module)
+                    # Utiliser le bilans_df déjà filtré (bilans sélectionnés + tests actifs)
+                    new_text = generate_analyse(bilans_df, patient_info, module)
                 st.session_state[session_key] = new_text
                 save_analyse_cas(cas_id, new_text)
                 st.session_state.pop(stale_key, None)
