@@ -2885,21 +2885,66 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         if dp:
             story.append(Paragraph(f"<b>Diagnostics prescription :</b> {dp}", styles["normal"]))
     else:
-        # ── Tableau de synthèse ────────────────────────────────────────────────
-        story.append(section_band("Synthèse des données"))
-        story.append(Spacer(1, 0.2*cm))
+        # ── Groupes cliniques de colonnes ──────────────────────────────────────
+        # Ordre : respiratoire → équilibre/marche → fonctionnel → autres
+        _GROUPS = [
+            ("Respiration & BPCO", [
+                "spiro_vems_pct","spiro_cvf","spiro_vems_cvf","spiro_gold",
+                "mmrc_grade","mmrc_interpretation",
+                "spo2","spo2_effort",
+                "cat_score","cat_interpretation",
+                "bode_score","bode_interpretation",
+                "mwt_distance","mwt_interpretation",
+                "bolt_score","bolt_interpretation",
+                "hvt_symptomes_reproduits",
+                "nij_score","nij_interpretation",
+            ]),
+            ("Équilibre & Chute", [
+                "tinetti_eq_score","tinetti_ma_score","tinetti_total","tinetti_interpretation",
+                "berg_score","berg_interpretation",
+                "unipodal_d_ouvert","unipodal_g_ouvert",
+                "unipodal_d_ferme","unipodal_g_ferme",
+                "tug_temps","tug_interpretation",
+            ]),
+            ("Capacité fonctionnelle", [
+                "sts_1min_reps","sts_1min_interpretation",
+                "sts_30s_reps","sts_30s_interpretation",
+                "bmi","bmi_interpretation",
+            ]),
+            ("Douleur & Lombalgie", [
+                "eva","schober","luomajoki",
+                "posture","groupe_clinique",
+            ]),
+            ("Données générales", [
+                "diagnostic_prescription","musc_notes","diag_notes",
+                "appreciation","objectifs","traitement","frequence",
+            ]),
+        ]
+
+        # Construire un ordre groupé des colonnes actives
+        active_set = set(active_cols)
+        ordered_cols = []
+        seen = set()
+        for _grp_name, _grp_cols in _GROUPS:
+            grp_active = [c for c in _grp_cols if c in active_set and c not in seen]
+            if grp_active:
+                ordered_cols.append((_grp_name, grp_active))
+                seen.update(grp_active)
+        # Colonnes non classifiées à la fin
+        ungrouped = [c for c in active_cols if c not in seen]
+        if ungrouped:
+            ordered_cols.append(("Autres mesures", ungrouped))
 
         col_w = [6*cm] + [(w - 6*cm) / n_bilans] * n_bilans
-        header = [["Indicateur"] + [f"B{i+1}" for i in range(n_bilans)]]
-        rows   = []
 
         _cell_style = ParagraphStyle("td", fontName=_LS, fontSize=7.5,
             leading=10, textColor=NOIR)
         _hdr_style  = ParagraphStyle("th", fontName=_LS_BD, fontSize=7.5,
             leading=10, textColor=BLANC)
+        _grp_style  = ParagraphStyle("grp", fontName=_LS_BD, fontSize=7,
+            leading=9, textColor=BLEU)
 
         def _wrap(text, style, max_chars=60):
-            """Wrap long text in a Paragraph to avoid overflow."""
             t = str(text or "—")
             if t in ("","None","nan"): t = "—"
             if len(t) > max_chars:
@@ -2908,34 +2953,74 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
 
         header_p = [[Paragraph("Indicateur", _hdr_style)] +
                     [Paragraph(f"B{i+1}", _hdr_style) for i in range(n_bilans)]]
-        rows   = []
-        for col in active_cols:
-            lbl  = _label(col)
-            vals = []
-            for _, r in bilans_df.iterrows():
-                v = str(r.get(col,"") or "").strip()
-                vals.append(_wrap(v, _cell_style))
-            rows.append([_wrap(lbl, _cell_style, max_chars=45)] + vals)
 
-        tbl_data = header_p + rows
-        tbl = Table(tbl_data, colWidths=col_w, repeatRows=1)
-        tbl.setStyle(TableStyle([
-            ("FONTNAME",    (0,0),(-1,-1), _LS),
-            ("FONTSIZE",    (0,0),(-1,-1), 7.5),
-            ("VALIGN",      (0,0),(-1,-1), "MIDDLE"),
-            ("ROWBACKGROUNDS",(0,1),(-1,-1), [BLANC, GRIS]),
-            ("GRID",        (0,0),(-1,-1), 0.25, GRIS_BORD),
-            ("TOPPADDING",  (0,0),(-1,-1), 5),
-            ("BOTTOMPADDING",(0,0),(-1,-1), 5),
-            ("LEFTPADDING", (0,0),(-1,-1), 7),
-            ("BACKGROUND",  (0,0),(-1,0), BLEU),
-            ("TEXTCOLOR",   (0,0),(-1,0), BLANC),
-            ("FONTNAME",    (0,0),(-1,0), _LS_BD),
-            ("FONTSIZE",    (0,0),(-1,0), 7.5),
-            ("TOPPADDING",  (0,0),(-1,0), 6),
-            ("BOTTOMPADDING",(0,0),(-1,0), 6),
-        ]))
-        story.append(tbl)
+        story.append(section_band("Synthèse des données"))
+        story.append(Spacer(1, 0.2*cm))
+
+        first_group = True
+        for grp_name, grp_cols in ordered_cols:
+            rows = []
+            for col in grp_cols:
+                lbl  = _label(col)
+                vals = []
+                for _, r in bilans_df.iterrows():
+                    v = str(r.get(col,"") or "").strip()
+                    vals.append(_wrap(v, _cell_style))
+                rows.append([_wrap(lbl, _cell_style, max_chars=45)] + vals)
+
+            if not rows:
+                continue
+
+            # En-tête de groupe : ligne pleine largeur bleu clair
+            grp_row = [[Paragraph(grp_name.upper(), _grp_style)] +
+                       [""] * n_bilans]
+
+            tbl_data = header_p + grp_row + rows if first_group else grp_row + rows
+            first_group = False
+
+            tbl = Table(tbl_data, colWidths=col_w, repeatRows=1)
+            n_data = len(tbl_data)
+            n_hdr  = 1 if not first_group else 1
+            # Style de base
+            cmds = [
+                ("FONTNAME",       (0,0),(-1,-1), _LS),
+                ("FONTSIZE",       (0,0),(-1,-1), 7.5),
+                ("VALIGN",         (0,0),(-1,-1), "MIDDLE"),
+                ("ROWBACKGROUNDS", (0,1),(-1,-1), [BLANC, GRIS]),
+                ("GRID",           (0,0),(-1,-1), 0.25, GRIS_BORD),
+                ("TOPPADDING",     (0,0),(-1,-1), 5),
+                ("BOTTOMPADDING",  (0,0),(-1,-1), 5),
+                ("LEFTPADDING",    (0,0),(-1,-1), 7),
+            ]
+            # En-tête bleu (première ligne si header présent)
+            if len(tbl_data) > 0 and tbl_data[0] == header_p[0]:
+                cmds += [
+                    ("BACKGROUND",   (0,0),(-1,0), BLEU),
+                    ("TEXTCOLOR",    (0,0),(-1,0), BLANC),
+                    ("FONTNAME",     (0,0),(-1,0), _LS_BD),
+                    ("TOPPADDING",   (0,0),(-1,0), 6),
+                    ("BOTTOMPADDING",(0,0),(-1,0), 6),
+                ]
+                grp_row_idx = 1
+            else:
+                grp_row_idx = 0
+
+            # Ligne de groupe : fond bleu très clair, texte bleu
+            cmds += [
+                ("BACKGROUND",   (0,grp_row_idx),(-1,grp_row_idx), BLEU_LIGHT),
+                ("TEXTCOLOR",    (0,grp_row_idx),(-1,grp_row_idx), BLEU),
+                ("FONTNAME",     (0,grp_row_idx),(-1,grp_row_idx), _LS_BD),
+                ("FONTSIZE",     (0,grp_row_idx),(-1,grp_row_idx), 7),
+                ("TOPPADDING",   (0,grp_row_idx),(-1,grp_row_idx), 5),
+                ("BOTTOMPADDING",(0,grp_row_idx),(-1,grp_row_idx), 5),
+                ("SPAN",         (0,grp_row_idx),(-1,grp_row_idx)),
+                ("GRID",         (0,grp_row_idx),(-1,grp_row_idx), 0, BLANC),
+                ("LINEBELOW",    (0,grp_row_idx),(-1,grp_row_idx), 0.5, BLEU),
+            ]
+
+            tbl.setStyle(TableStyle(cmds))
+            story.append(tbl)
+            story.append(Spacer(1, 0.15*cm))
 
         # ── Graphiques d'évolution ─────────────────────────────────────────────
         story.append(Spacer(1, 0.5*cm))
