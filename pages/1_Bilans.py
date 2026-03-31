@@ -861,9 +861,11 @@ def render_evolution():
     if _pdf_draft_key not in S:
         S[_pdf_draft_key] = list(S[_pdf_selected_key])
 
-    # ── Cache PDF : défini avant l'expander car référencé à l'intérieur ──────
+    # ── Cache PDF + mapping : définis avant l'expander ─────────────────────
     _pdf_cache_key = f"pdf_cache_{cid}"
     _pdf_sig_key   = f"pdf_sig_{cid}"
+    _label_to_tid  = {cls.tab_label(): cls.test_id()
+                      for cls in _active_tests if hasattr(cls, "tab_label") and hasattr(cls, "test_id")}
 
     with st.expander("⚙️ Options du rapport PDF", expanded=False):
         _draft = S[_pdf_draft_key]
@@ -979,9 +981,7 @@ def render_evolution():
 
 
 
-    # Construire excluded_test_ids + ordered_test_ids depuis la sélection CONFIRMÉE
-    _label_to_tid   = {cls.tab_label(): cls.test_id()
-                       for cls in _active_tests if hasattr(cls, "tab_label") and hasattr(cls, "test_id")}
+
     _selected_ordered = S.get(_pdf_selected_key, [])
     _selected_set     = set(_selected_ordered)
     _excluded         = {_label_to_tid[lbl] for lbl in _active_labels
