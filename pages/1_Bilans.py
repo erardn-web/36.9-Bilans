@@ -72,6 +72,7 @@ from utils.db import (
     save_bilan_donnees, get_tests_actifs, get_audit_log,
     get_bilan_tests_actifs, save_bilan_tests_actifs,
     delete_bilan,
+    get_medecin_destinataire, save_medecin_destinataire,
 )
 from core.registry import all_templates
 from core.engine   import render_bilan_form, render_evolution_view, build_tests_from_snapshot
@@ -572,6 +573,31 @@ def render_cas():
         S.pop("_bilan_unsaved", None)
         _go("formulaire", bilan_id=bid, bilan_data={})
 
+    # ── Médecin destinataire ──────────────────────────────────────────────────
+    st.markdown("---")
+    with st.expander("📋 Médecin destinataire (pour le PDF d'évolution)", expanded=False):
+        _med = get_medecin_destinataire(S.cas_id)
+        with st.form("form_medecin_destinataire"):
+            m1, m2 = st.columns(2)
+            with m1:
+                _med_nom  = st.text_input("Nom du médecin",
+                    value=_med.get("nom", ""),
+                    placeholder="ex: Dupont")
+                _med_spec = st.text_input("Spécialité",
+                    value=_med.get("specialite", ""),
+                    placeholder="ex: Médecin de famille")
+            with m2:
+                _med_adr  = st.text_input("Adresse",
+                    value=_med.get("adresse", ""),
+                    placeholder="ex: Rue de la Paix 1, 2300 La Chaux-de-Fonds")
+            if st.form_submit_button("💾 Enregistrer le médecin", type="primary"):
+                save_medecin_destinataire(S.cas_id, {
+                    "nom": _med_nom,
+                    "specialite": _med_spec,
+                    "adresse": _med_adr,
+                })
+                st.success("✅ Médecin enregistré.")
+
 # ── FORMULAIRE ────────────────────────────────────────────────────────────────
 def render_formulaire():
     import json as _j
@@ -782,9 +808,11 @@ def render_evolution():
         try:
             # Priorité : widget text_area (valeur courante) > session > GSheets
             analyse_txt = S.get(f"analyse_text_{cid}") or load_analyse_cas(cid)
+            _medecin_info = get_medecin_destinataire(cid)
             pdf_data = generate_pdf(be, info,
                 analyse_text=analyse_txt,
-                template_id=_tid, template_nom=_tnom)
+                template_id=_tid, template_nom=_tnom,
+                medecin_info=_medecin_info)
         except Exception as e:
             pdf_data = None
             st.error(f"Erreur PDF : {e}")
