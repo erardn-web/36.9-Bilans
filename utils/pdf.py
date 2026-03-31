@@ -1820,6 +1820,7 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
                   template_id: str = "shv", template_nom: str = "Bilan",
                   medecin_info: dict = None,
                   excluded_test_ids: set = None,
+                  ordered_test_ids: list = None,
                   show_charts: bool = True) -> bytes:
     """
     Génère le PDF d'évolution.
@@ -1834,6 +1835,7 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
                                     template_nom=template_nom,
                                     medecin_info=medecin_info,
                                     excluded_sections=excluded_test_ids,
+                                    ordered_test_ids=ordered_test_ids,
                                     show_charts=show_charts)
 
     buffer = io.BytesIO()
@@ -2638,7 +2640,7 @@ def _make_sparkline_png(title, values, bilans_labels, unit="",
     return buf.getvalue()
 
 
-def _make_evolution_charts(bilans_df, n_bilans, page_w, excluded_test_ids=None):
+def _make_evolution_charts(bilans_df, n_bilans, page_w, excluded_test_ids=None, ordered_test_ids=None):
     """
     Génère les mini-graphiques d'évolution pour les scores numériques disponibles.
     Retourne une liste de Flowables (Table de 2 colonnes).
@@ -2663,13 +2665,27 @@ def _make_evolution_charts(bilans_df, n_bilans, page_w, excluded_test_ids=None):
         "leg_press": ["lp_"], "vital": ["fc_repos","fr_repos","ta_repos","spo2_repos"],
         "bmi": ["bmi"],
     }
+    def _chart_tid(col):
+        for tid, pfxs in _TID_TO_PFX_CH.items():
+            if any(col == p or col.startswith(p) for p in pfxs):
+                return tid
+        return "__other__"
     def _ch_excluded(col):
         for tid in _excl_ch:
             for pfx in _TID_TO_PFX_CH.get(tid, [tid + "_", tid]):
                 if col == pfx or col.startswith(pfx):
                     return True
         return False
-    for col, label, unit, ref_val, ref_lbl, higher_ok in _CHART_SPECS:
+    # Réordonner _CHART_SPECS selon ordered_test_ids
+    if ordered_test_ids:
+        _tid_order = {tid: i for i, tid in enumerate(ordered_test_ids)}
+        _CHART_SPECS_SORTED = sorted(
+            _CHART_SPECS,
+            key=lambda x: _tid_order.get(_chart_tid(x[0]), 999)
+        )
+    else:
+        _CHART_SPECS_SORTED = _CHART_SPECS
+    for col, label, unit, ref_val, ref_lbl, higher_ok in _CHART_SPECS_SORTED:
         if _ch_excluded(col):
             continue
         # Extraire les valeurs numériques
@@ -2728,6 +2744,7 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
                           template_nom: str = "Bilan",
                           medecin_info: dict = None,
                           excluded_sections: set = None,
+                          ordered_test_ids: list = None,
                           show_charts: bool = True) -> bytes:
     """
     PDF d'évolution générique — affiche tous les champs non vides,
@@ -3013,7 +3030,35 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         story.append(section_band("Synthèse des données"))
         story.append(Spacer(1, 0.3*cm))
 
-        for test_name, test_cols in _TESTS:
+        # Réordonner _TESTS selon ordered_test_ids si fourni
+        if ordered_test_ids:
+            # Mapping test_id → entrées _TESTS
+            _tid_to_tests = {}
+            for _tn, _tc in _TESTS:
+                # Identifier le test_id de ce bloc via ses colonnes
+                for _tid, _pfxs in _TID_TO_PREFIXES.items():
+                    if any(col.startswith(_pfxs[0]) if _pfxs else False
+                           for col in _tc):
+                        _tid_to_tests.setdefault(_tid, []).append((_tn, _tc))
+                        break
+                else:
+                    _tid_to_tests.setdefault("__other__", []).append((_tn, _tc))
+            # Construire la liste ordonnée
+            _ordered_tests = []
+            _seen_tids = set()
+            for _tid in ordered_test_ids:
+                for _entry in _tid_to_tests.get(_tid, []):
+                    _ordered_tests.append(_entry)
+                _seen_tids.add(_tid)
+            # Ajouter les tests non référencés (dans l'ordre original)
+            for _tn, _tc in _TESTS:
+                if (_tn, _tc) not in _ordered_tests:
+                    _ordered_tests.append((_tn, _tc))
+            _TESTS_ORDERED = _ordered_tests
+        else:
+            _TESTS_ORDERED = _TESTS
+
+        for test_name, test_cols in _TESTS_ORDERED:
             # Ne garder que les colonnes actives de ce test (exclues déjà filtrées dans active_set)
             grp_active = [col for col in test_cols
                           if col in active_set and col not in seen]
@@ -3094,7 +3139,8 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         if show_charts:
             story.append(Spacer(1, 0.5*cm))
             charts = _make_evolution_charts(bilans_df, n_bilans, w,
-                                            excluded_test_ids=set(excluded_sections or []))
+                                            excluded_test_ids=set(excluded_sections or []),
+                                            ordered_test_ids=ordered_test_ids)
             if charts:
                 story.append(section_band("Évolution graphique"))
                 story.append(Spacer(1, 0.3*cm))
