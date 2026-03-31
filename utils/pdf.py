@@ -3124,9 +3124,9 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         col_w = [6*cm] + [(w - 6*cm) / n_bilans] * n_bilans
 
         _cell_style = ParagraphStyle("td", fontName=_LS, fontSize=7.5,
-            leading=10, textColor=NOIR)
+            leading=10, textColor=colors.HexColor("#333333"))
         _hdr_style  = ParagraphStyle("th", fontName=_LS_BD, fontSize=7.5,
-            leading=10, textColor=BLANC)
+            leading=10, textColor=colors.HexColor("#2B57A7"))
 
         def _wrap(text, style, max_chars=60):
             t = str(text or "—")
