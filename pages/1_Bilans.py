@@ -811,9 +811,10 @@ def render_evolution():
         for _, r in be.iterrows()
     ]))
     if S.get(_ai_sig_key) != _ai_sig_now:
-        # Bilans ou tests ont changé → effacer le cache IA en session
+        # Bilans ou tests ont changé → effacer le cache IA + marquer comme obsolète
         S.pop(_ai_key, None)
         S[_ai_sig_key] = _ai_sig_now
+        S[f"analyse_stale_{cid}"] = True  # déclenche le warning "à régénérer" dans l'UI
     if _ai_key not in S:
         S[_ai_key] = load_analyse_cas(cid)
 
