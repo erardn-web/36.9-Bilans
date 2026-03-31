@@ -10,7 +10,7 @@ from utils.db import (
 # ─────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────
-st.set_page_config(page_title="Feedback & Votes", page_icon="💬", layout="wide")
+st.set_page_config(page_title="Feedback & Votes", page_icon="??", layout="wide")
 
 THERAPEUTES = [
     "— Sélectionner —",
@@ -30,10 +30,10 @@ THERAPEUTES = [
 ]
 
 TYPES = {
-    "🐛 Bug": "Bug",
-    "🆕 Suggestion": "Suggestion",
-    "🔧 Amélioration": "Amélioration",
-    "📚 Bibliothèque": "Bibliothèque",
+    "?? Bug": "Bug",
+    "?? Suggestion": "Suggestion",
+    "?? Amélioration": "Amélioration",
+    "?? Bibliothèque": "Bibliothèque",
 }
 
 STATUTS_COULEUR = {
@@ -135,8 +135,8 @@ def badge_statut(statut):
 
 
 def badge_type(type_):
-    icons = {"Bug": "🐛", "Suggestion": "🆕", "Amélioration": "🔧", "Bibliothèque": "📚"}
-    return f'{icons.get(type_,"💬")} {type_}'
+    icons = {"Bug": "??", "Suggestion": "??", "Amélioration": "??", "Bibliothèque": "??"}
+    return f'{icons.get(type_,"??")} {type_}'
 
 
 # ─────────────────────────────────────────
@@ -155,7 +155,7 @@ def render_admin_login():
     if st.session_state.get("admin_ok"):
         return True
 
-    st.info("🔐 Espace réservé à l'administrateur.")
+    st.info("?? Espace réservé à l'administrateur.")
     with st.form("form_admin_login"):
         pwd = st.text_input("Mot de passe admin", type="password")
         ok  = st.form_submit_button("Se connecter", type="primary")
@@ -179,7 +179,7 @@ for key, default in [("fb_nom", ""), ("admin_ok", False)]:
 # ─────────────────────────────────────────
 # UI
 # ─────────────────────────────────────────
-st.title("💬 Feedback & Communauté")
+st.title("?? Feedback & Communauté")
 st.caption("Remonte un bug, propose une amélioration, vote sur les idées de tes collègues.")
 
 df_fb    = load_feedback()
@@ -190,7 +190,7 @@ with st.container():
     col_nom, col_info = st.columns([2, 4])
     with col_nom:
         nom = st.selectbox(
-            "👤 Qui es-tu ?",
+            "?? Qui es-tu ?",
             THERAPEUTES,
             index=THERAPEUTES.index(st.session_state.fb_nom)
                   if st.session_state.fb_nom in THERAPEUTES else 0,
@@ -205,7 +205,7 @@ with st.container():
         if st.session_state.fb_nom and st.session_state.fb_nom != "— Sélectionner —":
             label = f"Connecté en tant que **{st.session_state.fb_nom}**"
             if st.session_state.get("admin_ok"):
-                label += "  🔑 _Admin_"
+                label += "  ?? _Admin_"
             st.success(label)
         else:
             st.info("Sélectionne ton nom pour voter ou soumettre une proposition.")
@@ -217,12 +217,12 @@ st.divider()
 # ── ONGLETS — l'onglet Admin n'apparaît que si Nathan est sélectionné ─────────
 if st.session_state.fb_nom == "Nathan":
     tab_vote, tab_nouveau, tab_roadmap, tab_bugs, tab_admin = st.tabs([
-        "🗳️ Voter", "✏️ Proposer", "🗺️ Roadmap", "🐛 Bugs", "⚙️ Admin",
+        "??️ Voter", "✏️ Proposer", "??️ Roadmap", "?? Bugs", "⚙️ Admin",
     ])
 else:
     tab_admin = None
     tab_vote, tab_nouveau, tab_roadmap, tab_bugs = st.tabs([
-        "🗳️ Voter", "✏️ Proposer", "🗺️ Roadmap", "🐛 Bugs",
+        "??️ Voter", "✏️ Proposer", "??️ Roadmap", "?? Bugs",
     ])
 
 
@@ -247,7 +247,7 @@ with tab_vote:
                     st.markdown(f"**Description :** {row['description']}")
                     st.caption(f"Soumis le {row['date_creation']}  ·  Vote jusqu'au {row['deadline_vote']}")
                     if row.get("reponse_admin","").strip():
-                        st.info(f"💬 **Nathan :** {row['reponse_admin']}")
+                        st.info(f"?? **Nathan :** {row['reponse_admin']}")
                     total = int(row["votes_pour"]) + int(row["votes_contre"])
                     pct   = int(row["votes_pour"]) / total * 100 if total > 0 else 0
                     st.markdown(
@@ -292,10 +292,10 @@ with tab_nouveau:
                 placeholder="Décris le problème ou l'idée avec le plus de détails possible...",
                 height=150,
             )
-            if type_label == "🐛 Bug":
-                st.info("🐛 Les bugs sont traités directement sans vote — tu recevras un retour rapide.")
+            if type_label == "?? Bug":
+                st.info("?? Les bugs sont traités directement sans vote — tu recevras un retour rapide.")
             else:
-                st.info(f"🗳️ Ta proposition sera soumise au vote de l'équipe pendant {DELAI_VOTE} jours.")
+                st.info(f"??️ Ta proposition sera soumise au vote de l'équipe pendant {DELAI_VOTE} jours.")
             submitted = st.form_submit_button("Envoyer ✉️", use_container_width=True, type="primary")
             if submitted:
                 if not titre.strip() or not description.strip():
@@ -304,7 +304,7 @@ with tab_nouveau:
                     type_val = TYPES[type_label]
                     fid = soumettre_feedback(st.session_state.fb_nom, type_val, titre.strip(), description.strip())
                     if type_val == "Bug":
-                        st.success(f"🐛 Bug #{fid} enregistré — Nathan va s'en occuper !")
+                        st.success(f"?? Bug #{fid} enregistré — Nathan va s'en occuper !")
                     else:
                         st.success(f"✅ Proposition #{fid} soumise au vote pendant {DELAI_VOTE} jours !")
                     st.rerun()
@@ -318,8 +318,8 @@ with tab_roadmap:
     statuts_roadmap = ["Accepté", "En développement", "Livré"]
     labels = {
         "Accepté":          "✅ Accepté — à programmer",
-        "En développement": "🔨 En développement",
-        "Livré":            "🚀 Livré",
+        "En développement": "?? En développement",
+        "Livré":            "?? Livré",
     }
     if df_fb.empty:
         st.info("La roadmap est vide pour l'instant.")
@@ -336,7 +336,7 @@ with tab_roadmap:
                     f'<strong>{badge_type(row["type"])}</strong> — {row["titre"]}<br>'
                     f'<small style="color:#6B7280">Proposé par {row["auteur"]} · {row["date_creation"]}'
                     f' · ✅ {int(row["votes_pour"])} / ❌ {int(row["votes_contre"])}</small>'
-                    + (f'<br><em style="color:#374151">💬 {row["reponse_admin"]}</em>'
+                    + (f'<br><em style="color:#374151">?? {row["reponse_admin"]}</em>'
                        if row.get("reponse_admin","").strip() else "")
                     + '</div>',
                     unsafe_allow_html=True,
@@ -354,7 +354,7 @@ with tab_bugs:
     else:
         bugs = df_fb[df_fb["type"] == "Bug"].sort_values("date_creation", ascending=False)
         if bugs.empty:
-            st.success("Aucun bug enregistré 🎉")
+            st.success("Aucun bug enregistré ??")
         else:
             for _, row in bugs.iterrows():
                 with st.expander(
@@ -363,7 +363,7 @@ with tab_bugs:
                 ):
                     st.markdown(f"**Description :** {row['description']}")
                     if row.get("reponse_admin","").strip():
-                        st.info(f"💬 **Nathan :** {row['reponse_admin']}")
+                        st.info(f"?? **Nathan :** {row['reponse_admin']}")
                     col_s, col_d = st.columns(2)
                     with col_s:
                         st.markdown(f'Statut : {badge_statut(row["statut"])}', unsafe_allow_html=True)
@@ -466,11 +466,11 @@ if tab_admin is not None:
                         col_save, col_del = st.columns([3, 1])
                         with col_save:
                             save = st.form_submit_button(
-                                "💾 Enregistrer", use_container_width=True, type="primary"
+                                "?? Enregistrer", use_container_width=True, type="primary"
                             )
                         with col_del:
                             delete = st.form_submit_button(
-                                "🗑️ Supprimer", use_container_width=True
+                                "??️ Supprimer", use_container_width=True
                             )
 
                         if save:
@@ -490,13 +490,13 @@ if tab_admin is not None:
                         if delete:
                             ok = admin_delete_feedback(row["id"])
                             if ok:
-                                st.success("🗑️ Supprimé.")
+                                st.success("??️ Supprimé.")
                                 st.rerun()
                             else:
                                 st.error("Erreur lors de la suppression.")
 
         # ── Déconnexion admin ──────────────────────────────────
         st.divider()
-        if st.button("🔓 Se déconnecter", key="admin_logout"):
+        if st.button("?? Se déconnecter", key="admin_logout"):
             st.session_state["admin_ok"] = False
             st.rerun()
