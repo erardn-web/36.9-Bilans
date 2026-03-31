@@ -1847,7 +1847,7 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
     labels = [bilan_label(r) for _, r in bilans_df.iterrows()]
 
     # ── Page templates ────────────────────────────────────────────────────────
-    from utils.pdf_cover import make_cover_callback as _mcc, get_ia_frame as _gif, F_REG as _cfr
+    from utils.pdf_cover import make_cover_callback as _mcc, get_ia_frame as _gif, get_f_reg as _gfr
     ia_x, ia_y, ia_w, ia_h = _gif()
     cover_frame = Frame(ia_x, ia_y, ia_w, ia_h,
         leftPadding=0, rightPadding=0, topPadding=22, bottomPadding=0, id="cover")
@@ -1889,7 +1889,7 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
     _ai = _re_pdf.sub(r'\*(.*?)\*', r'\1', _ai).strip()
     if _ai:
         _ai_html = _ai.replace("\n\n", "<br/><br/>").replace("\n", " ")
-        _ia_para = Paragraph(_ai_html, _PS2("ia_s", fontName=_cfr, fontSize=10,
+        _ia_para = Paragraph(_ai_html, _PS2("ia_s", fontName=_gfr(), fontSize=10,
             leading=15, alignment=_TA_J, textColor=_cc.HexColor("#333333"), spaceAfter=6))
         story = [_ia_para, NextPageTemplate("Content"), PageBreak()]
     else:
@@ -2554,7 +2554,7 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
                  for _, r in bilans_df.iterrows()]
 
     # ── Page templates ────────────────────────────────────────────────────────
-    from utils.pdf_cover import make_cover_callback as _mcc, get_ia_frame as _gif, F_REG as _cfr
+    from utils.pdf_cover import make_cover_callback as _mcc, get_ia_frame as _gif, get_f_reg as _gfr
     ia_x, ia_y, ia_w, ia_h = _gif()
     cover_frame = Frame(ia_x, ia_y, ia_w, ia_h,
         leftPadding=0, rightPadding=0, topPadding=22, bottomPadding=0, id="cover")
@@ -2593,7 +2593,7 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
     _ai2 = _re_pdf2.sub(r'\*(.*?)\*', r'\1', _ai2).strip()
     if _ai2:
         _ai2_html = _ai2.replace("\n\n", "<br/><br/>").replace("\n", " ")
-        _ia_para_gen = Paragraph(_ai2_html, _PS3("ia_sg", fontName=_cfr, fontSize=10,
+        _ia_para_gen = Paragraph(_ai2_html, _PS3("ia_sg", fontName=_gfr(), fontSize=10,
             leading=15, alignment=_TA_J2, textColor=_cc2.HexColor("#333333"), spaceAfter=6))
         story = [_ia_para_gen, NextPageTemplate("Content"), PageBreak()]
     else:
