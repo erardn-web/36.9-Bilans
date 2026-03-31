@@ -806,42 +806,38 @@ def render_evolution():
     _tnom = snap.get("nom","Bilan")
 
     # ── Options du rapport PDF ────────────────────────────────────────────────
-    _ALL_SECTIONS = [
-        "Spirométrie",
-        "Dyspnée mMRC",
-        "CAT — COPD Assessment",
-        "Score BODE",
-        "Test de Marche 6min",
-        "STS 1 minute",
-        "STS 30 secondes",
-        "Leg Press (1RM)",
-        "Test Unipodal",
-        "Tinetti",
-        "Échelle de Berg",
-        "TUG",
-        "BOLT",
-        "HVT / Nijmegen",
-        "EVA Douleur",
-        "Lombalgie",
-        "Données vitales",
-        "IMC",
-        "Général",
-        "Autres",
-        "Évolution graphique",
-    ]
+    # Options PDF : tests actifs du cas + graphiques
+    _ensure_registry()
+    _tc_key2 = f"test_classes_ev_{cid}"
+    if _tc_key2 not in S or not S[_tc_key2]:
+        S[_tc_key2] = build_tests_from_snapshot(snap)
+    _active_tests = S[_tc_key2]
+    # Labels des tests actifs → noms affichés dans les options
+    _active_labels = [cls.tab_label() for cls in _active_tests if hasattr(cls, "tab_label")]
+
     _pdf_opts_key = f"pdf_opts_{cid}"
-    if _pdf_opts_key not in S:
-        S[_pdf_opts_key] = {s: True for s in _ALL_SECTIONS}
+    # Réinitialiser si la liste des tests a changé
+    _known = set(S.get(_pdf_opts_key, {}).keys()) - {"Évolution graphique"}
+    if _known != set(_active_labels):
+        S[_pdf_opts_key] = {lbl: True for lbl in _active_labels}
+        S[_pdf_opts_key]["Évolution graphique"] = True
 
     with st.expander("⚙️ Options du rapport PDF", expanded=False):
-        st.caption("Décochez les sections à exclure du rapport.")
-        _opts_cols = st.columns(5)
-        for _si, _sname in enumerate(_ALL_SECTIONS):
+        st.caption("Décochez les tests à exclure du rapport.")
+        _n_cols = min(len(_active_labels) + 1, 5)
+        _opts_cols = st.columns(_n_cols)
+        for _si, _sname in enumerate(_active_labels):
             _val = S[_pdf_opts_key].get(_sname, True)
-            _new = _opts_cols[_si % 4].checkbox(_sname, value=_val, key=f"pdfsec_{cid}_{_si}")
+            _new = _opts_cols[_si % _n_cols].checkbox(
+                _sname, value=_val, key=f"pdfsec_{cid}_{_si}")
             S[_pdf_opts_key][_sname] = _new
+        # Graphiques toujours en dernier
+        _gc_val = S[_pdf_opts_key].get("Évolution graphique", True)
+        _gc_new = _opts_cols[len(_active_labels) % _n_cols].checkbox(
+            "📈 Graphiques", value=_gc_val, key=f"pdfsec_{cid}_charts")
+        S[_pdf_opts_key]["Évolution graphique"] = _gc_new
 
-    _excluded = {s for s, v in S[_pdf_opts_key].items() if not v} - {"Évolution graphique"}
+    _excluded    = {s for s, v in S[_pdf_opts_key].items() if not v and s != "Évolution graphique"}
     _show_charts = S[_pdf_opts_key].get("Évolution graphique", True)
 
     with col_pdf:
