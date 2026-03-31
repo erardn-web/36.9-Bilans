@@ -206,9 +206,11 @@ def draw_cover_canvas(canvas, doc,
         canvas.setFont(FR, 9)
         canvas.drawString(nx, H - 1.55 * cm, "36.9 Bilans — Synthèse (suite)")
 
-        ia_x, ia_bottom, ia_w, ia_h = get_ia_frame()
+        # Barre terracotta : de footer_top jusqu'au bas du header (H-2.5cm)
+        _footer_top = FOOTER_H - 0.10 * cm
+        _bar_top    = H - 2.5 * cm
         canvas.setFillColor(TERRA)
-        canvas.rect(M, ia_bottom, 2, H - 2.5 * cm - ia_bottom, fill=1, stroke=0)
+        canvas.rect(M, _footer_top, 2, _bar_top - _footer_top, fill=1, stroke=0)
 
         foot_y = FOOTER_H - 0.10 * cm
         canvas.setStrokeColor(GRIS_BORD); canvas.setLineWidth(0.4)
