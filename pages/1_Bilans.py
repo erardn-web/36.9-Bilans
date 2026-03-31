@@ -837,7 +837,11 @@ def render_evolution():
             "📈 Graphiques", value=_gc_val, key=f"pdfsec_{cid}_charts")
         S[_pdf_opts_key]["Évolution graphique"] = _gc_new
 
-    _excluded    = {s for s, v in S[_pdf_opts_key].items() if not v and s != "Évolution graphique"}
+    # Construire excluded_test_ids : test_id() des tests dont le tab_label est décoché
+    _label_to_tid = {cls.tab_label(): cls.test_id()
+                     for cls in _active_tests if hasattr(cls, "tab_label") and hasattr(cls, "test_id")}
+    _excluded    = {_label_to_tid[lbl] for lbl, v in S[_pdf_opts_key].items()
+                    if not v and lbl in _label_to_tid}
     _show_charts = S[_pdf_opts_key].get("Évolution graphique", True)
 
     with col_pdf:
@@ -848,7 +852,7 @@ def render_evolution():
                 analyse_text=analyse_txt,
                 template_id=_tid, template_nom=_tnom,
                 medecin_info=_medecin_info,
-                excluded_sections=_excluded,
+                excluded_test_ids=_excluded,
                 show_charts=_show_charts)
         except Exception as e:
             pdf_data = None
