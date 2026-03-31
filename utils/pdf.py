@@ -1855,7 +1855,7 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
     # Page 2+ IA (suite) : frame pleine hauteur de contenu
     cont_frame = Frame(1.5*cm, 1.8*cm,
         A4[0]-3*cm, A4[1]-3.8*cm,
-        leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0, id="covercont")
+        leftPadding=0, rightPadding=0, topPadding=28, bottomPadding=0, id="covercont")
     content_frame = Frame(1.5*cm, 1.8*cm,
         A4[0]-3*cm, A4[1]-3.8*cm, id="content")
 
@@ -2567,7 +2567,7 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         leftPadding=0, rightPadding=0, topPadding=22, bottomPadding=0, id="cover")
     cont_frame = Frame(1.5*cm, 1.8*cm,
         A4[0]-3*cm, A4[1]-3.8*cm,
-        leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0, id="covercont")
+        leftPadding=0, rightPadding=0, topPadding=28, bottomPadding=0, id="covercont")
     content_frame = Frame(1.5*cm, 1.8*cm,
         A4[0]-3*cm, A4[1]-3.8*cm, id="content")
 
