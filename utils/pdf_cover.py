@@ -365,8 +365,10 @@ def draw_cover_canvas(canvas, doc,
 
         # Clipper proprement pour ne pas mordre sur le footer
         canvas.saveState()
-        canvas.clipRect(text_x, footer_top + 0.10 * cm,
-                        text_w, text_top - footer_top, stroke=0)
+        p_clip = canvas.beginPath()
+        p_clip.rect(text_x, footer_top + 0.10 * cm,
+                    text_w, text_top - footer_top)
+        canvas.clipPath(p_clip, stroke=0, fill=0)
         p.drawOn(canvas, text_x, text_top - p_h)
         canvas.restoreState()
 
