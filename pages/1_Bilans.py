@@ -941,7 +941,7 @@ def render_evolution():
         _excluded     = set()
         _ordered_tids = []
 
-    # Clé de cache PDF : invalide si options, ordre ou bilans changent
+    # PDF généré uniquement sur clic — évite le spinner en boucle
     _pdf_cache_key = f"pdf_cache_{cid}"
     _pdf_sig_key   = f"pdf_sig_{cid}"
     _current_sig   = str((
@@ -951,26 +951,14 @@ def render_evolution():
         _show_charts,
         S.get(f"analyse_text_{cid}", "")[:50],
     ))
-    # Régénérer uniquement si la signature a changé
+    # Invalider le cache si la signature a changé (bilans, options…)
     if S.get(_pdf_sig_key) != _current_sig:
-        try:
-            analyse_txt   = S.get(f"analyse_text_{cid}") or load_analyse_cas(cid)
-            _medecin_info = get_medecin_destinataire(cid)
-            S[_pdf_cache_key] = generate_pdf(be, info,
-                analyse_text=analyse_txt,
-                template_id=_tid, template_nom=_tnom,
-                medecin_info=_medecin_info,
-                excluded_test_ids=_excluded,
-                ordered_test_ids=_ordered_tids,
-                show_charts=_show_charts)
-            S[_pdf_sig_key] = _current_sig
-        except Exception as e:
-            S[_pdf_cache_key] = None
-            st.error(f"Erreur PDF : {e}")
+        S.pop(_pdf_cache_key, None)
 
     with col_pdf:
         pdf_data = S.get(_pdf_cache_key)
         if pdf_data:
+            # PDF en cache → bouton de téléchargement direct
             st.download_button(
                 label=f"📄 Exporter PDF ({n_sel} bilan{'s' if n_sel>1 else ''})",
                 data=pdf_data,
@@ -978,6 +966,25 @@ def render_evolution():
                 mime="application/pdf",
                 type="primary",
             )
+        else:
+            # Pas de cache → bouton de génération explicite
+            if st.button(f"📄 Générer PDF ({n_sel} bilan{'s' if n_sel>1 else ''})",
+                         type="primary", key=f"gen_pdf_{cid}"):
+                with st.spinner("Génération du PDF…"):
+                    try:
+                        analyse_txt   = S.get(f"analyse_text_{cid}") or load_analyse_cas(cid)
+                        _medecin_info = get_medecin_destinataire(cid)
+                        S[_pdf_cache_key] = generate_pdf(be, info,
+                            analyse_text=analyse_txt,
+                            template_id=_tid, template_nom=_tnom,
+                            medecin_info=_medecin_info,
+                            excluded_test_ids=_excluded,
+                            ordered_test_ids=_ordered_tids,
+                            show_charts=_show_charts)
+                        S[_pdf_sig_key] = _current_sig
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erreur PDF : {e}")
 
     _ensure_registry()
     tc_key = f"test_classes_ev_{cid}"
