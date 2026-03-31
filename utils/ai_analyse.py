@@ -44,6 +44,20 @@ def _format_bilans(bilans_df, module: str) -> str:
     bilans_df["date_bilan"] = pd.to_datetime(bilans_df["date_bilan"], errors="coerce")
     bilans_df = bilans_df.sort_values("date_bilan").reset_index(drop=True)
 
+    import json as _json_ai
+
+    # Mapping test_id → préfixes de colonnes (filtre les tests désactivés)
+    _TID_PREFIXES = {
+        "spirometrie": ["spiro_"], "six_mwt": ["mwt_"], "sts": ["sts_"],
+        "mmrc": ["mmrc_"], "cat": ["cat_score","cat_interpretation"],
+        "bode": ["bode_"], "tinetti": ["tinetti_"], "berg": ["berg_"],
+        "tug": ["tug_"], "unipodal": ["unipodal_"], "bolt": ["bolt_"],
+        "nijmegen": ["nij_"], "hvt": ["hvt_"], "eva": ["eva"],
+        "lombalgie": ["schober","luomajoki"], "testing_mi": ["musc_"],
+        "leg_press": ["lp_"], "had": ["had_a_score","had_d_score"],
+        "sf12": ["sf12_pcs","sf12_mcs"],
+    }
+
     lines = []
     for i, (_, row) in enumerate(bilans_df.iterrows()):
         d       = row["date_bilan"]
@@ -51,11 +65,34 @@ def _format_bilans(bilans_df, module: str) -> str:
         type_b  = row.get("type_bilan","") or ""
         lines.append(f"\n--- Bilan {i+1} — {dstr} ({type_b}) ---")
 
+        # Tests actifs de CE bilan spécifiquement
+        _ta_raw = str(row.get("tests_actifs","") or "")
+        _active_tids = set()
+        if _ta_raw and _ta_raw not in ("","[]","None","nan"):
+            try:
+                _active_tids = set(_json_ai.loads(_ta_raw))
+            except Exception:
+                pass
+
         skip = {"bilan_id","cas_id","patient_id","cabinet_id","date_bilan",
                 "type_bilan","praticien","notes_generales","date_creation",
-                "donnees","analyse_ia"}
+                "donnees","analyse_ia","tests_actifs"}
+
+        def _col_active_for_row(col):
+            if not _active_tids:
+                return True  # rétro-compat : pas de filtre si tests_actifs absent
+            _always = {"diagnostic_prescription","diag_notes","poids_kg","taille_cm",
+                       "bmi","fc_repos","fr_repos","ta_repos","spo2_repos"}
+            if col in _always:
+                return True
+            for tid, pfxs in _TID_PREFIXES.items():
+                if any(col == p or col.startswith(p) for p in pfxs):
+                    return tid in _active_tids
+            return True  # colonnes non mappées → inclure
+
         for col in bilans_df.columns:
             if col in skip: continue
+            if not _col_active_for_row(col): continue
             val = row.get(col,"")
             if val is None or str(val).strip() in ("","0","0.0","None","nan"): continue
             # Exclure les items individuels (had_a1, sf12_q1…)
