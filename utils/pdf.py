@@ -1830,7 +1830,9 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
         return generate_pdf_generic(bilans_df, patient_info,
                                     analyse_text=analyse_text,
                                     template_nom=template_nom,
-                                    medecin_info=medecin_info)
+                                    medecin_info=medecin_info,
+                                    excluded_sections=excluded_sections,
+                                    show_charts=show_charts)
 
     buffer = io.BytesIO()
 
@@ -2545,7 +2547,7 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
 # Scores avec leurs métadonnées cliniques :
 # (colonne, label, unité, seuil_val, seuil_label, higher_is_better)
 _CHART_SPECS = [
-    ("mwt_distance",    "TM6 — Distance",       "m",   400,  "≥ 400 m",   True),
+    ("mwt_distance",    "6MWT — Distance",      "m",   400,  "≥ 400 m",   True),
     ("tinetti_total",   "Tinetti Total",         "/28", 19,   "≥ 19",      True),
     ("tinetti_eq_score","Tinetti Équilibre",     "/16", 12,   "≥ 12",      True),
     ("tinetti_ma_score","Tinetti Marche",        "/12", 9,    "≥ 9",       True),
@@ -2703,7 +2705,9 @@ def _make_evolution_charts(bilans_df, n_bilans, page_w):
 def generate_pdf_generic(bilans_df, patient_info: dict,
                           analyse_text: str = "",
                           template_nom: str = "Bilan",
-                          medecin_info: dict = None) -> bytes:
+                          medecin_info: dict = None,
+                          excluded_sections: set = None,
+                          show_charts: bool = True) -> bytes:
     """
     PDF d'évolution générique — affiche tous les champs non vides,
     groupés par test. Fonctionne pour n'importe quel template.
@@ -2788,7 +2792,13 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         "mmrc_grade": "Dyspnée mMRC (grade)", "mmrc_interpretation": "Interprétation mMRC",
         "cat_score": "Score CAT", "cat_interpretation": "Interprétation CAT",
         "spo2": "SpO₂ (%)", "spo2_effort": "SpO₂ effort (%)",
-        "mwt_distance": "TM6 — Distance (m)", "mwt_interpretation": "Interprétation TM6",
+        "mwt_distance": "6MWT — Distance (m)", "mwt_interpretation": "Interprétation 6MWT",
+        "mwt_spo2_avant": "6MWT — SpO₂ avant (%)", "mwt_spo2_apres": "6MWT — SpO₂ après (%)",
+        "mwt_spo2_min": "6MWT — SpO₂ min (%)",
+        "mwt_fc_avant": "6MWT — FC avant (bpm)", "mwt_fc_apres": "6MWT — FC après (bpm)",
+        "mwt_dyspnee_avant": "6MWT — Dyspnée avant", "mwt_dyspnee_apres": "6MWT — Dyspnée après",
+        "mwt_fatigue_avant": "6MWT — Fatigue avant", "mwt_fatigue_apres": "6MWT — Fatigue après",
+        "mwt_aide_technique": "6MWT — Aide technique",
         "bode_score": "Score BODE", "bode_interpretation": "Interprétation BODE",
         # SHV / HVT
         "bolt_score": "Score BOLT", "bolt_interpretation": "Interprétation BOLT",
@@ -2852,7 +2862,7 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             "mob","aide","incidents","classification","groupe_clinique",
             "diag_notes","appreciation","objectifs","traitement","frequence",
             "posture","luomajoki","spiro","gold","spo2","fc_","mmrc",
-            "bode","bmi","mwt_","diagnostic_prescription","musc_notes",
+            "bode","bmi","mwt_","diagnostic_prescription","musc_notes","fc_repos","fr_repos","ta_repos","spo2_repos",
             "bolt","hvt","nij","tinetti","unipodal","sts","tug","berg",
         ]
         if any(p in col for p in keep_patterns):
@@ -2891,13 +2901,25 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             ("Respiration & BPCO", [
                 "spiro_vems_pct","spiro_cvf","spiro_vems_cvf","spiro_gold",
                 "mmrc_grade","mmrc_interpretation",
-                "spo2","spo2_effort",
+                "spo2","spo2_effort","spo2_repos",
                 "cat_score","cat_interpretation",
                 "bode_score","bode_interpretation",
-                "mwt_distance","mwt_interpretation",
                 "bolt_score","bolt_interpretation",
                 "hvt_symptomes_reproduits",
                 "nij_score","nij_interpretation",
+            ]),
+            ("Capacité fonctionnelle & 6MWT", [
+                "mwt_distance","mwt_interpretation",
+                "mwt_spo2_avant","mwt_spo2_apres","mwt_spo2_min",
+                "mwt_fc_avant","mwt_fc_apres",
+                "mwt_dyspnee_avant","mwt_dyspnee_apres",
+                "mwt_fatigue_avant","mwt_fatigue_apres",
+                "mwt_aide_technique",
+                "sts_1min_reps","sts_1min_interpretation",
+                "sts_30s_reps","sts_30s_interpretation",
+                "lp_reps","lp_interpretation",
+                "bmi","bmi_interpretation",
+                "fc_repos","fr_repos","ta_repos",
             ]),
             ("Équilibre & Chute", [
                 "tinetti_eq_score","tinetti_ma_score","tinetti_total","tinetti_interpretation",
@@ -2906,33 +2928,36 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
                 "unipodal_d_ferme","unipodal_g_ferme",
                 "tug_temps","tug_interpretation",
             ]),
-            ("Capacité fonctionnelle", [
-                "sts_1min_reps","sts_1min_interpretation",
-                "sts_30s_reps","sts_30s_interpretation",
-                "bmi","bmi_interpretation",
+            ("Force musculaire", [
+                "musc_notes",
             ]),
             ("Douleur & Lombalgie", [
                 "eva","schober","luomajoki",
                 "posture","groupe_clinique",
             ]),
             ("Données générales", [
-                "diagnostic_prescription","musc_notes","diag_notes",
+                "diagnostic_prescription","diag_notes",
                 "appreciation","objectifs","traitement","frequence",
             ]),
         ]
 
         # Construire un ordre groupé des colonnes actives
+        _excl = set(excluded_sections or [])
         active_set = set(active_cols)
         ordered_cols = []
         seen = set()
         for _grp_name, _grp_cols in _GROUPS:
+            if _grp_name in _excl:
+                # Marquer quand même comme vus pour ne pas les mettre dans "Autres"
+                seen.update(c for c in _grp_cols if c in active_set)
+                continue
             grp_active = [c for c in _grp_cols if c in active_set and c not in seen]
             if grp_active:
                 ordered_cols.append((_grp_name, grp_active))
                 seen.update(grp_active)
-        # Colonnes non classifiées à la fin
+        # Colonnes non classifiées à la fin (sauf si "Autres mesures" exclu)
         ungrouped = [c for c in active_cols if c not in seen]
-        if ungrouped:
+        if ungrouped and "Autres mesures" not in _excl:
             ordered_cols.append(("Autres mesures", ungrouped))
 
         col_w = [6*cm] + [(w - 6*cm) / n_bilans] * n_bilans
@@ -3023,12 +3048,13 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             story.append(Spacer(1, 0.15*cm))
 
         # ── Graphiques d'évolution ─────────────────────────────────────────────
-        story.append(Spacer(1, 0.5*cm))
-        charts = _make_evolution_charts(bilans_df, n_bilans, w)
-        if charts:
-            story.append(section_band("Évolution graphique"))
-            story.append(Spacer(1, 0.3*cm))
-            story.extend(charts)
+        if show_charts and "Évolution graphique" not in (excluded_sections or set()):
+            story.append(Spacer(1, 0.5*cm))
+            charts = _make_evolution_charts(bilans_df, n_bilans, w)
+            if charts:
+                story.append(section_band("Évolution graphique"))
+                story.append(Spacer(1, 0.3*cm))
+                story.extend(charts)
 
         # ── Notes générales ────────────────────────────────────────────────────
         any_notes = any(
