@@ -834,29 +834,33 @@ def render_evolution():
     S[_pdf_order_key] = _current_order
 
     with st.expander("⚙️ Options du rapport PDF", expanded=False):
-        st.caption("Décochez pour exclure · ▲▼ pour réordonner")
-        st.markdown("")
+        st.caption("Décochez pour exclure · Numérotez pour ordonner (1 = premier)")
 
+        _n_tests = len(S[_pdf_order_key])
+        # Afficher en grille : colonne position | colonne nom | colonne checkbox
+        _new_positions = {}
         for _oi, _sname in enumerate(S[_pdf_order_key]):
-            _c1, _c2, _c3, _c4 = st.columns([3, 0.5, 0.5, 0.5])
-            # Checkbox inclusion
+            _cc1, _cc2, _cc3 = st.columns([0.6, 3.5, 0.8])
+            # Input numérique pour la position
+            _pos_val = _oi + 1
+            _new_pos = _cc1.number_input(
+                "Pos", min_value=1, max_value=_n_tests, value=_pos_val,
+                step=1, key=f"pdf_pos_{cid}_{_oi}", label_visibility="collapsed")
+            _cc2.markdown(f"<div style='padding-top:6px'>{_sname}</div>",
+                          unsafe_allow_html=True)
             _val = S[_pdf_opts_key].get(_sname, True)
-            _new = _c1.checkbox(_sname, value=_val, key=f"pdfsec_{cid}_{_oi}",
-                                 label_visibility="visible")
+            _new = _cc3.checkbox("✓", value=_val, key=f"pdfsec_{cid}_{_oi}",
+                                  label_visibility="collapsed")
             S[_pdf_opts_key][_sname] = _new
-            # Boutons réordonnancement
-            if _oi > 0:
-                if _c2.button("▲", key=f"pdf_up_{cid}_{_oi}", use_container_width=True):
-                    _ord = S[_pdf_order_key]
-                    _ord[_oi-1], _ord[_oi] = _ord[_oi], _ord[_oi-1]
-                    S[_pdf_order_key] = _ord
-                    st.rerun()
-            if _oi < len(S[_pdf_order_key]) - 1:
-                if _c3.button("▼", key=f"pdf_dn_{cid}_{_oi}", use_container_width=True):
-                    _ord = S[_pdf_order_key]
-                    _ord[_oi], _ord[_oi+1] = _ord[_oi+1], _ord[_oi]
-                    S[_pdf_order_key] = _ord
-                    st.rerun()
+            _new_positions[_sname] = int(_new_pos)
+
+        # Appliquer le nouvel ordre sur changement (résolution des conflits)
+        # Si deux tests ont la même position, le dernier arrivé prend la place
+        _sorted_names = sorted(_new_positions.keys(),
+                                key=lambda n: (_new_positions[n], S[_pdf_order_key].index(n)))
+        if _sorted_names != S[_pdf_order_key]:
+            S[_pdf_order_key] = _sorted_names
+            st.rerun()
 
         st.markdown("---")
         _gc_val = S[_pdf_opts_key].get("Évolution graphique", True)
