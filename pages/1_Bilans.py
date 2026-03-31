@@ -802,17 +802,45 @@ def render_evolution():
     if _ai_key not in S:
         S[_ai_key] = load_analyse_cas(cid)
 
+    _tid  = snap.get("template_id","") or cas.get("template_id","") or "shv"
+    _tnom = snap.get("nom","Bilan")
+
+    # ── Options du rapport PDF ────────────────────────────────────────────────
+    _ALL_SECTIONS = [
+        "Respiration & BPCO",
+        "Capacité fonctionnelle & 6MWT",
+        "Équilibre & Chute",
+        "Force musculaire",
+        "Douleur & Lombalgie",
+        "Données générales",
+        "Autres mesures",
+        "Évolution graphique",
+    ]
+    _pdf_opts_key = f"pdf_opts_{cid}"
+    if _pdf_opts_key not in S:
+        S[_pdf_opts_key] = {s: True for s in _ALL_SECTIONS}
+
+    with st.expander("⚙️ Options du rapport PDF", expanded=False):
+        st.caption("Décochez les sections à exclure du rapport.")
+        _opts_cols = st.columns(4)
+        for _si, _sname in enumerate(_ALL_SECTIONS):
+            _val = S[_pdf_opts_key].get(_sname, True)
+            _new = _opts_cols[_si % 4].checkbox(_sname, value=_val, key=f"pdfsec_{cid}_{_si}")
+            S[_pdf_opts_key][_sname] = _new
+
+    _excluded = {s for s, v in S[_pdf_opts_key].items() if not v} - {"Évolution graphique"}
+    _show_charts = S[_pdf_opts_key].get("Évolution graphique", True)
+
     with col_pdf:
-        _tid  = snap.get("template_id","") or cas.get("template_id","") or "shv"
-        _tnom = snap.get("nom","Bilan")
         try:
-            # Priorité : widget text_area (valeur courante) > session > GSheets
-            analyse_txt = S.get(f"analyse_text_{cid}") or load_analyse_cas(cid)
+            analyse_txt   = S.get(f"analyse_text_{cid}") or load_analyse_cas(cid)
             _medecin_info = get_medecin_destinataire(cid)
             pdf_data = generate_pdf(be, info,
                 analyse_text=analyse_txt,
                 template_id=_tid, template_nom=_tnom,
-                medecin_info=_medecin_info)
+                medecin_info=_medecin_info,
+                excluded_sections=_excluded,
+                show_charts=_show_charts)
         except Exception as e:
             pdf_data = None
             st.error(f"Erreur PDF : {e}")
