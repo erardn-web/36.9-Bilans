@@ -833,56 +833,80 @@ def render_evolution():
     _current_order += [l for l in _active_labels if l not in _current_order]
     S[_pdf_order_key] = _current_order
 
+    # ── État : liste ordonnée des tests à imprimer ─────────────────────────
+    _pdf_selected_key = f"pdf_selected_{cid}"   # liste ordonnée (à imprimer)
+    # Initialiser si nouveau cas
+    if _pdf_selected_key not in S:
+        S[_pdf_selected_key] = []               # vide par défaut
+    _selected_ordered = S[_pdf_selected_key]
+    _selected_set     = set(_selected_ordered)
+    _available        = [lbl for lbl in _active_labels if lbl not in _selected_set]
+
     with st.expander("⚙️ Options du rapport PDF", expanded=False):
-        st.caption("Décochez pour exclure · Numérotez pour ordonner (1 = premier)")
+        # ── Zone sélectionnée (ordonnée) ──────────────────────────────────
+        if _selected_ordered:
+            st.caption("✅ **Dans le rapport** — cliquer pour retirer")
+            for _si, _sname in enumerate(_selected_ordered):
+                _col_num, _col_lbl, _col_rm = st.columns([0.4, 3.5, 0.8])
+                _col_num.markdown(
+                    f"<div style='padding-top:6px;color:#2B57A7;font-weight:700'>"
+                    f"{_si+1}</div>", unsafe_allow_html=True)
+                _col_lbl.markdown(
+                    f"<div style='padding-top:6px'>{_sname}</div>",
+                    unsafe_allow_html=True)
+                if _col_rm.button("✕", key=f"pdf_rm_{cid}_{_si}",
+                                   use_container_width=True):
+                    S[_pdf_selected_key] = [x for x in _selected_ordered
+                                             if x != _sname]
+                    st.rerun()
+        else:
+            st.caption("*(aucun test sélectionné — cliquer ci-dessous pour ajouter)*")
 
-        _n_tests = len(S[_pdf_order_key])
-        # Afficher en grille : colonne position | colonne nom | colonne checkbox
-        _new_positions = {}
-        for _oi, _sname in enumerate(S[_pdf_order_key]):
-            _cc1, _cc2, _cc3 = st.columns([0.6, 3.5, 0.8])
-            # Input numérique pour la position
-            _pos_val = _oi + 1
-            _new_pos = _cc1.number_input(
-                "Pos", min_value=1, max_value=_n_tests, value=_pos_val,
-                step=1, key=f"pdf_pos_{cid}_{_oi}", label_visibility="collapsed")
-            _cc2.markdown(f"<div style='padding-top:6px'>{_sname}</div>",
-                          unsafe_allow_html=True)
-            _val = S[_pdf_opts_key].get(_sname, True)
-            _new = _cc3.checkbox("✓", value=_val, key=f"pdfsec_{cid}_{_oi}",
-                                  label_visibility="collapsed")
-            S[_pdf_opts_key][_sname] = _new
-            _new_positions[_sname] = int(_new_pos)
+        if _selected_ordered:
+            st.markdown("---")
 
-        # Appliquer le nouvel ordre sur changement (résolution des conflits)
-        # Si deux tests ont la même position, le dernier arrivé prend la place
-        _sorted_names = sorted(_new_positions.keys(),
-                                key=lambda n: (_new_positions[n], S[_pdf_order_key].index(n)))
-        S[_pdf_order_key] = _sorted_names
+        # ── Zone disponible (non sélectionnée) ────────────────────────────
+        if _available:
+            st.caption("➕ **Disponibles** — cliquer pour ajouter au rapport")
+            _av_cols = st.columns(min(len(_available), 4))
+            for _ai, _aname in enumerate(_available):
+                if _av_cols[_ai % 4].button(
+                        _aname, key=f"pdf_add_{cid}_{_ai}",
+                        use_container_width=True):
+                    S[_pdf_selected_key] = _selected_ordered + [_aname]
+                    st.rerun()
+        else:
+            st.caption("*(tous les tests sont dans le rapport)*")
 
         st.markdown("---")
-        _gc_val = S[_pdf_opts_key].get("Évolution graphique", True)
+        _gc_val = S.get(f"pdf_charts_{cid}", True)
         _gc_new = st.checkbox("📈 Graphiques d'évolution", value=_gc_val,
                               key=f"pdfsec_{cid}_charts")
-        S[_pdf_opts_key]["Évolution graphique"] = _gc_new
+        S[f"pdf_charts_{cid}"] = _gc_new
 
-    # Construire excluded_test_ids + ordered_test_ids
+    # Construire excluded_test_ids + ordered_test_ids depuis la sélection ordonnée
     _label_to_tid = {cls.tab_label(): cls.test_id()
                      for cls in _active_tests if hasattr(cls, "tab_label") and hasattr(cls, "test_id")}
-    _excluded     = {_label_to_tid[lbl] for lbl, v in S[_pdf_opts_key].items()
-                     if not v and lbl in _label_to_tid}
-    _show_charts  = S[_pdf_opts_key].get("Évolution graphique", True)
-    # Ordre souhaité (uniquement les tests inclus)
-    _ordered_tids = [_label_to_tid[lbl] for lbl in S[_pdf_order_key]
-                     if lbl in _label_to_tid and _label_to_tid[lbl] not in _excluded]
+    # Inclus = tests dans _selected_ordered ; exclus = tous les autres
+    _selected_ordered = S.get(_pdf_selected_key, [])
+    _selected_set     = set(_selected_ordered)
+    _excluded         = {_label_to_tid[lbl] for lbl in _active_labels
+                         if lbl not in _selected_set and lbl in _label_to_tid}
+    _show_charts      = S.get(f"pdf_charts_{cid}", True)
+    _ordered_tids     = [_label_to_tid[lbl] for lbl in _selected_ordered
+                         if lbl in _label_to_tid]
+    # Si rien de sélectionné : tout imprimer dans l'ordre par défaut
+    if not _selected_ordered:
+        _excluded     = set()
+        _ordered_tids = []
 
     # Clé de cache PDF : invalide si options, ordre ou bilans changent
     _pdf_cache_key = f"pdf_cache_{cid}"
     _pdf_sig_key   = f"pdf_sig_{cid}"
     _current_sig   = str((
         sorted(be["bilan_id"].tolist()),
-        sorted(_excluded),
-        _ordered_tids,
+        tuple(sorted(_excluded)),
+        tuple(_ordered_tids),
         _show_charts,
         S.get(f"analyse_text_{cid}", "")[:50],
     ))
