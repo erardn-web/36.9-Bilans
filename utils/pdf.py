@@ -1819,7 +1819,7 @@ def build_leg_press(story, styles):
 def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
                   template_id: str = "shv", template_nom: str = "Bilan",
                   medecin_info: dict = None,
-                  excluded_sections: set = None,
+                  excluded_test_ids: set = None,
                   show_charts: bool = True) -> bytes:
     """
     Génère le PDF d'évolution.
@@ -1833,7 +1833,7 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
                                     analyse_text=analyse_text,
                                     template_nom=template_nom,
                                     medecin_info=medecin_info,
-                                    excluded_sections=excluded_sections,
+                                    excluded_sections=excluded_test_ids,
                                     show_charts=show_charts)
 
     buffer = io.BytesIO()
@@ -2638,7 +2638,7 @@ def _make_sparkline_png(title, values, bilans_labels, unit="",
     return buf.getvalue()
 
 
-def _make_evolution_charts(bilans_df, n_bilans, page_w):
+def _make_evolution_charts(bilans_df, n_bilans, page_w, excluded_test_ids=None):
     """
     Génère les mini-graphiques d'évolution pour les scores numériques disponibles.
     Retourne une liste de Flowables (Table de 2 colonnes).
@@ -2652,7 +2652,11 @@ def _make_evolution_charts(bilans_df, n_bilans, page_w):
     chart_h = chart_w * 0.55           # ratio hauteur
 
     charts_png = []
+    _excl_ch = set(excluded_test_ids or [])
     for col, label, unit, ref_val, ref_lbl, higher_ok in _CHART_SPECS:
+        # Ignorer si le test est exclu
+        if any(col == tid or col.startswith(tid + "_") for tid in _excl_ch):
+            continue
         # Extraire les valeurs numériques
         vals = []
         for _, row in bilans_df.iterrows():
@@ -2932,9 +2936,19 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
                                       "musc_notes"]),
         ]
 
-        # Filtrer par excluded_sections (noms de tests)
-        _excl      = set(excluded_sections or [])
-        active_set = set(active_cols)
+        # excluded_sections contient des test_ids (préfixes de colonnes)
+        # ex: {"tinetti", "mwt", "bolt"} → masquer toutes colonnes tinetti_*, mwt_*, etc.
+        _excl_ids  = set(excluded_sections or [])
+
+        def _col_excluded(col):
+            """Retourne True si la colonne appartient à un test exclu (par préfixe)."""
+            for tid in _excl_ids:
+                if col == tid or col.startswith(tid + "_"):
+                    return True
+            return False
+
+        # Retirer les colonnes exclues de active_set
+        active_set = {col for col in active_cols if not _col_excluded(col)}
         seen       = set()
 
         col_w = [6*cm] + [(w - 6*cm) / n_bilans] * n_bilans
@@ -2958,11 +2972,9 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         story.append(Spacer(1, 0.3*cm))
 
         for test_name, test_cols in _TESTS:
-            if test_name in _excl:
-                seen.update(test_cols)
-                continue
-            # Ne garder que les colonnes actives de ce test
-            grp_active = [col for col in test_cols if col in active_set and col not in seen]
+            # Ne garder que les colonnes actives de ce test (exclues déjà filtrées dans active_set)
+            grp_active = [col for col in test_cols
+                          if col in active_set and col not in seen]
             seen.update(test_cols)
             if not grp_active:
                 continue
@@ -3037,9 +3049,10 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             story.append(Spacer(1, 0.25*cm))
 
         # ── Graphiques d'évolution ─────────────────────────────────────────────
-        if show_charts and "Évolution graphique" not in (excluded_sections or set()):
+        if show_charts:
             story.append(Spacer(1, 0.5*cm))
-            charts = _make_evolution_charts(bilans_df, n_bilans, w)
+            charts = _make_evolution_charts(bilans_df, n_bilans, w,
+                                            excluded_test_ids=set(excluded_sections or []))
             if charts:
                 story.append(section_band("Évolution graphique"))
                 story.append(Spacer(1, 0.3*cm))
