@@ -3036,12 +3036,7 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             ("STS 1 minute",         ["sts_1min_reps","sts_1min_interpretation"]),
             ("STS 30 secondes",      ["sts_30s_reps","sts_30s_interpretation"]),
             ("Leg Press (1RM)",      ["lp_reps","lp_interpretation"]),
-            ("Testing musculaire MI",["musc_ankle_pf_d","musc_ankle_pf_g",
-                                      "musc_ankle_df_d","musc_ankle_df_g",
-                                      "musc_knee_ext_d","musc_knee_ext_g",
-                                      "musc_knee_flex_d","musc_knee_flex_g",
-                                      "musc_hip_abd_d","musc_hip_abd_g",
-                                      "musc_notes"]),
+            ("Testing musculaire MI", None),  # None = capturer TOUTES les colonnes musc_*
             ("Test Unipodal",        ["unipodal_d_ouvert","unipodal_g_ouvert",
                                       "unipodal_d_ferme","unipodal_g_ferme"]),
             ("Tinetti",              ["tinetti_eq_score","tinetti_ma_score",
@@ -3133,6 +3128,13 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             _TESTS_ORDERED = _TESTS
 
         for test_name, test_cols in _TESTS_ORDERED:
+            # None = capturer toutes les colonnes du préfixe correspondant
+            if test_cols is None:
+                tid = _TEST_NAME_TO_TID.get(test_name, "")
+                prefixes = _TID_TO_PREFIXES.get(tid, [])
+                test_cols = [col for col in active_set
+                             if any(col == p or col.startswith(p) for p in prefixes)
+                             and col not in seen]
             # Ne garder que les colonnes actives de ce test (exclues déjà filtrées dans active_set)
             grp_active = [col for col in test_cols
                           if col in active_set and col not in seen]
