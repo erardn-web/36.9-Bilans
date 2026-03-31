@@ -1,6 +1,7 @@
 """
 utils/pdf_cover.py — Page de garde moderne (canvas-based)
 Design : blanc épuré, accents bleu/terracotta, style clinique suisse.
+Appelé via onPage d'un PageTemplate dédié dans generate_pdf.
 """
 
 import os
@@ -25,7 +26,7 @@ _BLEU_BG   = colors.HexColor("#E8EEF9")
 _CARD_BG   = colors.HexColor("#F8F9FC")
 _WHITE     = colors.white
 
-M = 1.5 * cm
+M = 1.5 * cm  # marge latérale standard
 
 
 def _find_logo():
@@ -44,7 +45,10 @@ def _find_logo():
 def draw_cover_canvas(canvas, doc, patient_info: dict, bilans_df: pd.DataFrame,
                       labels: list, analyse_text: str,
                       template_nom: str, medecin_info: dict):
-    """Dessine la page de garde complète directement sur le canvas ReportLab."""
+    """
+    Dessine la page de garde complète directement sur le canvas ReportLab.
+    À appeler uniquement via make_cover_callback() → PageTemplate.onPage.
+    """
     canvas.saveState()
     W, H = A4
 
@@ -54,13 +58,13 @@ def draw_cover_canvas(canvas, doc, patient_info: dict, bilans_df: pd.DataFrame,
     canvas.setFillColor(_TERRA)
     canvas.rect(0, H - 7, W * 0.30, 2, fill=1, stroke=0)
 
-    # ── 2. Logo + identité cabinet ────────────────────────────────────────────
-    logo_h    = 0.85 * cm
-    logo_y    = H - 2.1 * cm
-    logo_x    = M
-    name_x    = M
-    logo_path = _find_logo()
+    # ── 2. Logo + identité cabinet (haut gauche) ──────────────────────────────
+    logo_h   = 0.85 * cm
+    logo_y   = H - 2.1 * cm
+    logo_x   = M
+    name_x   = M  # sera ajusté après le logo
 
+    logo_path = _find_logo()
     if logo_path:
         try:
             canvas.drawImage(logo_path, logo_x, logo_y,
@@ -122,6 +126,7 @@ def draw_cover_canvas(canvas, doc, patient_info: dict, bilans_df: pd.DataFrame,
 
     # ── 5. Zone hero ──────────────────────────────────────────────────────────
     y = sep_y - 0.88 * cm
+
     canvas.setFillColor(_TERRA)
     canvas.setFont("Helvetica-Bold", 8)
     canvas.drawString(M, y, "RAPPORT D'EVOLUTION")
@@ -129,7 +134,8 @@ def draw_cover_canvas(canvas, doc, patient_info: dict, bilans_df: pd.DataFrame,
     y -= 0.72 * cm
     canvas.setFillColor(_NOIR)
     canvas.setFont("Helvetica-Bold", 24)
-    canvas.drawString(M, y, str(template_nom or "Bilan"))
+    title = str(template_nom or "Bilan")
+    canvas.drawString(M, y, title)
 
     # Pill badge
     y -= 0.58 * cm
@@ -139,7 +145,7 @@ def draw_cover_canvas(canvas, doc, patient_info: dict, bilans_df: pd.DataFrame,
         if len(dates_ok) >= 2:
             y1 = dates_ok.iloc[0].strftime("%Y")
             y2 = dates_ok.iloc[-1].strftime("%Y")
-            date_rng = f"{y1}–{y2}" if y1 != y2 else y1
+            date_rng = f"{y1}-{y2}" if y1 != y2 else y1
         elif len(dates_ok) == 1:
             date_rng = dates_ok.iloc[0].strftime("%Y")
         else:
@@ -148,7 +154,7 @@ def draw_cover_canvas(canvas, doc, patient_info: dict, bilans_df: pd.DataFrame,
         date_rng = ""
 
     plural   = "s" if n_bilans > 1 else ""
-    pill_txt = f"{n_bilans} bilan{plural}  {'·  ' + date_rng if date_rng else ''}"
+    pill_txt = f"{n_bilans} bilan{plural}  {'+  ' + date_rng if date_rng else ''}"
     pill_w   = len(pill_txt) * 0.175 * cm + 1.1 * cm
     canvas.setFillColor(_BLEU_BG)
     canvas.roundRect(M, y - 0.08 * cm, pill_w, 0.44 * cm, 10, fill=1, stroke=0)
@@ -164,11 +170,13 @@ def draw_cover_canvas(canvas, doc, patient_info: dict, bilans_df: pd.DataFrame,
     mid_x    = M + card_w / 2
     hdr_h    = 0.52 * cm
 
+    # Fond blanc + bordure
     canvas.setFillColor(_WHITE)
     canvas.setStrokeColor(_GRIS_BORD)
     canvas.setLineWidth(0.5)
     canvas.roundRect(M, card_top - card_h, card_w, card_h, 5, fill=1, stroke=1)
 
+    # En-tête grisée (hack : roundRect puis rect blanc pour effacer arrondi bas)
     canvas.setFillColor(_CARD_BG)
     canvas.roundRect(M, card_top - hdr_h, card_w, hdr_h, 5, fill=1, stroke=0)
     canvas.setFillColor(_WHITE)
@@ -181,6 +189,7 @@ def draw_cover_canvas(canvas, doc, patient_info: dict, bilans_df: pd.DataFrame,
     canvas.setFont("Helvetica-Bold", 7)
     canvas.drawString(M + 0.35 * cm, card_top - 0.34 * cm, "PATIENT")
 
+    # Séparateurs internes
     canvas.setStrokeColor(_GRIS_BORD)
     canvas.setLineWidth(0.3)
     canvas.line(mid_x, card_top - hdr_h, mid_x, card_top - card_h)
@@ -198,6 +207,7 @@ def draw_cover_canvas(canvas, doc, patient_info: dict, bilans_df: pd.DataFrame,
         canvas.setFont("Helvetica-Bold", 9.5)
         canvas.drawString(cx, cy, v)
 
+    # Calculer âge
     age_str = "—"
     try:
         ddn_raw = patient_info.get("date_naissance", "")
@@ -205,9 +215,8 @@ def draw_cover_canvas(canvas, doc, patient_info: dict, bilans_df: pd.DataFrame,
             ddn_p = pd.to_datetime(str(ddn_raw), errors="coerce")
             if pd.notna(ddn_p):
                 today = _date.today()
-                age   = today.year - ddn_p.year - (
-                    (today.month, today.day) < (ddn_p.month, ddn_p.day))
-                age_str = f"{ddn_p.strftime('%d.%m.%Y')}  ·  {age} ans"
+                age   = today.year - ddn_p.year - ((today.month, today.day) < (ddn_p.month, ddn_p.day))
+                age_str = f"{ddn_p.strftime('%d.%m.%Y')}  +  {age} ans"
     except Exception:
         pass
 
@@ -217,10 +226,10 @@ def draw_cover_canvas(canvas, doc, patient_info: dict, bilans_df: pd.DataFrame,
     row1_y = row_div + 0.44 * cm
     row2_y = row_div - 0.65 * cm
 
-    _cell(M + 0.35 * cm,     row1_y, "Nom",               nom_full, 26)
-    _cell(mid_x + 0.35 * cm, row1_y, "Date de naissance", age_str, 30)
-    _cell(M + 0.35 * cm,     row2_y, "Sexe",              patient_info.get("sexe", "—"))
-    _cell(mid_x + 0.35 * cm, row2_y, "N dossier",         pid)
+    _cell(M + 0.35 * cm,      row1_y, "Nom",               nom_full, maxlen=26)
+    _cell(mid_x + 0.35 * cm,  row1_y, "Date de naissance", age_str,  maxlen=30)
+    _cell(M + 0.35 * cm,      row2_y, "Sexe",              patient_info.get("sexe", "—"))
+    _cell(mid_x + 0.35 * cm,  row2_y, "N dossier",         pid)
 
     # ── 7. Timeline des bilans ────────────────────────────────────────────────
     tl_label_y = card_top - card_h - 0.68 * cm
@@ -278,14 +287,16 @@ def draw_cover_canvas(canvas, doc, patient_info: dict, bilans_df: pd.DataFrame,
 
         ai_block_h = 2.1 * cm
 
+        # Bordure gauche terracotta
         canvas.setFillColor(_TERRA)
         canvas.rect(M, ai_top - ai_block_h, 2.5, ai_block_h, fill=1, stroke=0)
 
+        # Label
         canvas.setFillColor(_TERRA)
         canvas.setFont("Helvetica-Bold", 7)
-        canvas.drawString(M + 0.32 * cm, ai_top - 0.30 * cm,
-                          "SYNTHESE PHYSIOTHERAPEUTIQUE")
+        canvas.drawString(M + 0.32 * cm, ai_top - 0.30 * cm, "SYNTHESE PHYSIOTHERAPEUTIQUE")
 
+        # Paragraphe ReportLab rendu dans le canvas
         ai_style = ParagraphStyle(
             "ai_cover", fontSize=8.5, fontName="Helvetica",
             textColor=colors.HexColor("#444444"), leading=13,
@@ -296,12 +307,13 @@ def draw_cover_canvas(canvas, doc, patient_info: dict, bilans_df: pd.DataFrame,
         p_w, p_h = p.wrap(avail_w, avail_h)
         p.drawOn(canvas, M + 0.36 * cm, ai_top - 0.5 * cm - p_h)
 
-    # ── 9. Footer ─────────────────────────────────────────────────────────────
+    # ── 9. Footer ────────────────────────────────────────────────────────────
     foot_y = 2.55 * cm
     canvas.setStrokeColor(_GRIS_BORD)
     canvas.setLineWidth(0.5)
     canvas.line(M, foot_y, W - M, foot_y)
 
+    # Praticien (gauche)
     praticien_nom = ""
     try:
         praticien_nom = str(bilans_df.iloc[-1].get("praticien", "") or "")
@@ -318,6 +330,7 @@ def draw_cover_canvas(canvas, doc, patient_info: dict, bilans_df: pd.DataFrame,
     canvas.setFont("Helvetica", 8)
     canvas.drawString(M, foot_y - 1.00 * cm, "Physiotherapeute diplome")
 
+    # Date générée (droite)
     canvas.setFillColor(_GRIS_999)
     canvas.setFont("Helvetica", 7)
     canvas.drawRightString(W - M, foot_y - 0.33 * cm, "Genere le")
@@ -339,15 +352,20 @@ def draw_cover_canvas(canvas, doc, patient_info: dict, bilans_df: pd.DataFrame,
 def make_cover_callback(patient_info: dict, bilans_df: pd.DataFrame,
                         labels: list, analyse_text: str,
                         template_nom: str, medecin_info: dict):
-    """Retourne la fonction onPage pour le PageTemplate de couverture."""
+    """
+    Retourne la fonction onPage à passer au PageTemplate de couverture.
+    Utilisation :
+        cover_cb = make_cover_callback(...)
+        PageTemplate(id='Cover', frames=[cover_frame], onPage=cover_cb)
+    """
     def _draw(canvas, doc):
         draw_cover_canvas(
             canvas, doc,
-            patient_info=patient_info,
-            bilans_df=bilans_df,
-            labels=labels,
-            analyse_text=analyse_text,
-            template_nom=template_nom,
-            medecin_info=medecin_info,
+            patient_info  = patient_info,
+            bilans_df     = bilans_df,
+            labels        = labels,
+            analyse_text  = analyse_text,
+            template_nom  = template_nom,
+            medecin_info  = medecin_info,
         )
     return _draw
