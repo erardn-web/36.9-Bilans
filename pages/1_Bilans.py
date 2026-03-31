@@ -858,9 +858,7 @@ def render_evolution():
         # Si deux tests ont la même position, le dernier arrivé prend la place
         _sorted_names = sorted(_new_positions.keys(),
                                 key=lambda n: (_new_positions[n], S[_pdf_order_key].index(n)))
-        if _sorted_names != S[_pdf_order_key]:
-            S[_pdf_order_key] = _sorted_names
-            st.rerun()
+        S[_pdf_order_key] = _sorted_names
 
         st.markdown("---")
         _gc_val = S[_pdf_opts_key].get("Évolution graphique", True)
@@ -878,20 +876,35 @@ def render_evolution():
     _ordered_tids = [_label_to_tid[lbl] for lbl in S[_pdf_order_key]
                      if lbl in _label_to_tid and _label_to_tid[lbl] not in _excluded]
 
-    with col_pdf:
+    # Clé de cache PDF : invalide si options, ordre ou bilans changent
+    _pdf_cache_key = f"pdf_cache_{cid}"
+    _pdf_sig_key   = f"pdf_sig_{cid}"
+    _current_sig   = str((
+        sorted(be["bilan_id"].tolist()),
+        sorted(_excluded),
+        _ordered_tids,
+        _show_charts,
+        S.get(f"analyse_text_{cid}", "")[:50],
+    ))
+    # Régénérer uniquement si la signature a changé
+    if S.get(_pdf_sig_key) != _current_sig:
         try:
             analyse_txt   = S.get(f"analyse_text_{cid}") or load_analyse_cas(cid)
             _medecin_info = get_medecin_destinataire(cid)
-            pdf_data = generate_pdf(be, info,
+            S[_pdf_cache_key] = generate_pdf(be, info,
                 analyse_text=analyse_txt,
                 template_id=_tid, template_nom=_tnom,
                 medecin_info=_medecin_info,
                 excluded_test_ids=_excluded,
                 ordered_test_ids=_ordered_tids,
                 show_charts=_show_charts)
+            S[_pdf_sig_key] = _current_sig
         except Exception as e:
-            pdf_data = None
+            S[_pdf_cache_key] = None
             st.error(f"Erreur PDF : {e}")
+
+    with col_pdf:
+        pdf_data = S.get(_pdf_cache_key)
         if pdf_data:
             st.download_button(
                 label=f"📄 Exporter PDF ({n_sel} bilan{'s' if n_sel>1 else ''})",
