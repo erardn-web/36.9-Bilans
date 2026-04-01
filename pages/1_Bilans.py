@@ -68,6 +68,8 @@ def _load_templates():
     import templates.genou               # noqa
     import templates.hanche              # noqa
     import templates.membre_superieur    # noqa
+    # Templates cabinet
+    _load_cabinet_templates()
     # Tests batch 2 (FullPhysio + Physiotutors)
     from tests.questionnaires.lefs          import LEFS          # noqa
     from tests.questionnaires.womac         import WOMAC         # noqa
@@ -282,6 +284,8 @@ def _ensure_registry():
         import templates.hanche              # noqa
     if "membre_superieur" not in _templates:
         import templates.membre_superieur    # noqa
+    # Templates cabinet
+    _load_cabinet_templates()
 
 # ── CSS (copie fidèle v1) ─────────────────────────────────────────────────────
 st.markdown("""
