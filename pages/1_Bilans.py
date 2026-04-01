@@ -237,16 +237,25 @@ def _sidebar_context(unsaved=False):
             st.markdown("---")
             return
 
-        # Affichage des segments
+        # Affichage — fil d'Ariane stylisé
+        st.markdown(
+            "<div style='font-size:0.7rem;color:#aaa;text-transform:uppercase;"
+            "letter-spacing:.08em;margin-bottom:4px'>Vous êtes ici</div>",
+            unsafe_allow_html=True)
         for i, (label, fn) in enumerate(_segs):
             is_last = (i == len(_segs) - 1)
-            _indent = "　" * i  # indentation visuelle
+            _prefix = "└─ " if i > 0 else ""
             if is_last or fn is None:
+                # Segment actif — non cliquable, mis en évidence
                 st.markdown(
-                    f"{_indent}<span style='color:#333;font-weight:600'>{label}</span>",
+                    f"<div style='padding:4px 8px;background:#EBF0FA;"
+                    f"border-left:3px solid #2B57A7;border-radius:0 4px 4px 0;"
+                    f"font-size:0.85rem;font-weight:600;color:#1a3c5e;"
+                    f"margin:2px 0'>{_prefix}{label}</div>",
                     unsafe_allow_html=True)
             else:
-                if st.button(f"{_indent}{label}", key=f"sb_{i}_{S.mode}",
+                # Segment parent — bouton discret
+                if st.button(f"{_prefix}{label}", key=f"sb_{i}_{S.mode}",
                              use_container_width=True):
                     if unsaved:
                         S["_sb_confirm"] = fn
@@ -329,10 +338,7 @@ def render_dossier():
         unsafe_allow_html=True)
     st.markdown("")
 
-    col_back, col_new, col_edit, _ = st.columns([1,1,1,3])
-    with col_back:
-        if st.button("⬅️ Changer de patient"):
-            _go("accueil")
+    col_new, col_edit, _ = st.columns([1,1,4])
     with col_new:
         if st.button("➕ Nouveau cas", type="primary"):
             _go("choisir_template")
@@ -454,7 +460,6 @@ def render_choisir_template():
     st.markdown(
         f'<div class="patient-badge">👤 {info.get("nom","")} {info.get("prenom","")}'
         f' — Nouveau cas</div>', unsafe_allow_html=True)
-    if st.button("⬅️ Retour"): _go("dossier")
 
     _ensure_registry()
     templates = all_templates()
@@ -561,10 +566,7 @@ def render_cas():
     st.markdown("")
 
     # Barre d'actions
-    col_back, col_evol, _ = st.columns([1,1.5,4])
-    with col_back:
-        if st.button("⬅️ Changer de patient"):
-            _go("accueil")
+    col_evol, _ = st.columns([1.5,5])
     with col_evol:
         if st.button("📈 Voir l'évolution", type="primary"):
             sel_key = f"sel_bilans_{S.cas_id}"
@@ -705,29 +707,14 @@ def render_formulaire():
         unsafe_allow_html=True)
     st.markdown("")
 
-    col_back, col_save, col_print_b, col_cas, _ = st.columns([1,1,1.5,1.5,2])
-    with col_back:
-        if st.button("⬅️ Retour"):
-            if S.get("_bilan_unsaved"):
-                S["_confirm_back"] = True
-                st.rerun()
-            else:
-                _back_to_cas()
+    col_save, col_print_b, _ = st.columns([1, 1.5, 4])
     with col_save:
         save_btn = st.button("💾 Sauvegarder", type="primary")
     with col_print_b:
         if st.button("🖨️ Imprimer fiches"):
-            # Snapshot des tests actifs au moment du clic
             _ta_snap = (S.bilan_data.get("_tests_actifs_list")
                         or [cls.test_id() for cls in test_classes])
             _go("impression", bilan_id=bid, tests_actifs_snap=_ta_snap)
-    with col_cas:
-        if st.button("⬅️ Changer de patient"):
-            if S.get("_bilan_unsaved"):
-                S["_confirm_back_accueil"] = True
-                st.rerun()
-            else:
-                _go("accueil")
 
     # ── Confirmation retour sans sauvegarde ───────────────────────────────────
     if S.get("_confirm_back"):
@@ -838,12 +825,6 @@ def render_evolution():
         f'<div class="patient-badge">👤 {info.get("nom","")} {info.get("prenom","")} '
         f'— Évolution {nom_t}</div>', unsafe_allow_html=True)
     st.markdown("")
-
-    col_back, col_chg, _ = st.columns([1,1.5,5])
-    with col_back:
-        if st.button("⬅️ Retour"): _back_to_cas()
-    with col_chg:
-        if st.button("⬅️ Changer de patient"): _go("accueil")
 
     st.markdown("---")
 
@@ -1098,9 +1079,6 @@ def render_impression():
     st.markdown(
         f'<div class="patient-badge">👤 {info.get("nom","")} {info.get("prenom","")} '
         f'— Impression fiches</div>', unsafe_allow_html=True)
-    if st.button("⬅️ Retour au bilan"):
-        _go("formulaire", bilan_id=bid, bilan_data=S.bilan_data)
-
     st.markdown("---")
     st.markdown("### 🖨️ Fiches à imprimer")
     st.caption("Basé sur les tests actifs au moment de l'ouverture de cette page.")
@@ -1148,9 +1126,6 @@ def render_bibliotheque():
 
     st.markdown('<div class="page-title">📚 Bibliothèque des tests</div>',
                 unsafe_allow_html=True)
-    if st.button("⬅️ Retour"):
-        _go(S.get("_prev_mode","accueil"))
-
     st.markdown("---")
 
     # Recherche
