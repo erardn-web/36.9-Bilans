@@ -218,10 +218,16 @@ def _sidebar_context(unsaved=False):
             _cname = _snap.get("nom", S.cas_info.get("template_id","—"))
             _segs.append((f"📂 {_cname}", lambda: _back_to_cas()))
 
-        if S.mode in ("formulaire", "evolution", "impression"):
-            _labels = {"formulaire": "📋 Bilan", "evolution": "📈 Évolution",
-                       "impression": "🖨️ Impression"}
-            _segs.append((_labels.get(S.mode, S.mode), None))  # dernier = non cliquable
+        if S.mode == "formulaire":
+            _segs.append(("📋 Bilan", None))
+        elif S.mode == "evolution":
+            _segs.append(("📈 Évolution", None))
+        elif S.mode == "impression":
+            # Bilan cliquable, puis Impression comme page active
+            _bid = S.get("bilan_id")
+            _segs.append(("📋 Bilan", lambda: _go("formulaire", bilan_id=_bid,
+                                                   bilan_data=S.bilan_data)))
+            _segs.append(("🖨️ Impression", None))
 
         # Confirmation navigation non sauvegardée
         if S.get("_sb_confirm"):
