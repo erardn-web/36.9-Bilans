@@ -196,74 +196,6 @@ def _back_to_cas():
     _go("cas")
 
 
-def _breadcrumb(unsaved=False):
-    import json as _jbc
-    parts = [("🏥 Accueil", "accueil")]
-    if S.get("patient_id") and S.get("patient_info"):
-        _pi = S.patient_info
-        _pname = f"{_pi.get('nom','')} {_pi.get('prenom','')}".strip()
-        parts.append((f"👤 {_pname}", "dossier"))
-    if S.get("cas_id") and S.get("cas_info"):
-        try:
-            _snap = _jbc.loads(S.cas_info.get("template_snapshot","{}") or "{}")
-        except Exception:
-            _snap = {}
-        _cname = _snap.get("nom", S.cas_info.get("template_id","Cas"))
-        parts.append((f"📂 {_cname}", "cas"))
-    if S.mode == "formulaire" and S.get("bilan_id"):
-        parts.append(("📋 Bilan", None))
-    elif S.mode == "evolution":
-        parts.append(("📈 Évolution", None))
-    elif S.mode == "impression":
-        parts.append(("🖨️ Impression", None))
-    elif S.mode == "bibliotheque":
-        parts.append(("📚 Bibliothèque", None))
-
-    # Alerte navigation non sauvegardée
-    if S.get("_confirm_back_bc"):
-        _dest = S["_confirm_back_bc"]
-        st.warning("⚠️ Modifications non sauvegardées — quitter quand même ?")
-        _ca, _cb, _ = st.columns([1.5, 1.5, 5])
-        if _ca.button("🚪 Quitter", type="primary", key="bc_confirm_quit"):
-            S.pop("_confirm_back_bc", None)
-            S.pop("_bilan_unsaved", None)
-            if _dest == "dossier": _go("dossier")
-            elif _dest == "cas":   _back_to_cas()
-            else:                  _go(_dest)
-        if _cb.button("✏️ Continuer", key="bc_confirm_stay"):
-            S.pop("_confirm_back_bc", None)
-            st.rerun()
-        st.divider()
-
-    # Rendu HTML + boutons de navigation
-    _sep = " › "
-    _parts_html = []
-    for label, _ in parts[:-1]:
-        _parts_html.append(f'<span style="color:#2B57A7">{label}</span>')
-    _parts_html.append(f'<strong style="color:#333">{parts[-1][0]}</strong>')
-    st.markdown(
-        f'<div style="font-size:0.82rem;padding:2px 0 6px 0;color:#888">'
-        f'{_sep.join(_parts_html)}</div>',
-        unsafe_allow_html=True,
-    )
-
-    # Boutons cliquables (petits, discrets) pour les segments précédents
-    _clickable = [(lbl, tgt) for lbl, tgt in parts[:-1] if tgt is not None]
-    if _clickable:
-        _nav = st.columns([1]*len(_clickable) + [6])
-        for i, (lbl, tgt) in enumerate(_clickable):
-            _short = lbl.split(" ", 1)[-1][:14]
-            if _nav[i].button(f"⬅ {_short}", key=f"bc_{tgt}_{S.mode}",
-                              use_container_width=True):
-                if unsaved:
-                    S["_confirm_back_bc"] = tgt
-                    st.rerun()
-                else:
-                    if tgt == "dossier": _go("dossier")
-                    elif tgt == "cas":   _back_to_cas()
-                    else:                _go(tgt)
-        st.markdown("---")
-
 # ── ACCUEIL — recherche gauche / créer droite (v1) ────────────────────────────
 def render_accueil():
     st.markdown('<div class="page-title">🏥 36.9 Bilans</div>', unsafe_allow_html=True)
@@ -337,7 +269,6 @@ def render_dossier():
         unsafe_allow_html=True)
     st.markdown("")
 
-    _breadcrumb()
     col_new, col_edit, _ = st.columns([1,1,4])
     with col_new:
         if st.button("➕ Nouveau cas", type="primary"):
@@ -459,7 +390,6 @@ def render_choisir_template():
     st.markdown(
         f'<div class="patient-badge">👤 {info.get("nom","")} {info.get("prenom","")}'
         f' — Nouveau cas</div>', unsafe_allow_html=True)
-    _breadcrumb()
     _ensure_registry()
     templates = all_templates()
     if not templates:
@@ -564,7 +494,6 @@ def render_cas():
     st.markdown("")
 
     # Barre d'actions
-    _breadcrumb()
     col_evol, _ = st.columns([1.5, 6])
     with col_evol:
         if st.button("📈 Voir l'évolution", type="primary"):
@@ -799,7 +728,6 @@ def render_evolution():
         f'— Évolution {nom_t}</div>', unsafe_allow_html=True)
     st.markdown("")
 
-    _breadcrumb()
     st.markdown("---")
 
     bilans_df = get_cas_bilans(cid)
@@ -949,57 +877,29 @@ def render_evolution():
         _gc_new = st.checkbox("📈 Graphiques d'évolution", value=_gc_val,
                               key=f"pdfsec_{cid}_charts")
 
-        # ── Bouton Sauvegarder ─────────────────────────────────────────
+        # ── Appliquer / Réinitialiser ──────────────────────────────────
         _draft_changed = (S[_pdf_draft_key] != S[_pdf_selected_key]
                           or _gc_new != S.get(_pdf_charts_key, True))
         st.markdown("")
         _save_col, _reset_col = st.columns([2, 1])
-        # helper inline
-        def _do_gen(excl, ordr, charts):
-            at = (S.get(f"ta_{cid}") or S.get(f"analyse_text_{cid}") or load_analyse_cas(cid))
-            mi = get_medecin_destinataire(cid)
-            S[_pdf_cache_key] = generate_pdf(be, info,
-                analyse_text=at, template_id=_tid, template_nom=_tnom,
-                medecin_info=mi, excluded_test_ids=excl,
-                ordered_test_ids=ordr, show_charts=charts)
-            S[_pdf_sig_key] = _current_sig
-
-        # Bouton Appliquer — visible uniquement si sélection changée
-        if _draft_changed:
-            if _save_col.button("💾 Appliquer", type="primary",
-                                use_container_width=True, key=f"pdf_save_{cid}"):
-                S[_pdf_selected_key] = list(S[_pdf_draft_key])
-                S[_pdf_charts_key]   = _gc_new
-                _sel2 = S[_pdf_selected_key]
-                _ex2  = {_label_to_tid[lbl] for lbl in _active_labels
-                         if lbl not in set(_sel2) and lbl in _label_to_tid}
-                _or2  = [_label_to_tid[lbl] for lbl in _sel2 if lbl in _label_to_tid]
-                if not _sel2: _ex2 = set(); _or2 = []
-                # Calculer la sig qui sera valide au prochain rerun
-                _new_sig = str((
-                    sorted(be["bilan_id"].tolist()),
-                    tuple(sorted(_ex2)),
-                    tuple(_or2),
-                    _gc_new,
-                    S.get(f"analyse_text_{cid}", "")[:50],
-                ))
-                with st.spinner("Génération du PDF…"):
-                    try:
-                        _do_gen(_ex2, _or2, _gc_new)
-                        S[_pdf_sig_key] = _new_sig  # sig cohérente avec le rerun suivant
-                    except Exception as _e: st.error(f"Erreur PDF : {_e}")
-                st.rerun()
-
-        # Bouton Générer — visible si pas de cache et draft stable
-        elif not S.get(_pdf_cache_key):
-            if _save_col.button("📄 Générer PDF", type="primary",
-                                use_container_width=True, key=f"pdf_save_{cid}"):
-                with st.spinner("Génération du PDF…"):
-                    try: _do_gen(_excluded, _ordered_tids, _show_charts)
-                    except Exception as _e: st.error(f"Erreur PDF : {_e}")
-                st.rerun()
-
-        # Bouton Télécharger — visible si PDF en cache
+        if _save_col.button("💾 Appliquer au rapport",
+                             type="primary", use_container_width=True,
+                             disabled=not _draft_changed,
+                             key=f"pdf_save_{cid}"):
+            S[_pdf_selected_key] = list(S[_pdf_draft_key])
+            S[_pdf_charts_key]   = _gc_new
+            S.pop(_pdf_cache_key, None)
+            S.pop(_pdf_sig_key, None)
+            st.rerun()
+        if _reset_col.button("↺ Réinitialiser",
+                              use_container_width=True,
+                              key=f"pdf_reset_{cid}"):
+            S[_pdf_draft_key] = []
+            S[_pdf_selected_key] = []
+            S.pop(_pdf_cache_key, None)
+            S.pop(_pdf_sig_key, None)
+            st.rerun()
+        # Télécharger si déjà en cache
         if S.get(_pdf_cache_key):
             st.download_button(
                 label=f"📄 Télécharger PDF ({n_sel} bilan{'s' if n_sel>1 else ''})",
@@ -1009,23 +909,32 @@ def render_evolution():
                 use_container_width=True,
                 key=f"dl_pdf_exp_{cid}",
             )
-        if _reset_col.button("↺ Réinitialiser",
-                              use_container_width=True,
-                              key=f"pdf_reset_{cid}"):
-            S[_pdf_draft_key] = []
-            S[_pdf_selected_key] = []
-            S.pop(f"pdf_cache_{cid}", None)
-            S.pop(f"pdf_sig_{cid}", None)
-            st.rerun()
 
-
-
-
-
-
-
-
-
+    # Génération auto si cache absent ou sig changée ───────────────────────
+    _sel_auto   = S.get(_pdf_selected_key, [])
+    _excl_auto  = {_label_to_tid[lbl] for lbl in _active_labels
+                   if lbl not in set(_sel_auto) and lbl in _label_to_tid}
+    _chrt_auto  = S.get(_pdf_charts_key, True)
+    _ordr_auto  = [_label_to_tid[lbl] for lbl in _sel_auto if lbl in _label_to_tid]
+    if not _sel_auto: _excl_auto = set(); _ordr_auto = []
+    _auto_sig = str((
+        sorted(be["bilan_id"].tolist()),
+        tuple(sorted(_excl_auto)), tuple(_ordr_auto), _chrt_auto,
+        (S.get(f"ta_{cid}") or S.get(f"analyse_text_{cid}", ""))[:50],
+    ))
+    if not S.get(_pdf_cache_key) or S.get(_pdf_sig_key) != _auto_sig:
+        with st.spinner("Génération du PDF…"):
+            try:
+                _at = (S.get(f"ta_{cid}") or S.get(f"analyse_text_{cid}") or load_analyse_cas(cid))
+                _mi = get_medecin_destinataire(cid)
+                S[_pdf_cache_key] = generate_pdf(be, info,
+                    analyse_text=_at, template_id=_tid, template_nom=_tnom,
+                    medecin_info=_mi, excluded_test_ids=_excl_auto,
+                    ordered_test_ids=_ordr_auto, show_charts=_chrt_auto)
+                S[_pdf_sig_key] = _auto_sig
+            except Exception as _eg:
+                S[_pdf_cache_key] = None
+                st.error(f"Erreur PDF : {_eg}")
 
     _ensure_registry()
     tc_key = f"test_classes_ev_{cid}"
@@ -1053,7 +962,6 @@ def render_impression():
     st.markdown(
         f'<div class="patient-badge">👤 {info.get("nom","")} {info.get("prenom","")} '
         f'— Impression fiches</div>', unsafe_allow_html=True)
-    _breadcrumb()
     st.markdown("---")
     st.markdown("### 🖨️ Fiches à imprimer")
     st.caption("Basé sur les tests actifs au moment de l'ouverture de cette page.")
@@ -1101,7 +1009,6 @@ def render_bibliotheque():
 
     st.markdown('<div class="page-title">📚 Bibliothèque des tests</div>',
                 unsafe_allow_html=True)
-    _breadcrumb()
     st.markdown("---")
 
     # Recherche
