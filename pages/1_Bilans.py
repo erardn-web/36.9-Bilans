@@ -934,58 +934,50 @@ def render_evolution():
                           or _gc_new != S.get(_pdf_charts_key, True))
         st.markdown("")
         _save_col, _reset_col = st.columns([2, 1])
-        if _draft_changed:
-            _apply_label = f"💾 Appliquer & générer PDF ({n_sel} bilan{'s' if n_sel>1 else ''})"
-        elif S.get(_pdf_cache_key):
-            _apply_label = None  # on affiche download_button
-        else:
-            _apply_label = f"📄 Générer PDF ({n_sel} bilan{'s' if n_sel>1 else ''})"
+        # helper inline
+        def _do_gen(excl, ordr, charts):
+            at = (S.get(f"ta_{cid}") or S.get(f"analyse_text_{cid}") or load_analyse_cas(cid))
+            mi = get_medecin_destinataire(cid)
+            S[_pdf_cache_key] = generate_pdf(be, info,
+                analyse_text=at, template_id=_tid, template_nom=_tnom,
+                medecin_info=mi, excluded_test_ids=excl,
+                ordered_test_ids=ordr, show_charts=charts)
+            S[_pdf_sig_key] = _current_sig
 
-        if _apply_label:
-            if _save_col.button(_apply_label, type="primary",
+        # Bouton Appliquer — visible uniquement si sélection changée
+        if _draft_changed:
+            if _save_col.button("💾 Appliquer", type="primary",
                                 use_container_width=True, key=f"pdf_save_{cid}"):
-                # 1. Sauvegarder la sélection si changée
-                if _draft_changed:
-                    S[_pdf_selected_key] = list(S[_pdf_draft_key])
-                    S[_pdf_charts_key]   = _gc_new
-                    S.pop(_pdf_cache_key, None)
-                    S.pop(_pdf_sig_key, None)
-                    # Recalculer exclusions/ordre avec la nouvelle sélection
-                    _sel_new = S[_pdf_selected_key]
-                    _excl_new = {_label_to_tid[lbl] for lbl in _active_labels
-                                 if lbl not in set(_sel_new) and lbl in _label_to_tid}
-                    _ord_new  = [_label_to_tid[lbl] for lbl in _sel_new if lbl in _label_to_tid]
-                    if not _sel_new: _excl_new = set(); _ord_new = []
-                else:
-                    _excl_new = _excluded
-                    _ord_new  = _ordered_tids
-                # 2. Générer le PDF immédiatement
+                S[_pdf_selected_key] = list(S[_pdf_draft_key])
+                S[_pdf_charts_key]   = _gc_new
+                S.pop(_pdf_cache_key, None); S.pop(_pdf_sig_key, None)
+                _sel2 = S[_pdf_selected_key]
+                _ex2  = {_label_to_tid[lbl] for lbl in _active_labels
+                         if lbl not in set(_sel2) and lbl in _label_to_tid}
+                _or2  = [_label_to_tid[lbl] for lbl in _sel2 if lbl in _label_to_tid]
+                if not _sel2: _ex2 = set(); _or2 = []
                 with st.spinner("Génération du PDF…"):
-                    try:
-                        analyse_txt = (S.get(f"ta_{cid}")
-                                       or S.get(f"analyse_text_{cid}")
-                                       or load_analyse_cas(cid))
-                        _medecin_info = get_medecin_destinataire(cid)
-                        S[_pdf_cache_key] = generate_pdf(be, info,
-                            analyse_text=analyse_txt,
-                            template_id=_tid, template_nom=_tnom,
-                            medecin_info=_medecin_info,
-                            excluded_test_ids=_excl_new,
-                            ordered_test_ids=_ord_new,
-                            show_charts=S.get(_pdf_charts_key, True))
-                        S[_pdf_sig_key] = _current_sig
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Erreur PDF : {e}")
-        else:
-            # PDF en cache et rien à changer → download direct
-            _save_col.download_button(
+                    try: _do_gen(_ex2, _or2, _gc_new)
+                    except Exception as _e: st.error(f"Erreur PDF : {_e}")
+                st.rerun()
+
+        # Bouton Générer — visible si pas de cache et draft stable
+        elif not S.get(_pdf_cache_key):
+            if _save_col.button("📄 Générer PDF", type="primary",
+                                use_container_width=True, key=f"pdf_save_{cid}"):
+                with st.spinner("Génération du PDF…"):
+                    try: _do_gen(_excluded, _ordered_tids, _show_charts)
+                    except Exception as _e: st.error(f"Erreur PDF : {_e}")
+                st.rerun()
+
+        # Bouton Télécharger — visible si PDF en cache
+        if S.get(_pdf_cache_key):
+            st.download_button(
                 label=f"📄 Télécharger PDF ({n_sel} bilan{'s' if n_sel>1 else ''})",
                 data=S[_pdf_cache_key],
                 file_name=f"evolution_{_tnom}_{info.get('nom','')}_{date.today()}.pdf",
                 mime="application/pdf",
                 use_container_width=True,
-                type="primary",
                 key=f"dl_pdf_exp_{cid}",
             )
         if _reset_col.button("↺ Réinitialiser",
