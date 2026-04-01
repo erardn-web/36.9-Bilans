@@ -195,6 +195,75 @@ def _back_to_cas():
         if cas_info: S.cas_info = cas_info
     _go("cas")
 
+
+def _breadcrumb(unsaved=False):
+    import json as _jbc
+    parts = [("🏥 Accueil", "accueil")]
+    if S.get("patient_id") and S.get("patient_info"):
+        _pi = S.patient_info
+        _pname = f"{_pi.get('nom','')} {_pi.get('prenom','')}".strip()
+        parts.append((f"👤 {_pname}", "dossier"))
+    if S.get("cas_id") and S.get("cas_info"):
+        try:
+            _snap = _jbc.loads(S.cas_info.get("template_snapshot","{}") or "{}")
+        except Exception:
+            _snap = {}
+        _cname = _snap.get("nom", S.cas_info.get("template_id","Cas"))
+        parts.append((f"📂 {_cname}", "cas"))
+    if S.mode == "formulaire" and S.get("bilan_id"):
+        parts.append(("📋 Bilan", None))
+    elif S.mode == "evolution":
+        parts.append(("📈 Évolution", None))
+    elif S.mode == "impression":
+        parts.append(("🖨️ Impression", None))
+    elif S.mode == "bibliotheque":
+        parts.append(("📚 Bibliothèque", None))
+
+    # Alerte navigation non sauvegardée
+    if S.get("_confirm_back_bc"):
+        _dest = S["_confirm_back_bc"]
+        st.warning("⚠️ Modifications non sauvegardées — quitter quand même ?")
+        _ca, _cb, _ = st.columns([1.5, 1.5, 5])
+        if _ca.button("🚪 Quitter", type="primary", key="bc_confirm_quit"):
+            S.pop("_confirm_back_bc", None)
+            S.pop("_bilan_unsaved", None)
+            if _dest == "dossier": _go("dossier")
+            elif _dest == "cas":   _back_to_cas()
+            else:                  _go(_dest)
+        if _cb.button("✏️ Continuer", key="bc_confirm_stay"):
+            S.pop("_confirm_back_bc", None)
+            st.rerun()
+        st.divider()
+
+    # Rendu HTML + boutons de navigation
+    _sep = " › "
+    _parts_html = []
+    for label, _ in parts[:-1]:
+        _parts_html.append(f'<span style="color:#2B57A7">{label}</span>')
+    _parts_html.append(f'<strong style="color:#333">{parts[-1][0]}</strong>')
+    st.markdown(
+        f'<div style="font-size:0.82rem;padding:2px 0 6px 0;color:#888">'
+        f'{_sep.join(_parts_html)}</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Boutons cliquables (petits, discrets) pour les segments précédents
+    _clickable = [(lbl, tgt) for lbl, tgt in parts[:-1] if tgt is not None]
+    if _clickable:
+        _nav = st.columns([1]*len(_clickable) + [6])
+        for i, (lbl, tgt) in enumerate(_clickable):
+            _short = lbl.split(" ", 1)[-1][:14]
+            if _nav[i].button(f"⬅ {_short}", key=f"bc_{tgt}_{S.mode}",
+                              use_container_width=True):
+                if unsaved:
+                    S["_confirm_back_bc"] = tgt
+                    st.rerun()
+                else:
+                    if tgt == "dossier": _go("dossier")
+                    elif tgt == "cas":   _back_to_cas()
+                    else:                _go(tgt)
+        st.markdown("---")
+
 # ── ACCUEIL — recherche gauche / créer droite (v1) ────────────────────────────
 def render_accueil():
     st.markdown('<div class="page-title">🏥 36.9 Bilans</div>', unsafe_allow_html=True)
@@ -268,10 +337,8 @@ def render_dossier():
         unsafe_allow_html=True)
     st.markdown("")
 
-    col_back, col_new, col_edit, _ = st.columns([1,1,1,3])
-    with col_back:
-        if st.button("⬅️ Changer de patient"):
-            _go("accueil")
+    _breadcrumb()
+    col_new, col_edit, _ = st.columns([1,1,4])
     with col_new:
         if st.button("➕ Nouveau cas", type="primary"):
             _go("choisir_template")
@@ -392,8 +459,7 @@ def render_choisir_template():
     st.markdown(
         f'<div class="patient-badge">👤 {info.get("nom","")} {info.get("prenom","")}'
         f' — Nouveau cas</div>', unsafe_allow_html=True)
-    if st.button("⬅️ Retour"): _go("dossier")
-
+    _breadcrumb()
     _ensure_registry()
     templates = all_templates()
     if not templates:
@@ -498,10 +564,8 @@ def render_cas():
     st.markdown("")
 
     # Barre d'actions
-    col_back, col_evol, _ = st.columns([1,1.5,4])
-    with col_back:
-        if st.button("⬅️ Changer de patient"):
-            _go("accueil")
+    _breadcrumb()
+    col_evol, _ = st.columns([1.5, 6])
     with col_evol:
         if st.button("📈 Voir l'évolution", type="primary"):
             sel_key = f"sel_bilans_{S.cas_id}"
@@ -641,57 +705,18 @@ def render_formulaire():
         unsafe_allow_html=True)
     st.markdown("")
 
-    col_back, col_save, col_print_b, col_cas, _ = st.columns([1,1,1.5,1.5,2])
-    with col_back:
-        if st.button("⬅️ Retour"):
-            if S.get("_bilan_unsaved"):
-                S["_confirm_back"] = True
-                st.rerun()
-            else:
-                _back_to_cas()
+    _breadcrumb(unsaved=S.get("_bilan_unsaved", False))
+    col_save, col_print_b, _ = st.columns([1,1.5,5])
     with col_save:
         save_btn = st.button("💾 Sauvegarder", type="primary")
     with col_print_b:
         if st.button("🖨️ Imprimer fiches"):
-            # Snapshot des tests actifs au moment du clic
             _ta_snap = (S.bilan_data.get("_tests_actifs_list")
                         or [cls.test_id() for cls in test_classes])
             _go("impression", bilan_id=bid, tests_actifs_snap=_ta_snap)
-    with col_cas:
-        if st.button("⬅️ Changer de patient"):
-            if S.get("_bilan_unsaved"):
-                S["_confirm_back_accueil"] = True
-                st.rerun()
-            else:
-                _go("accueil")
 
-    # ── Confirmation retour sans sauvegarde ───────────────────────────────────
-    if S.get("_confirm_back"):
-        st.warning("⚠️ Modifications non sauvegardées — quitter quand même ?")
-        ca, cb, _ = st.columns([1.5, 1.5, 5])
-        with ca:
-            if st.button("🚪 Quitter sans sauvegarder", type="primary"):
-                S.pop("_confirm_back", None)
-                S.pop("_bilan_unsaved", None)
-                _back_to_cas()
-        with cb:
-            if st.button("✏️ Continuer l'édition"):
-                S.pop("_confirm_back", None)
-                st.rerun()
-        return
-
-    if S.get("_confirm_back_accueil"):
-        st.warning("⚠️ Modifications non sauvegardées — quitter quand même ?")
-        ca, cb, _ = st.columns([1.5, 1.5, 5])
-        with ca:
-            if st.button("🚪 Quitter sans sauvegarder", type="primary", key="cba_ok"):
-                S.pop("_confirm_back_accueil", None)
-                S.pop("_bilan_unsaved", None)
-                _go("accueil")
-        with cb:
-            if st.button("✏️ Continuer l'édition", key="cba_no"):
-                S.pop("_confirm_back_accueil", None)
-                st.rerun()
+    # Confirmation gérée par _breadcrumb — arrêt si alerte active
+    if S.get("_confirm_back_bc"):
         return
 
     st.markdown("---")
@@ -774,12 +799,7 @@ def render_evolution():
         f'— Évolution {nom_t}</div>', unsafe_allow_html=True)
     st.markdown("")
 
-    col_back, col_chg, _ = st.columns([1,1.5,5])
-    with col_back:
-        if st.button("⬅️ Retour"): _back_to_cas()
-    with col_chg:
-        if st.button("⬅️ Changer de patient"): _go("accueil")
-
+    _breadcrumb()
     st.markdown("---")
 
     bilans_df = get_cas_bilans(cid)
@@ -880,7 +900,7 @@ def render_evolution():
         tuple(sorted(_excluded)),
         tuple(_ordered_tids),
         _show_charts,
-        (S.get(f"ta_{cid}") or S.get(f"analyse_text_{cid}", ""))[:50],
+        S.get(f"analyse_text_{cid}", "")[:50],
     ))
     if S.get(_pdf_sig_key) != _current_sig:
         S.pop(_pdf_cache_key, None)
@@ -961,7 +981,7 @@ def render_evolution():
                     tuple(sorted(_ex2)),
                     tuple(_or2),
                     _gc_new,
-                    (S.get(f"ta_{cid}") or S.get(f"analyse_text_{cid}", ""))[:50],
+                    S.get(f"analyse_text_{cid}", "")[:50],
                 ))
                 with st.spinner("Génération du PDF…"):
                     try:
@@ -1033,9 +1053,7 @@ def render_impression():
     st.markdown(
         f'<div class="patient-badge">👤 {info.get("nom","")} {info.get("prenom","")} '
         f'— Impression fiches</div>', unsafe_allow_html=True)
-    if st.button("⬅️ Retour au bilan"):
-        _go("formulaire", bilan_id=bid, bilan_data=S.bilan_data)
-
+    _breadcrumb()
     st.markdown("---")
     st.markdown("### 🖨️ Fiches à imprimer")
     st.caption("Basé sur les tests actifs au moment de l'ouverture de cette page.")
@@ -1083,9 +1101,7 @@ def render_bibliotheque():
 
     st.markdown('<div class="page-title">📚 Bibliothèque des tests</div>',
                 unsafe_allow_html=True)
-    if st.button("⬅️ Retour"):
-        _go(S.get("_prev_mode","accueil"))
-
+    _breadcrumb()
     st.markdown("---")
 
     # Recherche
