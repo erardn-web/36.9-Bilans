@@ -553,6 +553,10 @@ def render_cas():
                         delete_bilan(bid2, S.therapeute)
                         S.pop(f"confirm_del_{bid2}", None)
                         get_cas_bilans_meta.clear()
+                        get_cas_bilans.clear()
+                        # Invalider le cache IA — les bilans ont changé
+                        S.pop(f"analyse_text_{S.cas_id}", None)
+                        S.pop(f"analyse_sig_{S.cas_id}", None)
                         st.rerun()
                     if db2.button("❌ Non", key=f"no_del_{bid2}"):
                         S.pop(f"confirm_del_{bid2}", None)
@@ -797,8 +801,20 @@ def render_evolution():
     be = be.sort_values("date_bilan").reset_index(drop=True)
 
     # PDF — généré sur clic uniquement (évite rerun en boucle)
-    # Pré-charger la synthèse IA en session AVANT la génération PDF
-    _ai_key = f"analyse_text_{cid}"
+    # Pré-charger la synthèse IA — invalider si les bilans ont changé
+    _ai_key     = f"analyse_text_{cid}"
+    _ai_sig_key = f"analyse_sig_{cid}"
+    import json as _jj
+    # Signature = liste triée des bilan_ids + tests_actifs de chacun
+    _ai_sig_now = str(sorted([
+        (r["bilan_id"], r.get("tests_actifs",""))
+        for _, r in be.iterrows()
+    ]))
+    if S.get(_ai_sig_key) != _ai_sig_now:
+        # Bilans ou tests ont changé → effacer le cache IA + marquer comme obsolète
+        S.pop(_ai_key, None)
+        S[_ai_sig_key] = _ai_sig_now
+        S[f"analyse_stale_{cid}"] = True  # déclenche le warning "à régénérer" dans l'UI
     if _ai_key not in S:
         S[_ai_key] = load_analyse_cas(cid)
 
@@ -815,62 +831,162 @@ def render_evolution():
     # Labels des tests actifs → noms affichés dans les options
     _active_labels = [cls.tab_label() for cls in _active_tests if hasattr(cls, "tab_label")]
 
-    _pdf_opts_key = f"pdf_opts_{cid}"
+    # ── État PDF : inclusion + ordre ─────────────────────────────────────────
+    _pdf_opts_key  = f"pdf_opts_{cid}"
+    _pdf_order_key = f"pdf_order_{cid}"
+
     # Réinitialiser si la liste des tests a changé
     _known = set(S.get(_pdf_opts_key, {}).keys()) - {"Évolution graphique"}
     if _known != set(_active_labels):
-        S[_pdf_opts_key] = {lbl: True for lbl in _active_labels}
+        S[_pdf_opts_key]  = {lbl: True for lbl in _active_labels}
         S[_pdf_opts_key]["Évolution graphique"] = True
+        S[_pdf_order_key] = list(_active_labels)
+
+    # S'assurer que _pdf_order_key est initialisé et cohérent
+    _current_order = S.get(_pdf_order_key, list(_active_labels))
+    # Ajouter éventuels nouveaux tests à la fin, retirer les disparus
+    _current_order = [l for l in _current_order if l in set(_active_labels)]
+    _current_order += [l for l in _active_labels if l not in _current_order]
+    S[_pdf_order_key] = _current_order
+
+    # ── État : sélection ordonnée (confirmée) + draft (en cours d'édition) ───
+    _pdf_selected_key = f"pdf_selected_{cid}"
+    _pdf_draft_key    = f"pdf_draft_{cid}"
+    _pdf_charts_key   = f"pdf_charts_{cid}"
+
+    if _pdf_selected_key not in S:
+        S[_pdf_selected_key] = []
+    # Draft = copie de travail, initialisée depuis la sélection confirmée
+    if _pdf_draft_key not in S:
+        S[_pdf_draft_key] = list(S[_pdf_selected_key])
 
     with st.expander("⚙️ Options du rapport PDF", expanded=False):
-        st.caption("Décochez les tests à exclure du rapport.")
-        _n_cols = min(len(_active_labels) + 1, 5)
-        _opts_cols = st.columns(_n_cols)
-        for _si, _sname in enumerate(_active_labels):
-            _val = S[_pdf_opts_key].get(_sname, True)
-            _new = _opts_cols[_si % _n_cols].checkbox(
-                _sname, value=_val, key=f"pdfsec_{cid}_{_si}")
-            S[_pdf_opts_key][_sname] = _new
-        # Graphiques toujours en dernier
-        _gc_val = S[_pdf_opts_key].get("Évolution graphique", True)
-        _gc_new = _opts_cols[len(_active_labels) % _n_cols].checkbox(
-            "📈 Graphiques", value=_gc_val, key=f"pdfsec_{cid}_charts")
-        S[_pdf_opts_key]["Évolution graphique"] = _gc_new
+        _draft = S[_pdf_draft_key]
+        _draft_set = set(_draft)
+        _avail_draft = [lbl for lbl in _active_labels if lbl not in _draft_set]
 
-    # Construire excluded_test_ids : test_id() des tests dont le tab_label est décoché
-    _label_to_tid = {cls.tab_label(): cls.test_id()
-                     for cls in _active_tests if hasattr(cls, "tab_label") and hasattr(cls, "test_id")}
-    _excluded    = {_label_to_tid[lbl] for lbl, v in S[_pdf_opts_key].items()
-                    if not v and lbl in _label_to_tid}
-    _show_charts = S[_pdf_opts_key].get("Évolution graphique", True)
+        # ── Zone sélectionnée (draft) ──────────────────────────────────
+        if _draft:
+            st.caption("✅ **Dans le rapport** — cliquer ✕ pour retirer")
+            for _si, _sname in enumerate(_draft):
+                _col_num, _col_lbl, _col_rm = st.columns([0.4, 3.5, 0.8])
+                _col_num.markdown(
+                    f"<div style='padding-top:6px;color:#2B57A7;font-weight:700'>"
+                    f"{_si+1}</div>", unsafe_allow_html=True)
+                _col_lbl.markdown(
+                    f"<div style='padding-top:6px'>{_sname}</div>",
+                    unsafe_allow_html=True)
+                if _col_rm.button("✕", key=f"pdf_rm_{cid}_{_si}",
+                                   use_container_width=True):
+                    S[_pdf_draft_key] = [x for x in _draft if x != _sname]
+                    st.rerun()
+        else:
+            st.caption("*(aucun test sélectionné — cliquer ci-dessous pour ajouter)*")
 
-    # DEBUG temporaire — à retirer après validation
-    with st.expander("🔍 Debug exclusions", expanded=False):
-        st.write("label_to_tid:", _label_to_tid)
-        st.write("pdf_opts:", S[_pdf_opts_key])
-        st.write("excluded:", _excluded)
+        if _draft:
+            st.markdown("---")
 
-    with col_pdf:
-        try:
-            analyse_txt   = S.get(f"analyse_text_{cid}") or load_analyse_cas(cid)
-            _medecin_info = get_medecin_destinataire(cid)
-            pdf_data = generate_pdf(be, info,
-                analyse_text=analyse_txt,
-                template_id=_tid, template_nom=_tnom,
-                medecin_info=_medecin_info,
-                excluded_test_ids=_excluded,
-                show_charts=_show_charts)
-        except Exception as e:
-            pdf_data = None
-            st.error(f"Erreur PDF : {e}")
-        if pdf_data:
+        # ── Zone disponible ────────────────────────────────────────────
+        if _avail_draft:
+            st.caption("➕ **Disponibles** — cliquer pour ajouter")
+            _av_cols = st.columns(min(len(_avail_draft), 4))
+            for _ai, _aname in enumerate(_avail_draft):
+                if _av_cols[_ai % 4].button(
+                        _aname, key=f"pdf_add_{cid}_{_ai}",
+                        use_container_width=True):
+                    S[_pdf_draft_key] = _draft + [_aname]
+                    st.rerun()
+        else:
+            st.caption("*(tous les tests sont dans le rapport)*")
+
+        st.markdown("---")
+        _gc_val = S.get(_pdf_charts_key, True)
+        _gc_new = st.checkbox("📈 Graphiques d'évolution", value=_gc_val,
+                              key=f"pdfsec_{cid}_charts")
+
+        # ── Bouton Sauvegarder ─────────────────────────────────────────
+        _draft_changed = (S[_pdf_draft_key] != S[_pdf_selected_key]
+                          or _gc_new != S.get(_pdf_charts_key, True))
+        st.markdown("")
+        _save_col, _reset_col = st.columns([2, 1])
+        if _save_col.button("💾 Appliquer au rapport",
+                             type="primary", use_container_width=True,
+                             disabled=not _draft_changed,
+                             key=f"pdf_save_{cid}"):
+            S[_pdf_selected_key] = list(S[_pdf_draft_key])
+            S[_pdf_charts_key]   = _gc_new
+            S.pop(f"pdf_cache_{cid}", None)
+            S.pop(f"pdf_sig_{cid}", None)
+            st.rerun()
+        if _reset_col.button("↺ Réinitialiser",
+                              use_container_width=True,
+                              key=f"pdf_reset_{cid}"):
+            S[_pdf_draft_key] = []
+            S[_pdf_selected_key] = []
+            S.pop(f"pdf_cache_{cid}", None)
+            S.pop(f"pdf_sig_{cid}", None)
+            st.rerun()
+
+        # Bouton export PDF dans l'expander
+        _pdf_in_cache = S.get(f"pdf_cache_{cid}")
+        if _pdf_in_cache:
             st.download_button(
                 label=f"📄 Exporter PDF ({n_sel} bilan{'s' if n_sel>1 else ''})",
-                data=pdf_data,
+                data=_pdf_in_cache,
                 file_name=f"evolution_{_tnom}_{info.get('nom','')}_{date.today()}.pdf",
                 mime="application/pdf",
-                type="primary",
+                use_container_width=True,
+                key=f"dl_pdf_exp_{cid}",
             )
+
+    # Construire excluded_test_ids + ordered_test_ids depuis la sélection CONFIRMÉE
+    _label_to_tid   = {cls.tab_label(): cls.test_id()
+                       for cls in _active_tests if hasattr(cls, "tab_label") and hasattr(cls, "test_id")}
+    _selected_ordered = S.get(_pdf_selected_key, [])
+    _selected_set     = set(_selected_ordered)
+    _excluded         = {_label_to_tid[lbl] for lbl in _active_labels
+                         if lbl not in _selected_set and lbl in _label_to_tid}
+    _show_charts      = S.get(_pdf_charts_key, True)
+    _ordered_tids     = [_label_to_tid[lbl] for lbl in _selected_ordered
+                         if lbl in _label_to_tid]
+    if not _selected_ordered:
+        _excluded     = set()
+        _ordered_tids = []
+
+    # PDF généré uniquement sur clic — évite le spinner en boucle
+    _pdf_cache_key = f"pdf_cache_{cid}"
+    _pdf_sig_key   = f"pdf_sig_{cid}"
+    _current_sig   = str((
+        sorted(be["bilan_id"].tolist()),
+        tuple(sorted(_excluded)),
+        tuple(_ordered_tids),
+        _show_charts,
+        S.get(f"analyse_text_{cid}", "")[:50],
+    ))
+    # Invalider le cache si la signature a changé (bilans, options…)
+    if S.get(_pdf_sig_key) != _current_sig:
+        S.pop(_pdf_cache_key, None)
+
+    with col_pdf:
+        # Bouton Générer — visible si pas de cache
+        if not S.get(_pdf_cache_key):
+            if st.button(f"📄 Générer PDF ({n_sel} bilan{'s' if n_sel>1 else ''})",
+                         type="primary", key=f"gen_pdf_{cid}"):
+                with st.spinner("Génération du PDF…"):
+                    try:
+                        analyse_txt   = S.get(f"analyse_text_{cid}") or load_analyse_cas(cid)
+                        _medecin_info = get_medecin_destinataire(cid)
+                        S[_pdf_cache_key] = generate_pdf(be, info,
+                            analyse_text=analyse_txt,
+                            template_id=_tid, template_nom=_tnom,
+                            medecin_info=_medecin_info,
+                            excluded_test_ids=_excluded,
+                            ordered_test_ids=_ordered_tids,
+                            show_charts=_show_charts)
+                        S[_pdf_sig_key] = _current_sig
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erreur PDF : {e}")
 
     _ensure_registry()
     tc_key = f"test_classes_ev_{cid}"
