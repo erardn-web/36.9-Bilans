@@ -2670,6 +2670,15 @@ def _make_evolution_charts(bilans_df, n_bilans, page_w, excluded_test_ids=None, 
         "lombalgie": ["schober","luomajoki"], "testing_mi": ["musc_"],
         "leg_press": ["lp_"], "vital": ["fc_repos","fr_repos","ta_repos","spo2_repos"],
         "bmi": ["bmi"],
+        "nrs": ["nrs_repos","nrs_mouvement","nrs_nuit"],
+        "psfs": ["psfs_score_moyen"],
+        "groc": ["groc_score"],
+        "eq5d": ["eq5d_index","eq5d_vas"],
+        "ndi": ["ndi_score_pct"],
+        "koos": ["koos_pain","koos_adl","koos_sport","koos_qol"],
+        "hoos": ["hoos_pain","hoos_adl","hoos_sport","hoos_qol"],
+        "lysholm": ["lysholm_score_total"],
+        "dash": ["dash_score"],
     }
     def _chart_tid(col):
         for tid, pfxs in _TID_TO_PFX_CH.items():
@@ -2884,6 +2893,15 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         "bmi":           ["bmi"],
         "general":       ["diagnostic_prescription","diag_notes","appreciation",
                           "objectifs","traitement","frequence"],
+            "nrs":     ["nrs_repos","nrs_mouvement","nrs_nuit","nrs_region"],
+        "psfs":    ["psfs_score_moyen","psfs_activite_","psfs_score_"],
+        "groc":    ["groc_score","groc_appreciation","groc_notes"],
+        "eq5d":    ["eq5d_"],
+        "ndi":     ["ndi_s","ndi_score_"],
+        "koos":    ["koos_"],
+        "hoos":    ["hoos_"],
+        "lysholm": ["lysholm_"],
+        "dash":    ["dash_"],
     }
 
     def _col_belongs_to_active_test(col):
@@ -3077,6 +3095,15 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
                                       "nij_score","nij_interpretation"]),
             ("EVA Douleur",          ["eva"]),
             ("Lombalgie",            ["schober","luomajoki","posture","groupe_clinique"]),
+            ("NRS — Douleur",        ["nrs_repos","nrs_mouvement","nrs_nuit","nrs_region"]),
+            ("PSFS",                 ["psfs_score_moyen","psfs_activite_1","psfs_activite_2","psfs_activite_3","psfs_score_1","psfs_score_2","psfs_score_3"]),
+            ("GROC",                 ["groc_score","groc_appreciation"]),
+            ("EQ-5D",                ["eq5d_index","eq5d_vas"]),
+            ("NDI",                  ["ndi_score_total","ndi_score_pct"]),
+            ("KOOS",                 ["koos_pain","koos_symptoms","koos_adl","koos_sport","koos_qol"]),
+            ("HOOS",                 ["hoos_pain","hoos_symptoms","hoos_adl","hoos_sport","hoos_qol"]),
+            ("Lysholm",              ["lysholm_score_total"]),
+            ("DASH",                 ["dash_score"]),
         ]
 
         # excluded_sections contient des test_ids (préfixes de colonnes)
