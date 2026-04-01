@@ -68,6 +68,24 @@ def _load_templates():
     import templates.genou               # noqa
     import templates.hanche              # noqa
     import templates.membre_superieur    # noqa
+    # Tests batch 2 (FullPhysio + Physiotutors)
+    from tests.questionnaires.lefs          import LEFS          # noqa
+    from tests.questionnaires.womac         import WOMAC         # noqa
+    from tests.questionnaires.spadi         import SPADI         # noqa
+    from tests.questionnaires.constant_murley import ConstantMurley # noqa
+    from tests.questionnaires.prtee         import PRTEE         # noqa
+    from tests.questionnaires.bctq          import BCTQ          # noqa
+    from tests.questionnaires.roland_morris import RolandMorris  # noqa
+    from tests.questionnaires.start_back    import STarTBack     # noqa
+    from tests.questionnaires.fabq          import FABQ          # noqa
+    from tests.questionnaires.dn4           import DN4           # noqa
+    from tests.questionnaires.faos          import FAOS          # noqa
+    from tests.questionnaires.kujala        import Kujala        # noqa
+    from tests.questionnaires.acl_rsi       import ACLRSI        # noqa
+    from tests.questionnaires.visa_scales   import VISAA, VISAP, VISAH, VISAG # noqa
+    from tests.questionnaires.misc_scores   import CAIT, Tegner, DHI, HIT6   # noqa
+    from tests.questionnaires.hagos         import HAGOS         # noqa
+    from tests.questionnaires.other_scores  import IKDC, CSI, QBPDS, ATRS, WOSI # noqa
     return True
 
 try:
@@ -154,6 +172,23 @@ def _ensure_registry():
         from tests.questionnaires.hoos       import HOOS          # noqa
         from tests.questionnaires.lysholm    import Lysholm       # noqa
         from tests.questionnaires.dash       import DASH          # noqa
+        from tests.questionnaires.lefs          import LEFS          # noqa
+        from tests.questionnaires.womac         import WOMAC         # noqa
+        from tests.questionnaires.spadi         import SPADI         # noqa
+        from tests.questionnaires.constant_murley import ConstantMurley # noqa
+        from tests.questionnaires.prtee         import PRTEE         # noqa
+        from tests.questionnaires.bctq          import BCTQ          # noqa
+        from tests.questionnaires.roland_morris import RolandMorris  # noqa
+        from tests.questionnaires.start_back    import STarTBack     # noqa
+        from tests.questionnaires.fabq          import FABQ          # noqa
+        from tests.questionnaires.dn4           import DN4           # noqa
+        from tests.questionnaires.faos          import FAOS          # noqa
+        from tests.questionnaires.kujala        import Kujala        # noqa
+        from tests.questionnaires.acl_rsi       import ACLRSI        # noqa
+        from tests.questionnaires.visa_scales   import VISAA, VISAP, VISAH, VISAG # noqa
+        from tests.questionnaires.misc_scores   import CAIT, Tegner, DHI, HIT6   # noqa
+        from tests.questionnaires.hagos         import HAGOS         # noqa
+        from tests.questionnaires.other_scores  import IKDC, CSI, QBPDS, ATRS, WOSI # noqa
     except Exception as _e:
         st.error(f"Erreur import tests : {_e}")
         return
