@@ -195,6 +195,66 @@ def _back_to_cas():
         if cas_info: S.cas_info = cas_info
     _go("cas")
 
+
+def _sidebar_context(unsaved=False):
+    """Fil d'Ariane cliquable dans la sidebar."""
+    import json as _jsc
+    with st.sidebar:
+        # Construire les segments
+        _segs = []  # (label, action_fn or None)
+
+        _segs.append(("🏥 Bilans", lambda: _go("accueil")))
+
+        if S.get("patient_id") and S.get("patient_info"):
+            _pi   = S.patient_info
+            _nom  = f"{_pi.get('nom','')} {_pi.get('prenom','')}".strip()
+            _segs.append((f"👤 {_nom}", lambda: _go("dossier")))
+
+        if S.get("cas_id") and S.get("cas_info"):
+            try:
+                _snap = _jsc.loads(S.cas_info.get("template_snapshot","{}") or "{}")
+            except Exception:
+                _snap = {}
+            _cname = _snap.get("nom", S.cas_info.get("template_id","—"))
+            _segs.append((f"📂 {_cname}", lambda: _back_to_cas()))
+
+        if S.mode in ("formulaire", "evolution", "impression"):
+            _labels = {"formulaire": "📋 Bilan", "evolution": "📈 Évolution",
+                       "impression": "🖨️ Impression"}
+            _segs.append((_labels.get(S.mode, S.mode), None))  # dernier = non cliquable
+
+        # Confirmation navigation non sauvegardée
+        if S.get("_sb_confirm"):
+            st.warning("⚠️ Non sauvegardé — quitter ?")
+            _c1, _c2 = st.columns(2)
+            if _c1.button("✅ Oui", key="sb_yes", use_container_width=True):
+                _dest_fn = S.pop("_sb_confirm")
+                S.pop("_bilan_unsaved", None)
+                _dest_fn()
+            if _c2.button("❌ Non", key="sb_no", use_container_width=True):
+                S.pop("_sb_confirm", None)
+                st.rerun()
+            st.markdown("---")
+            return
+
+        # Affichage des segments
+        for i, (label, fn) in enumerate(_segs):
+            is_last = (i == len(_segs) - 1)
+            _indent = "　" * i  # indentation visuelle
+            if is_last or fn is None:
+                st.markdown(
+                    f"{_indent}<span style='color:#333;font-weight:600'>{label}</span>",
+                    unsafe_allow_html=True)
+            else:
+                if st.button(f"{_indent}{label}", key=f"sb_{i}_{S.mode}",
+                             use_container_width=True):
+                    if unsaved:
+                        S["_sb_confirm"] = fn
+                        st.rerun()
+                    else:
+                        fn()
+        st.markdown("---")
+
 # ── ACCUEIL — recherche gauche / créer droite (v1) ────────────────────────────
 def render_accueil():
     st.markdown('<div class="page-title">🏥 36.9 Bilans</div>', unsafe_allow_html=True)
@@ -261,6 +321,7 @@ def render_accueil():
 
 # ── DOSSIER PATIENT ───────────────────────────────────────────────────────────
 def render_dossier():
+    _sidebar_context()
     info = S.patient_info
     st.markdown(
         f'<div class="patient-badge">👤 {info.get("nom","")} {info.get("prenom","")} '
@@ -388,6 +449,7 @@ def _render_cas_list(df, is_clos=False):
 
 # ── CHOISIR TEMPLATE ──────────────────────────────────────────────────────────
 def render_choisir_template():
+    _sidebar_context()
     info = S.patient_info
     st.markdown(
         f'<div class="patient-badge">👤 {info.get("nom","")} {info.get("prenom","")}'
@@ -485,6 +547,7 @@ def render_choisir_template():
 
 # ── VUE CAS — liste bilans gauche / créer droite (v1) ─────────────────────────
 def render_cas():
+    _sidebar_context()
     import json as _j
     info = S.patient_info
     cas  = S.cas_info
@@ -604,6 +667,7 @@ def render_cas():
 
 # ── FORMULAIRE ────────────────────────────────────────────────────────────────
 def render_formulaire():
+    _sidebar_context(unsaved=S.get('_bilan_unsaved', False))
     import json as _j
     info = S.patient_info
 
@@ -761,6 +825,7 @@ def render_formulaire():
 
 # ── ÉVOLUTION ─────────────────────────────────────────────────────────────────
 def render_evolution():
+    _sidebar_context()
     import json as _j
     info = S.patient_info
     cas  = S.cas_info
@@ -1024,6 +1089,7 @@ def render_evolution():
 mode = S.mode
 # ── VUE IMPRESSION ────────────────────────────────────────────────────────────
 def render_impression():
+    _sidebar_context()
     from utils.pdf import generate_tests_pdf
     from core.registry import all_tests as _all_tests_imp
     info = S.patient_info
