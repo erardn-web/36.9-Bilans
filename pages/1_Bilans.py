@@ -243,31 +243,44 @@ def _sidebar_context(unsaved=False):
             st.markdown("---")
             return
 
-        # Affichage — fil d'Ariane stylisé
-        st.markdown(
-            "<div style='font-size:0.7rem;color:#aaa;text-transform:uppercase;"
-            "letter-spacing:.08em;margin-bottom:4px'>Vous êtes ici</div>",
-            unsafe_allow_html=True)
+        # Style liens discrets (masque l'apparence bouton)
+        st.markdown("""<style>
+        div[data-testid="stSidebar"] .bc-btn button {
+            background: none !important;
+            border: none !important;
+            padding: 2px 0 !important;
+            color: #2B57A7 !important;
+            font-size: 0.85rem !important;
+            font-weight: 400 !important;
+            text-align: left !important;
+            box-shadow: none !important;
+            text-decoration: underline !important;
+            cursor: pointer !important;
+            width: auto !important;
+        }
+        div[data-testid="stSidebar"] .bc-btn button:hover {
+            color: #1a3c5e !important;
+        }
+        </style>""", unsafe_allow_html=True)
+
+        # Affichage fil d'Ariane sobre
         for i, (label, fn) in enumerate(_segs):
             is_last = (i == len(_segs) - 1)
-            _prefix = "└─ " if i > 0 else ""
+            _sep = " › " if i > 0 else ""
             if is_last or fn is None:
-                # Segment actif — non cliquable, mis en évidence
                 st.markdown(
-                    f"<div style='padding:4px 8px;background:#EBF0FA;"
-                    f"border-left:3px solid #2B57A7;border-radius:0 4px 4px 0;"
-                    f"font-size:0.85rem;font-weight:600;color:#1a3c5e;"
-                    f"margin:2px 0'>{_prefix}{label}</div>",
+                    f"<span style='font-size:0.85rem;font-weight:600;"
+                    f"color:#1a3c5e'>{_sep}{label}</span>",
                     unsafe_allow_html=True)
             else:
-                # Segment parent — bouton discret
-                if st.button(f"{_prefix}{label}", key=f"sb_{i}_{S.mode}",
-                             use_container_width=True):
+                st.markdown(f'<div class="bc-btn">', unsafe_allow_html=True)
+                if st.button(f"{_sep}{label}", key=f"sb_{i}_{S.mode}"):
                     if unsaved:
                         S["_sb_confirm"] = fn
                         st.rerun()
                     else:
                         fn()
+                st.markdown('</div>', unsafe_allow_html=True)
         st.markdown("---")
 
 # ── ACCUEIL — recherche gauche / créer droite (v1) ────────────────────────────
