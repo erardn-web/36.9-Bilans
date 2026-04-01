@@ -73,6 +73,7 @@ from utils.db import (
     get_bilan_tests_actifs, save_bilan_tests_actifs,
     delete_bilan,
     get_medecin_destinataire, save_medecin_destinataire,
+    get_all_validations, save_validation,
 )
 from core.registry import all_templates
 from core.engine   import render_bilan_form, render_evolution_view, build_tests_from_snapshot
@@ -1154,17 +1155,31 @@ def render_bibliotheque():
     from core.registry import all_tests as _all_tests_reg
     tests_map = _all_tests_reg()  # {test_id: class}
 
+    # Charger les validations
+    _validations = get_all_validations()
+    _VAL_STYLE = {
+        "validé":    ("✅", "#e8f5e9", "#388e3c"),
+        "en_cours":  ("🔄", "#fff8e1", "#f9a825"),
+        "non_testé": ("⬜", "#f5f5f5", "#999"),
+    }
+
     st.markdown('<div class="page-title">📚 Bibliothèque des tests</div>',
                 unsafe_allow_html=True)
     if st.button("⬅️ Retour"): _go(S.get("_prev_mode","accueil"))
     st.markdown("---")
 
-    # Recherche
-    s1, s2 = st.columns([3, 2])
+    # Filtre validation + recherche
+    s1, s2, s3 = st.columns([3, 2, 1.5])
+    _val_filter = s3.selectbox("Validation", ["Tous", "✅ Validé", "🔄 En cours", "⬜ Non testé"],
+                                key="bib_val_filter", label_visibility="collapsed")
     search_q  = s1.text_input("🔍 Rechercher", placeholder="ex: épaule, équilibre, Berg…",
                                key="bib_search")
     ai_q      = s2.text_input("🤖 Décrire", placeholder="ex: patient âgé qui chute…",
                                key="bib_ai")
+    # Filtre validation
+    _val_map  = {"Tous": None, "✅ Validé": "validé",
+                 "🔄 En cours": "en_cours", "⬜ Non testé": "non_testé"}
+    _val_sel  = _val_map.get(_val_filter)
 
     # Recherche IA
     if ai_q and S.get("bib_ai_prev") != ai_q:
@@ -1206,6 +1221,11 @@ def render_bibliotheque():
     else:
         filtered = all_items
 
+    # Appliquer filtre validation
+    if _val_sel:
+        filtered = [(tid, cls) for tid, cls in filtered
+                    if _validations.get(tid, {}).get("statut","non_testé") == _val_sel]
+
     if not filtered:
         st.info("Aucun test trouvé.")
         return
@@ -1222,13 +1242,19 @@ def render_bibliotheque():
             m = cls.meta()
             tags = m.get("tags", [])
             is_sel = (tid == selected_tid)
-            tag_str = " ".join([f"`{t}`" for t in tags[:3]])
+            _vstat = _validations.get(tid, {}).get("statut", "non_testé")
+            _vicon, _vbg, _vcol = _VAL_STYLE.get(_vstat, _VAL_STYLE["non_testé"])
             btn_label = f"{'▶ ' if is_sel else ''}{cls.tab_label()}"
-            if st.button(btn_label, key=f"bib_btn_{tid}",
-                         use_container_width=True,
-                         type="primary" if is_sel else "secondary"):
+            _bcol1, _bcol2 = st.columns([5, 1])
+            if _bcol1.button(btn_label, key=f"bib_btn_{tid}",
+                             use_container_width=True,
+                             type="primary" if is_sel else "secondary"):
                 S[sel_key] = tid
                 st.rerun()
+            _bcol2.markdown(
+                f"<div style='text-align:center;padding-top:6px;font-size:1rem'"
+                f" title='{_vstat}'>{_vicon}</div>",
+                unsafe_allow_html=True)
             if tags:
                 st.caption(" · ".join(tags[:4]))
 
@@ -1263,6 +1289,37 @@ def render_bibliotheque():
             except Exception as _e:
                 st.warning(f"Aperçu non disponible : {_e}")
             st.markdown('</div>', unsafe_allow_html=True)
+
+            # ── Validation (dev) ───────────────────────────────────────
+            st.markdown("---")
+            _vdata  = _validations.get(selected_tid, {})
+            _vstat  = _vdata.get("statut", "non_testé")
+            _vnotes = _vdata.get("notes", "")
+            _vicon, _vbg, _vcol = _VAL_STYLE.get(_vstat, _VAL_STYLE["non_testé"])
+            st.markdown(
+                f"<div style='display:inline-block;padding:3px 10px;"
+                f"background:{_vbg};border-radius:12px;"
+                f"font-size:0.82rem;color:{_vcol};font-weight:600'>"
+                f"{_vicon} {_vstat.replace('_',' ').capitalize()}</div>",
+                unsafe_allow_html=True)
+            with st.expander("🧪 Changer le statut de validation", expanded=False):
+                _opts = ["non_testé", "en_cours", "validé"]
+                _idx  = _opts.index(_vstat) if _vstat in _opts else 0
+                _new_stat = st.radio("Statut", _opts, index=_idx,
+                    format_func=lambda x: {"non_testé":"⬜ Non testé",
+                                           "en_cours":"🔄 En cours",
+                                           "validé":"✅ Validé"}[x],
+                    key=f"val_stat_{selected_tid}", horizontal=True)
+                _new_notes = st.text_area("Notes", value=_vnotes, height=80,
+                                          key=f"val_notes_{selected_tid}",
+                                          placeholder="Observations, bugs, points à vérifier…")
+                if st.button("💾 Enregistrer", key=f"val_save_{selected_tid}",
+                             type="primary"):
+                    if save_validation(selected_tid, _new_stat, _new_notes):
+                        st.success("✅ Sauvegardé.")
+                        st.rerun()
+                    else:
+                        st.error("❌ Erreur GSheets.")
 
             # Impression PDF si disponible
             from utils.pdf import QUESTIONNAIRES, generate_questionnaires_pdf
