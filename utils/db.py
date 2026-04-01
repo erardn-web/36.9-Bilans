@@ -53,8 +53,9 @@ def _get_spreadsheet():
     _ensure_sheet(ss, "Cas",       CAS_HEADERS)
     _ensure_sheet(ss, "Bilans",    BILANS_BASE_HEADERS + ALL_TEST_FIELDS)
     _ensure_sheet(ss, "Audit_Log", AUDIT_HEADERS)
-    _ensure_sheet(ss, "Feedback",  FEEDBACK_HEADERS)
-    _ensure_sheet(ss, "Votes",     VOTES_HEADERS)
+    _ensure_sheet(ss, "Feedback",   FEEDBACK_HEADERS)
+    _ensure_sheet(ss, "Votes",      VOTES_HEADERS)
+    _ensure_sheet(ss, "Validation", ["test_id", "statut", "notes", "updated_at"])
     return ss
 
 # ── Headers ───────────────────────────────────────────────────────────────────
@@ -637,4 +638,44 @@ def save_medecin_destinataire(cas_id: str, medecin_info: dict) -> bool:
     })
     if ok:
         _invalidate_read_cache()
+    return ok
+
+
+# ── Validation des tests (bibliothèque dev) ───────────────────────────────────
+_VALIDATION_STATUTS = ["non_testé", "en_cours", "validé"]
+
+@st.cache_data(ttl=60)
+def get_all_validations() -> dict:
+    """Retourne {test_id: {"statut": ..., "notes": ...}}."""
+    try:
+        ws   = _ws("Validation")
+        rows = ws.get_all_values()
+        if not rows or len(rows) < 2:
+            return {}
+        hdr = rows[0]
+        result = {}
+        for row in rows[1:]:
+            d = dict(zip(hdr, row))
+            tid = d.get("test_id", "").strip()
+            if tid:
+                result[tid] = {"statut": d.get("statut","non_testé"),
+                               "notes":  d.get("notes","")}
+        return result
+    except Exception:
+        return {}
+
+
+def save_validation(test_id: str, statut: str, notes: str = "") -> bool:
+    """Crée ou met à jour la ligne de validation pour un test."""
+    existing = _get_row("Validation", "test_id", test_id)
+    data = {"test_id": test_id, "statut": statut,
+            "notes": notes, "updated_at": _now()}
+    if existing:
+        ok = _update_row("Validation", "test_id", test_id,
+                         {"statut": statut, "notes": notes, "updated_at": _now()})
+    else:
+        _append_row("Validation", data)
+        ok = True
+    if ok:
+        get_all_validations.clear()
     return ok
