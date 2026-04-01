@@ -264,6 +264,10 @@ def _sidebar_context(unsaved=False):
         </style>""", unsafe_allow_html=True)
 
         # Affichage fil d'Ariane sobre
+        st.markdown(
+            "<div style='font-size:0.7rem;color:#aaa;text-transform:uppercase;"
+            "letter-spacing:.08em;margin-bottom:6px'>📍 Vous êtes ici</div>",
+            unsafe_allow_html=True)
         for i, (label, fn) in enumerate(_segs):
             is_last = (i == len(_segs) - 1)
             _sep = " › " if i > 0 else ""
