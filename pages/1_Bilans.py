@@ -82,10 +82,45 @@ def _load_templates():
     from tests.questionnaires.faos          import FAOS          # noqa
     from tests.questionnaires.kujala        import Kujala        # noqa
     from tests.questionnaires.acl_rsi       import ACLRSI        # noqa
-    from tests.questionnaires.visa_scales   import VISAA, VISAP, VISAH, VISAG # noqa
-    from tests.questionnaires.misc_scores   import CAIT, Tegner, DHI, HIT6   # noqa
-    from tests.questionnaires.hagos         import HAGOS         # noqa
-    from tests.questionnaires.other_scores  import IKDC, CSI, QBPDS, ATRS, WOSI # noqa
+    from tests.questionnaires.visa_a        import VISAA        # noqa
+    from tests.questionnaires.visa_p        import VISAP        # noqa
+    from tests.questionnaires.visa_h        import VISAH        # noqa
+    from tests.questionnaires.visa_g        import VISAG        # noqa
+    from tests.questionnaires.cait          import CAIT         # noqa
+    from tests.questionnaires.tegner        import Tegner       # noqa
+    from tests.questionnaires.dhi           import DHI          # noqa
+    from tests.questionnaires.hit6          import HIT6         # noqa
+    from tests.questionnaires.hagos         import HAGOS        # noqa
+    from tests.questionnaires.ikdc          import IKDC         # noqa
+    from tests.questionnaires.csi           import CSI          # noqa
+    from tests.questionnaires.qbpds         import QBPDS        # noqa
+    from tests.questionnaires.atrs          import ATRS         # noqa
+    from tests.questionnaires.wosi          import WOSI         # noqa
+    from tests.questionnaires.borg_rpe      import BorgRPE              # noqa
+    from tests.questionnaires.sgrq          import SGRQ                 # noqa
+    from tests.questionnaires.lcadl         import LCADL                # noqa
+    from tests.questionnaires.pcfs          import PCFS                 # noqa
+    from tests.questionnaires.psqi          import PSQI                 # noqa
+    from tests.questionnaires.abc_scale     import ABCScale             # noqa
+    from tests.questionnaires.mini_bestest  import MiniBESTest          # noqa
+    from tests.questionnaires.fes_i         import FESI                 # noqa
+    from tests.questionnaires.barthel       import Barthel              # noqa
+    from tests.questionnaires.ten_mwt       import TenMWT               # noqa
+    from tests.questionnaires.ashworth      import AshworthScale        # noqa
+    from tests.questionnaires.iciq_ui       import ICIQUI               # noqa
+    from tests.questionnaires.pfdi20        import PFDI20               # noqa
+    from tests.questionnaires.pcs           import PCS                  # noqa
+    from tests.questionnaires.phq9          import PHQ9                 # noqa
+    from tests.questionnaires.gad7          import GAD7                 # noqa
+    from tests.questionnaires.isi           import ISI                  # noqa
+    from tests.questionnaires.haq           import HAQ                  # noqa
+    from tests.questionnaires.basdai        import BASDAI               # noqa
+    from tests.questionnaires.frailty_scale import ClinicalFrailtyScale # noqa
+    from tests.questionnaires.frail_scale   import FRAILScale           # noqa
+    from tests.questionnaires.gait_speed    import GaitSpeed4m          # noqa
+    from tests.questionnaires.k_ses         import KSES                 # noqa
+    from tests.questionnaires.prwe          import PRWE                 # noqa
+    from tests.questionnaires.bpi           import BPI                  # noqa
     return True
 
 try:
@@ -185,10 +220,45 @@ def _ensure_registry():
         from tests.questionnaires.faos          import FAOS          # noqa
         from tests.questionnaires.kujala        import Kujala        # noqa
         from tests.questionnaires.acl_rsi       import ACLRSI        # noqa
-        from tests.questionnaires.visa_scales   import VISAA, VISAP, VISAH, VISAG # noqa
-        from tests.questionnaires.misc_scores   import CAIT, Tegner, DHI, HIT6   # noqa
-        from tests.questionnaires.hagos         import HAGOS         # noqa
-        from tests.questionnaires.other_scores  import IKDC, CSI, QBPDS, ATRS, WOSI # noqa
+        from tests.questionnaires.visa_a        import VISAA        # noqa
+        from tests.questionnaires.visa_p        import VISAP        # noqa
+        from tests.questionnaires.visa_h        import VISAH        # noqa
+        from tests.questionnaires.visa_g        import VISAG        # noqa
+        from tests.questionnaires.cait          import CAIT         # noqa
+        from tests.questionnaires.tegner        import Tegner       # noqa
+        from tests.questionnaires.dhi           import DHI          # noqa
+        from tests.questionnaires.hit6          import HIT6         # noqa
+        from tests.questionnaires.hagos         import HAGOS        # noqa
+        from tests.questionnaires.ikdc          import IKDC         # noqa
+        from tests.questionnaires.csi           import CSI          # noqa
+        from tests.questionnaires.qbpds         import QBPDS        # noqa
+        from tests.questionnaires.atrs          import ATRS         # noqa
+        from tests.questionnaires.wosi          import WOSI         # noqa
+        from tests.questionnaires.borg_rpe      import BorgRPE              # noqa
+        from tests.questionnaires.sgrq          import SGRQ                 # noqa
+        from tests.questionnaires.lcadl         import LCADL                # noqa
+        from tests.questionnaires.pcfs          import PCFS                 # noqa
+        from tests.questionnaires.psqi          import PSQI                 # noqa
+        from tests.questionnaires.abc_scale     import ABCScale             # noqa
+        from tests.questionnaires.mini_bestest  import MiniBESTest          # noqa
+        from tests.questionnaires.fes_i         import FESI                 # noqa
+        from tests.questionnaires.barthel       import Barthel              # noqa
+        from tests.questionnaires.ten_mwt       import TenMWT               # noqa
+        from tests.questionnaires.ashworth      import AshworthScale        # noqa
+        from tests.questionnaires.iciq_ui       import ICIQUI               # noqa
+        from tests.questionnaires.pfdi20        import PFDI20               # noqa
+        from tests.questionnaires.pcs           import PCS                  # noqa
+        from tests.questionnaires.phq9          import PHQ9                 # noqa
+        from tests.questionnaires.gad7          import GAD7                 # noqa
+        from tests.questionnaires.isi           import ISI                  # noqa
+        from tests.questionnaires.haq           import HAQ                  # noqa
+        from tests.questionnaires.basdai        import BASDAI               # noqa
+        from tests.questionnaires.frailty_scale import ClinicalFrailtyScale # noqa
+        from tests.questionnaires.frail_scale   import FRAILScale           # noqa
+        from tests.questionnaires.gait_speed    import GaitSpeed4m          # noqa
+        from tests.questionnaires.k_ses         import KSES                 # noqa
+        from tests.questionnaires.prwe          import PRWE                 # noqa
+        from tests.questionnaires.bpi           import BPI                  # noqa
     except Exception as _e:
         st.error(f"Erreur import tests : {_e}")
         return
