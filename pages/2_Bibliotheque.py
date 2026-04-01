@@ -7,8 +7,49 @@ st.set_page_config(page_title="Bibliothèque — 36.9 Bilans",
 @st.cache_resource
 def _load_all():
     import importlib
+    # Templates (importent leurs propres tests)
     for m in ["templates.shv","templates.equilibre","templates.bpco",
-              "templates.lombalgie","templates.neutre","templates.epaule_douloureuse"]:
+              "templates.lombalgie","templates.neutre","templates.epaule_douloureuse",
+              "templates.cervicalgie","templates.genou","templates.hanche",
+              "templates.membre_superieur"]:
+        try: importlib.import_module(m)
+        except Exception as e: st.warning(f"{m}: {e}")
+    # Tests non liés à un template (batch 1)
+    for m in [
+        "tests.questionnaires.psfs","tests.questionnaires.groc",
+        "tests.questionnaires.eq5d","tests.questionnaires.ndi",
+        "tests.questionnaires.koos","tests.questionnaires.hoos",
+        "tests.questionnaires.lysholm","tests.questionnaires.dash",
+        "tests.questionnaires.lefs","tests.questionnaires.womac",
+        "tests.questionnaires.spadi","tests.questionnaires.constant_murley",
+        "tests.questionnaires.prtee","tests.questionnaires.bctq",
+        "tests.questionnaires.roland_morris","tests.questionnaires.start_back",
+        "tests.questionnaires.fabq","tests.questionnaires.dn4",
+        "tests.questionnaires.faos","tests.questionnaires.kujala",
+        "tests.questionnaires.acl_rsi","tests.questionnaires.hagos",
+        "tests.questionnaires.ikdc","tests.questionnaires.csi",
+        "tests.questionnaires.qbpds","tests.questionnaires.atrs",
+        "tests.questionnaires.wosi",
+        "tests.questionnaires.visa_a","tests.questionnaires.visa_p",
+        "tests.questionnaires.visa_h","tests.questionnaires.visa_g",
+        "tests.questionnaires.cait","tests.questionnaires.tegner",
+        "tests.questionnaires.dhi","tests.questionnaires.hit6",
+        "tests.tests_cliniques.nrs",
+        # Tests batch 2
+        "tests.questionnaires.borg_rpe","tests.questionnaires.sgrq",
+        "tests.questionnaires.lcadl","tests.questionnaires.pcfs",
+        "tests.questionnaires.psqi","tests.questionnaires.abc_scale",
+        "tests.questionnaires.mini_bestest","tests.questionnaires.fes_i",
+        "tests.questionnaires.barthel","tests.questionnaires.ten_mwt",
+        "tests.questionnaires.ashworth","tests.questionnaires.iciq_ui",
+        "tests.questionnaires.pfdi20","tests.questionnaires.pcs",
+        "tests.questionnaires.phq9","tests.questionnaires.gad7",
+        "tests.questionnaires.isi","tests.questionnaires.haq",
+        "tests.questionnaires.basdai","tests.questionnaires.frailty_scale",
+        "tests.questionnaires.frail_scale","tests.questionnaires.gait_speed",
+        "tests.questionnaires.k_ses","tests.questionnaires.prwe",
+        "tests.questionnaires.bpi",
+    ]:
         try: importlib.import_module(m)
         except Exception as e: st.warning(f"{m}: {e}")
     return True
