@@ -52,7 +52,22 @@ def _load_templates():
     from tests.tests_cliniques.testing_epaule        import TestingEpaule        # noqa
     from tests.tests_cliniques.tests_epaule_speciaux import TestsEpauleSpeciaux  # noqa
     from tests.tests_cliniques.classification_epaule import ClassificationEpaule # noqa
+    # Nouveaux tests
+    from tests.tests_cliniques.nrs       import NRS           # noqa
+    from tests.questionnaires.psfs       import PSFS          # noqa
+    from tests.questionnaires.groc       import GROC          # noqa
+    from tests.questionnaires.eq5d       import EQ5D          # noqa
+    from tests.questionnaires.ndi        import NDI           # noqa
+    from tests.questionnaires.koos       import KOOS          # noqa
+    from tests.questionnaires.hoos       import HOOS          # noqa
+    from tests.questionnaires.lysholm    import Lysholm       # noqa
+    from tests.questionnaires.dash       import DASH          # noqa
+    # Nouveaux templates
     import templates.epaule_douloureuse  # noqa
+    import templates.cervicalgie         # noqa
+    import templates.genou               # noqa
+    import templates.hanche              # noqa
+    import templates.membre_superieur    # noqa
     return True
 
 try:
@@ -130,6 +145,15 @@ def _ensure_registry():
         from tests.tests_cliniques.odi              import ODI              # noqa
         from tests.tests_cliniques.tampa            import Tampa            # noqa
         from tests.tests_cliniques.orebro           import Orebro           # noqa
+        from tests.tests_cliniques.nrs       import NRS           # noqa
+        from tests.questionnaires.psfs       import PSFS          # noqa
+        from tests.questionnaires.groc       import GROC          # noqa
+        from tests.questionnaires.eq5d       import EQ5D          # noqa
+        from tests.questionnaires.ndi        import NDI           # noqa
+        from tests.questionnaires.koos       import KOOS          # noqa
+        from tests.questionnaires.hoos       import HOOS          # noqa
+        from tests.questionnaires.lysholm    import Lysholm       # noqa
+        from tests.questionnaires.dash       import DASH          # noqa
     except Exception as _e:
         st.error(f"Erreur import tests : {_e}")
         return
@@ -145,6 +169,14 @@ def _ensure_registry():
     if "lombalgie" not in _templates:
         import templates.lombalgie           # noqa
         import templates.epaule_douloureuse  # noqa
+    if "cervicalgie" not in _templates:
+        import templates.cervicalgie         # noqa
+    if "genou" not in _templates:
+        import templates.genou               # noqa
+    if "hanche" not in _templates:
+        import templates.hanche              # noqa
+    if "membre_superieur" not in _templates:
+        import templates.membre_superieur    # noqa
 
 # ── CSS (copie fidèle v1) ─────────────────────────────────────────────────────
 st.markdown("""
