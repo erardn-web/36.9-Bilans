@@ -17,13 +17,23 @@ _load_all()
 
 from core.registry import all_tests
 from utils.search import search_items
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.db import get_all_validations, save_validation
 
 tests_map = all_tests()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
+_validations = get_all_validations()
+_VAL_STYLE = {
+    "validé":    ("✅", "#e8f5e9", "#388e3c"),
+    "en_cours":  ("🔄", "#fff8e1", "#f9a825"),
+    "non_testé": ("⬜", "#f5f5f5", "#999999"),
+}
+
 with st.sidebar:
     st.markdown("**⚙️ Affichage**")
-    layout = st.radio("Mode d'affichage", 
+    layout = st.radio("Mode d'affichage",
         options=["liste","cartes","tuiles","table"],
         format_func=lambda x: {
             "liste":"☰ Liste avec accents",
@@ -35,6 +45,22 @@ with st.sidebar:
             st.session_state.get("bib_layout","liste")),
         label_visibility="collapsed")
     st.session_state["bib_layout"] = layout
+    st.markdown("---")
+    st.markdown("**🧪 Validation**")
+    _val_filter = st.selectbox("Statut",
+        ["Tous", "✅ Validé", "🔄 En cours", "⬜ Non testé"],
+        key="bib_val_filter", label_visibility="collapsed")
+    # Compteurs
+    _counts = {"validé": 0, "en_cours": 0, "non_testé": 0}
+    for _v in _validations.values():
+        _s = _v.get("statut","non_testé")
+        if _s in _counts: _counts[_s] += 1
+    _total = len(list(all_tests().keys()))
+    _counts["non_testé"] = _total - _counts["validé"] - _counts["en_cours"]
+    st.caption(
+        f"✅ {_counts['validé']} · "
+        f"🔄 {_counts['en_cours']} · "
+        f"⬜ {_counts['non_testé']} / {_total}")
 
 st.markdown("""<style>
 .bib-readonly input,.bib-readonly textarea,.bib-readonly select{pointer-events:none!important;opacity:.7}
@@ -109,6 +135,35 @@ if selected_tid and selected_tid in tests_map:
     except Exception as e:
         st.warning(f"Aperçu non disponible : {e}")
     st.markdown('</div>', unsafe_allow_html=True)
+    # ── Validation ──────────────────────────────────────────────────────────
+    st.markdown("---")
+    _vdata  = _validations.get(selected_tid, {})
+    _vstat  = _vdata.get("statut", "non_testé")
+    _vnotes = _vdata.get("notes", "")
+    _vicon, _vbg, _vcol = _VAL_STYLE.get(_vstat, _VAL_STYLE["non_testé"])
+    st.markdown(
+        f"<span style='display:inline-block;padding:3px 12px;background:{_vbg};"
+        f"border-radius:12px;font-size:0.82rem;color:{_vcol};font-weight:600'>"
+        f"{_vicon} {_vstat.replace('_',' ').capitalize()}</span>",
+        unsafe_allow_html=True)
+    with st.expander("🧪 Modifier le statut", expanded=(_vstat == "non_testé")):
+        _opts  = ["non_testé", "en_cours", "validé"]
+        _idx   = _opts.index(_vstat) if _vstat in _opts else 0
+        _new_stat = st.radio("Statut", _opts, index=_idx, horizontal=True,
+            format_func=lambda x: {"non_testé":"⬜ Non testé",
+                                    "en_cours": "🔄 En cours",
+                                    "validé":   "✅ Validé"}[x],
+            key=f"val_stat_{selected_tid}")
+        _new_notes = st.text_area("Notes / observations", value=_vnotes, height=80,
+            key=f"val_notes_{selected_tid}",
+            placeholder="Points à vérifier, bugs, comportement attendu…")
+        if st.button("💾 Enregistrer", type="primary", key=f"val_save_{selected_tid}"):
+            if save_validation(selected_tid, _new_stat, _new_notes):
+                st.success("✅ Sauvegardé.")
+                st.rerun()
+            else:
+                st.error("❌ Erreur GSheets.")
+
     st.markdown("---")
     from utils.pdf import generate_tests_pdf
     _pdf_key = f"bib_pdf_{selected_tid}"
@@ -163,6 +218,14 @@ elif ai_ids:
 else:
     filtered = all_items
 
+# Filtre validation
+_val_map = {"Tous": None, "✅ Validé": "validé",
+            "🔄 En cours": "en_cours", "⬜ Non testé": "non_testé"}
+_val_sel = _val_map.get(_val_filter)
+if _val_sel:
+    filtered = [(tid, cls) for tid, cls in filtered
+                if _validations.get(tid, {}).get("statut","non_testé") == _val_sel]
+
 st.caption(f"{len(filtered)} test(s)")
 st.markdown("")
 
@@ -178,12 +241,15 @@ if layout == "liste":
         desc = m.get("description","")[:90] + ("…" if len(m.get("description",""))>90 else "")
         color = _ACCENT_COLORS[i % len(_ACCENT_COLORS)]
         tag_html = "".join(f'<span class="tag">{t}</span>' for t in tags)
+        _vstat = _validations.get(tid, {}).get("statut","non_testé")
+        _vicon = _VAL_STYLE.get(_vstat, _VAL_STYLE["non_testé"])[0]
         st.markdown(f"""<div class="list-item">
   <div class="list-accent" style="background:{color}"></div>
   <div style="flex:1;min-width:0">
     <div class="list-title">{cls.tab_label()}</div>
     <div class="list-desc">{desc}</div>
   </div>
+  <div style="flex-shrink:0;margin-right:6px;font-size:1rem" title="{_vstat}">{_vicon}</div>
   <div style="flex-shrink:0">{tag_html}</div>
 </div>""", unsafe_allow_html=True)
         if st.button("→", key=f"bib_{tid}", help=m.get("description","")):
