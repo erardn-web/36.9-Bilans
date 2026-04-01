@@ -49,6 +49,12 @@ MODULE_CONTEXT = {
                         "PSFS activités spécifiques /10, GROC changement perçu -7 à +7.",
     "epaule_douloureuse": "Épaule douloureuse. Scores : ASES /100, QuickDASH /100, "
                           "amplitudes articulaires, testing musculaire coiffe des rotateurs.",
+    "genou_sport": "Genou sportif. Scores : IKDC /100, Lysholm /100, Kujala /100 (PFPS), ACL-RSI /100 (préparation psychologique retour sport, seuil ≥56).",
+    "cheville": "Cheville. Scores : FAOS /100 (sous-échelles douleur/AVQ/sport), CAIT /30 (instabilité, seuil ≤27), ATRS /100 (rupture Achille).",
+    "cou_tete": "Cervical/tête. Scores : NDI /100 (incapacité cervicale), DHI /100 (vertiges, seuil sévère ≥60), HIT-6 /78 (céphalées, seuil impact sévère ≥60).",
+    "coude": "Coude. Scores : PRTEE /100 (épicondylalgie latérale, douleur + fonction).",
+    "main": "Main/poignet. Scores : BCTQ SSS /5 et FSS /5 (canal carpien, seuil symptômes modérés ≥2.5).",
+    "general_msk": "Général MSK. Scores : WOMAC /100 (arthrose genou/hanche), LEFS /80 (membres inférieurs, seuil ≥54), STarT Back (risque faible/moyen/élevé), FABQ-PA /24 (seuil ≥15) et FABQ-W /42 (seuil ≥34), DN4 /10 (neuropathique, seuil ≥4), CSI /100 (sensibilisation centrale, seuil ≥40), Roland-Morris /24 (lombalgie), QBPDS /100.",
 }
 
 
@@ -80,6 +86,34 @@ def _format_bilans(bilans_df, module: str) -> str:
         "hoos":    ["hoos_pain","hoos_symptoms","hoos_adl","hoos_sport","hoos_qol"],
         "lysholm": ["lysholm_score_total"],
         "dash":    ["dash_score"],
+        # Nouveaux tests (batch 2)
+        "lefs":          ["lefs_score"],
+        "womac":         ["womac_total","womac_pain","womac_func"],
+        "spadi":         ["spadi_total","spadi_pain","spadi_disability"],
+        "constant_murley":["cm_score_total"],
+        "prtee":         ["prtee_total"],
+        "bctq":          ["bctq_sss","bctq_fss"],
+        "roland_morris": ["rmq_score"],
+        "start_back":    ["sb_total","sb_risque"],
+        "fabq":          ["fabq_pa_score","fabq_work_score"],
+        "dn4":           ["dn4_score"],
+        "faos":          ["faos_pain","faos_adl","faos_sport","faos_qol"],
+        "kujala":        ["kujala_score"],
+        "acl_rsi":       ["acl_rsi_score"],
+        "visa_a":        ["visa_a_score"],
+        "visa_p":        ["visa_p_score"],
+        "visa_h":        ["visa_h_score"],
+        "visa_g":        ["visa_g_score"],
+        "cait":          ["cait_score"],
+        "tegner":        ["tegner_actuel","tegner_avant"],
+        "dhi":           ["dhi_score"],
+        "hit6":          ["hit6_score"],
+        "hagos":         ["hagos_pain","hagos_adl","hagos_sport","hagos_qol"],
+        "ikdc":          ["ikdc_score"],
+        "csi":           ["csi_score"],
+        "qbpds":         ["qbpds_score"],
+        "atrs":          ["atrs_score"],
+        "wosi":          ["wosi_pct"],
     }
 
     lines = []
