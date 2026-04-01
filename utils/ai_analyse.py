@@ -35,6 +35,20 @@ MODULE_CONTEXT = {
     "bpco": "BPCO / pathologie respiratoire chronique. Scores : 6MWT distance (m, bon pronostic "
             "≥400m), CAT (/40, seuil faible ≤10, sévère >20), mMRC grade (0-4), VEMS % prédit, "
             "STS 1 minute, SpO2 effort.",
+    "cervicalgie": "Cervicalgie. Scores : NRS repos/mouvement/nuit (/10), NDI (/100, seuil légère "
+                   ">8%, modérée >28%), HAD anxiété/dépression (/21), PSFS (activités spécifiques "
+                   "/10), GROC (changement perçu -7 à +7).",
+    "genou": "Genou post-chirurgical (LCA, PTG, ménisque). Scores : KOOS sous-échelles /100 "
+             "(douleur, AVQ, sport, QoL — seuil bonne fonction ≥70), Lysholm /100 (excellent ≥95, "
+             "bon ≥84), NRS douleur /10, TUG (secondes, normal <10s), STS 1 min (répétitions).",
+    "hanche": "Hanche post-chirurgicale (PTH, fracture). Scores : HOOS sous-échelles /100 "
+              "(douleur, AVQ, sport, QoL — seuil bonne fonction ≥70), NRS douleur /10, "
+              "6MWT distance (m, bon pronostic ≥400m), TUG (secondes).",
+    "membre_superieur": "Membre supérieur (épaule, coude, poignet). Scores : DASH /100 "
+                        "(seuil légère ≤10, modérée ≤30, sévère >50), NRS douleur /10, "
+                        "PSFS activités spécifiques /10, GROC changement perçu -7 à +7.",
+    "epaule_douloureuse": "Épaule douloureuse. Scores : ASES /100, QuickDASH /100, "
+                          "amplitudes articulaires, testing musculaire coiffe des rotateurs.",
 }
 
 
@@ -56,6 +70,16 @@ def _format_bilans(bilans_df, module: str) -> str:
         "lombalgie": ["schober","luomajoki"], "testing_mi": ["musc_"],
         "leg_press": ["lp_"], "had": ["had_a_score","had_d_score"],
         "sf12": ["sf12_pcs","sf12_mcs"],
+        # Nouveaux tests
+        "nrs":     ["nrs_repos","nrs_mouvement","nrs_nuit"],
+        "psfs":    ["psfs_score_moyen","psfs_activite_"],
+        "groc":    ["groc_score","groc_appreciation"],
+        "eq5d":    ["eq5d_"],
+        "ndi":     ["ndi_score_total","ndi_score_pct"],
+        "koos":    ["koos_pain","koos_symptoms","koos_adl","koos_sport","koos_qol"],
+        "hoos":    ["hoos_pain","hoos_symptoms","hoos_adl","hoos_sport","hoos_qol"],
+        "lysholm": ["lysholm_score_total"],
+        "dash":    ["dash_score"],
     }
 
     lines = []
