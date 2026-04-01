@@ -55,7 +55,8 @@ def _get_spreadsheet():
     _ensure_sheet(ss, "Audit_Log", AUDIT_HEADERS)
     _ensure_sheet(ss, "Feedback",   FEEDBACK_HEADERS)
     _ensure_sheet(ss, "Votes",      VOTES_HEADERS)
-    _ensure_sheet(ss, "Validation", ["test_id", "statut", "notes", "updated_at"])
+    _ensure_sheet(ss, "Validation",          ["test_id", "statut", "notes", "updated_at"])
+    _ensure_sheet(ss, "Templates_Cabinet",    ["template_id","nom","icone","description","tests_json","actif","created_at","updated_at"])
     return ss
 
 # ── Headers ───────────────────────────────────────────────────────────────────
@@ -678,4 +679,66 @@ def save_validation(test_id: str, statut: str, notes: str = "") -> bool:
         ok = True
     if ok:
         get_all_validations.clear()
+    return ok
+
+
+# ── Templates cabinet (créés dans l'application) ─────────────────────────────
+CAB_TMPL_HEADERS = ["template_id","nom","icone","description","tests_json","actif","created_at","updated_at"]
+
+
+@st.cache_data(ttl=30)
+def get_all_cabinet_templates() -> list:
+    """Retourne la liste des templates cabinet actifs (et inactifs)."""
+    try:
+        ws   = _ws("Templates_Cabinet")
+        rows = ws.get_all_values()
+        if not rows or len(rows) < 2:
+            return []
+        hdr = rows[0]
+        result = []
+        for row in rows[1:]:
+            d = dict(zip(hdr, row))
+            if d.get("template_id","").strip():
+                result.append(d)
+        return result
+    except Exception:
+        return []
+
+
+def save_cabinet_template(template_id: str, nom: str, icone: str,
+                           description: str, tests_json: str,
+                           actif: bool = True) -> bool:
+    """Crée ou met à jour un template cabinet."""
+    import json as _j
+    existing = _get_row("Templates_Cabinet", "template_id", template_id)
+    data = {
+        "template_id": template_id, "nom": nom, "icone": icone,
+        "description": description, "tests_json": tests_json,
+        "actif": "Oui" if actif else "Non",
+        "updated_at": _now(),
+    }
+    if existing:
+        ok = _update_row("Templates_Cabinet", "template_id", template_id,
+                         {k: v for k, v in data.items() if k != "template_id"})
+    else:
+        data["created_at"] = _now()
+        _append_row("Templates_Cabinet", data)
+        ok = True
+    if ok:
+        get_all_cabinet_templates.clear()
+    return ok
+
+
+def set_cabinet_template_actif(template_id: str, actif: bool) -> bool:
+    """Active ou désactive un template cabinet."""
+    ok = _update_row("Templates_Cabinet", "template_id", template_id,
+                     {"actif": "Oui" if actif else "Non", "updated_at": _now()})
+    if ok:
+        get_all_cabinet_templates.clear()
+    return ok
+
+
+def delete_cabinet_template(template_id: str) -> bool:
+    """Supprime définitivement un template cabinet (désactivation douce recommandée)."""
+    ok = set_cabinet_template_actif(template_id, False)
     return ok
