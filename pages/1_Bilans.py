@@ -950,14 +950,23 @@ def render_evolution():
                                 use_container_width=True, key=f"pdf_save_{cid}"):
                 S[_pdf_selected_key] = list(S[_pdf_draft_key])
                 S[_pdf_charts_key]   = _gc_new
-                S.pop(_pdf_cache_key, None); S.pop(_pdf_sig_key, None)
                 _sel2 = S[_pdf_selected_key]
                 _ex2  = {_label_to_tid[lbl] for lbl in _active_labels
                          if lbl not in set(_sel2) and lbl in _label_to_tid}
                 _or2  = [_label_to_tid[lbl] for lbl in _sel2 if lbl in _label_to_tid]
                 if not _sel2: _ex2 = set(); _or2 = []
+                # Calculer la sig qui sera valide au prochain rerun
+                _new_sig = str((
+                    sorted(be["bilan_id"].tolist()),
+                    tuple(sorted(_ex2)),
+                    tuple(_or2),
+                    _gc_new,
+                    (S.get(f"ta_{cid}") or S.get(f"analyse_text_{cid}", ""))[:50],
+                ))
                 with st.spinner("Génération du PDF…"):
-                    try: _do_gen(_ex2, _or2, _gc_new)
+                    try:
+                        _do_gen(_ex2, _or2, _gc_new)
+                        S[_pdf_sig_key] = _new_sig  # sig cohérente avec le rerun suivant
                     except Exception as _e: st.error(f"Erreur PDF : {_e}")
                 st.rerun()
 
