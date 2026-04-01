@@ -743,19 +743,22 @@ def render_formulaire():
 
     _unsaved = S.get("_bilan_unsaved", False)
     if _unsaved:
-        col_quit, col_save_quit, col_print_b, _ = st.columns([1.5, 2, 1.5, 2])
+        col_save, col_save_quit, col_quit, col_print_b, _ = st.columns([1.2, 2, 2, 1.5, 1])
+        with col_save:
+            save_btn = st.button("💾 Sauvegarder", type="primary")
+        with col_save_quit:
+            _save_quit_btn = st.button("💾 Sauvegarder avant de quitter")
         with col_quit:
-            if st.button("⬅️ Quitter quand même"):
+            if st.button("⬅️ Quitter sans sauvegarder"):
                 S.pop("_bilan_unsaved", None)
                 _back_to_cas()
-        with col_save_quit:
-            save_btn = st.button("💾 Sauvegarder avant de quitter", type="primary")
         with col_print_b:
             if st.button("🖨️ Imprimer fiches"):
                 _ta_snap = (S.bilan_data.get("_tests_actifs_list")
                             or [cls.test_id() for cls in test_classes])
                 _go("impression", bilan_id=bid, tests_actifs_snap=_ta_snap)
-        _save_and_quit = save_btn  # si sauvegarde OK → retour au cas
+        _save_and_quit = _save_quit_btn
+        save_btn = save_btn or _save_quit_btn
     else:
         col_back, col_save, col_print_b, _ = st.columns([1, 1, 1.5, 3])
         with col_back:
