@@ -55,7 +55,12 @@ MODULE_CONTEXT = {
     "coude": "Coude. Scores : PRTEE /100 (épicondylalgie latérale, douleur + fonction).",
     "main": "Main/poignet. Scores : BCTQ SSS /5 et FSS /5 (canal carpien, seuil symptômes modérés ≥2.5).",
     "general_msk": "Général MSK. Scores : WOMAC /100 (arthrose genou/hanche), LEFS /80 (membres inférieurs, seuil ≥54), STarT Back (risque faible/moyen/élevé), FABQ-PA /24 (seuil ≥15) et FABQ-W /42 (seuil ≥34), DN4 /10 (neuropathique, seuil ≥4), CSI /100 (sensibilisation centrale, seuil ≥40), Roland-Morris /24 (lombalgie), QBPDS /100.",
-}
+    "urogyneco": "Urogynécologie / plancher pelvien. Scores : ICIQ-UI /21 (incontinence, seuil ≥1), PFDI-20 /300 (sous-échelles UDI, POPDI, CRADI).",
+    "cardiopulmo": "Cardiopulmonaire. Scores : SGRQ /100 (qualité vie respiratoire, MCID=4), LCADL /75 (limitations AVQ respiratoires), Borg dyspnée 0-10, PSQI /21 (sommeil, seuil ≤5 bonne qualité), PCFS grade 0-4 (post-COVID).",
+    "neuro_avc": "Neurologie/AVC. Scores : Barthel /100 (indépendance AVQ, seuil ≥95 indépendant), 10MWT vitesse m/s (seuil communautaire ≥0.8 m/s), Mini-BESTest /28 (équilibre, seuil chutes ≤20), FES-I /64 (peur tomber, seuil ≥23).",
+    "geriatrie": "Gériatrie. Scores : Clinical Frailty Scale grade 1-9 (fragile ≥5), FRAIL Scale /5 (fragile ≥3), Vitesse marche 4m m/s (fragilité <0.8 m/s), ABC Scale % (risque chutes <67%).",
+    "rhumatologie": "Rhumatologie. Scores : HAQ-DI /3 (incapacité PR, MCID=0.22), BASDAI /10 (spondylarthrite, activité élevée ≥4).",
+    "douleur_chro": "Douleur chronique. Scores : PCS /52 (catastrophisation, seuil ≥30), BPI sévérité/retentissement /10, PHQ-9 /27 (dépression, seuil ≥10), GAD-7 /21 (anxiété, seuil ≥10), ISI /28 (insomnie, seuil ≥15)."}
 
 
 def _format_bilans(bilans_df, module: str) -> str:
