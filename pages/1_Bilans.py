@@ -208,7 +208,13 @@ def _sidebar_context(unsaved=False):
         if S.get("patient_id") and S.get("patient_info"):
             _pi   = S.patient_info
             _nom  = f"{_pi.get('nom','')} {_pi.get('prenom','')}".strip()
-            _segs.append((f"👤 {_nom}", lambda: _go("dossier")))
+            def _go_dossier():
+                S.cas_id   = None
+                S.cas_info = {}
+                S.bilan_id   = None
+                S.bilan_data = {}
+                _go("dossier")
+            _segs.append((f"👤 {_nom}", _go_dossier))
 
         if S.get("cas_id") and S.get("cas_info"):
             try:
