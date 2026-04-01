@@ -728,6 +728,12 @@ def render_evolution():
         f'— Évolution {nom_t}</div>', unsafe_allow_html=True)
     st.markdown("")
 
+    col_back, col_chg, _ = st.columns([1, 1.5, 5])
+    with col_back:
+        if st.button("⬅️ Retour"): _back_to_cas()
+    with col_chg:
+        if st.button("⬅️ Changer de patient"): _go("accueil")
+
     st.markdown("---")
 
     bilans_df = get_cas_bilans(cid)
@@ -888,8 +894,28 @@ def render_evolution():
                              key=f"pdf_save_{cid}"):
             S[_pdf_selected_key] = list(S[_pdf_draft_key])
             S[_pdf_charts_key]   = _gc_new
-            S.pop(_pdf_cache_key, None)
-            S.pop(_pdf_sig_key, None)
+            # Recalculer les exclusions avec la nouvelle sélection
+            _sel2 = S[_pdf_selected_key]
+            _ex2  = {_label_to_tid[lbl] for lbl in _active_labels
+                     if lbl not in set(_sel2) and lbl in _label_to_tid}
+            _or2  = [_label_to_tid[lbl] for lbl in _sel2 if lbl in _label_to_tid]
+            if not _sel2: _ex2 = set(); _or2 = []
+            _sig2 = str((
+                sorted(be["bilan_id"].tolist()),
+                tuple(sorted(_ex2)), tuple(_or2), _gc_new,
+                (S.get(f"ta_{cid}") or S.get(f"analyse_text_{cid}", ""))[:50],
+            ))
+            with st.spinner("Génération du PDF…"):
+                try:
+                    _at = (S.get(f"ta_{cid}") or S.get(f"analyse_text_{cid}") or load_analyse_cas(cid))
+                    _mi = get_medecin_destinataire(cid)
+                    S[_pdf_cache_key] = generate_pdf(be, info,
+                        analyse_text=_at, template_id=_tid, template_nom=_tnom,
+                        medecin_info=_mi, excluded_test_ids=_ex2,
+                        ordered_test_ids=_or2, show_charts=_gc_new)
+                    S[_pdf_sig_key] = _sig2
+                except Exception as _e:
+                    st.error(f"Erreur PDF : {_e}")
             st.rerun()
         if _reset_col.button("↺ Réinitialiser",
                               use_container_width=True,
@@ -899,7 +925,7 @@ def render_evolution():
             S.pop(_pdf_cache_key, None)
             S.pop(_pdf_sig_key, None)
             st.rerun()
-        # Télécharger si déjà en cache
+        # Télécharger (si cache) ou Générer (premier accès)
         if S.get(_pdf_cache_key):
             st.download_button(
                 label=f"📄 Télécharger PDF ({n_sel} bilan{'s' if n_sel>1 else ''})",
@@ -909,32 +935,23 @@ def render_evolution():
                 use_container_width=True,
                 key=f"dl_pdf_exp_{cid}",
             )
+        elif not _draft_changed:
+            if st.button("📄 Générer PDF", use_container_width=True,
+                         key=f"gen_pdf_{cid}"):
+                with st.spinner("Génération du PDF…"):
+                    try:
+                        _at = (S.get(f"ta_{cid}") or S.get(f"analyse_text_{cid}")
+                               or load_analyse_cas(cid))
+                        _mi = get_medecin_destinataire(cid)
+                        S[_pdf_cache_key] = generate_pdf(be, info,
+                            analyse_text=_at, template_id=_tid, template_nom=_tnom,
+                            medecin_info=_mi, excluded_test_ids=_excluded,
+                            ordered_test_ids=_ordered_tids, show_charts=_show_charts)
+                        S[_pdf_sig_key] = _current_sig
+                        st.rerun()
+                    except Exception as _e:
+                        st.error(f"Erreur PDF : {_e}")
 
-    # Génération auto si cache absent ou sig changée ───────────────────────
-    _sel_auto   = S.get(_pdf_selected_key, [])
-    _excl_auto  = {_label_to_tid[lbl] for lbl in _active_labels
-                   if lbl not in set(_sel_auto) and lbl in _label_to_tid}
-    _chrt_auto  = S.get(_pdf_charts_key, True)
-    _ordr_auto  = [_label_to_tid[lbl] for lbl in _sel_auto if lbl in _label_to_tid]
-    if not _sel_auto: _excl_auto = set(); _ordr_auto = []
-    _auto_sig = str((
-        sorted(be["bilan_id"].tolist()),
-        tuple(sorted(_excl_auto)), tuple(_ordr_auto), _chrt_auto,
-        (S.get(f"ta_{cid}") or S.get(f"analyse_text_{cid}", ""))[:50],
-    ))
-    if not S.get(_pdf_cache_key) or S.get(_pdf_sig_key) != _auto_sig:
-        with st.spinner("Génération du PDF…"):
-            try:
-                _at = (S.get(f"ta_{cid}") or S.get(f"analyse_text_{cid}") or load_analyse_cas(cid))
-                _mi = get_medecin_destinataire(cid)
-                S[_pdf_cache_key] = generate_pdf(be, info,
-                    analyse_text=_at, template_id=_tid, template_nom=_tnom,
-                    medecin_info=_mi, excluded_test_ids=_excl_auto,
-                    ordered_test_ids=_ordr_auto, show_charts=_chrt_auto)
-                S[_pdf_sig_key] = _auto_sig
-            except Exception as _eg:
-                S[_pdf_cache_key] = None
-                st.error(f"Erreur PDF : {_eg}")
 
     _ensure_registry()
     tc_key = f"test_classes_ev_{cid}"
