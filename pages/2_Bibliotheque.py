@@ -164,7 +164,10 @@ if selected_tid and selected_tid in tests_map:
     with c1:
         st.markdown(f"## {cls.tab_label()}")
         if m.get("description"): st.caption(m["description"])
-        if m.get("tags"): st.markdown(" ".join([f"`{t}`" for t in m["tags"]]))
+        tags_md = " ".join([f"`{t}`" for t in m.get("tags", [])])
+        if m.get("has_fixed_pdf"):
+            tags_md += ' &nbsp;<span style="display:inline-block;padding:2px 10px;background:#e3f2fd;border-radius:12px;font-size:0.78rem;color:#1565c0;font-weight:600">📄 Fiche PDF disponible</span>'
+        if tags_md: st.markdown(tags_md, unsafe_allow_html=True)
     with c2:
         if st.button("✖ Fermer", use_container_width=True):
             st.session_state.pop(sel_key, None)
