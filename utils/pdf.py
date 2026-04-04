@@ -894,7 +894,7 @@ def radio_table(question_num, question_text, options, styles):
     header = [[option_row(lbl, ParagraphStyle(
         "opt", fontSize=9, fontName="Helvetica",
         textColor=NOIR, alignment=TA_CENTER,
-    )) for _, lbl in options]]
+    ), col_w=col_w) for _, lbl in options]]
 
     tbl = Table(header, colWidths=[col_w] * n)
     tbl.setStyle(TableStyle([
@@ -1131,8 +1131,8 @@ def build_sf12(story, styles):
     pcs_mcs = Table([
         ["PCS-12 (score physique) : _______ / 100",
          "MCS-12 (score mental) : _______ / 100"],
-        ["Interprétation : ≥55 au-dessus moy. · 45–55 dans la moy. · 35–45 en-dessous · <35 très en-dessous",
-         "Interprétation : ≥55 au-dessus moy. · 45–55 dans la moy. · 35–45 en-dessous · <35 très en-dessous"],
+        ["Interprétation : ≥55 au-dessus de la moyenne · 45–55 dans la moyenne · 35–45 en-dessous · <35 très en-dessous",
+         ""],
     ], colWidths=[W/2, W/2])
     pcs_mcs.setStyle(TableStyle([
         ("FONTNAME",      (0, 0), (-1, 0),  "Helvetica-Bold"),
@@ -1140,7 +1140,9 @@ def build_sf12(story, styles):
         ("FONTSIZE",      (0, 0), (-1, -1), 8),
         ("TEXTCOLOR",     (0, 0), (-1, 0),  BLEU),
         ("BACKGROUND",    (0, 0), (-1, -1), BLEU_CLAIR),
-        ("GRID",          (0, 0), (-1, -1), 0.5, GRIS_BORD),
+        ("GRID",          (0, 0), (-1, 0),  0.5, GRIS_BORD),
+        ("BOX",           (0, 0), (-1, -1), 0.5, GRIS_BORD),
+        ("SPAN",          (0, 1), (1, 1)),
         ("TOPPADDING",    (0, 0), (-1, -1), 5),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
         ("LEFTPADDING",   (0, 0), (-1, -1), 6),
