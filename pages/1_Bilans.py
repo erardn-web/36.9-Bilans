@@ -1,3 +1,4 @@
+import os
 """
 pages/1_Bilans.py — Dossier patient → Cas → Bilans (UX fidèle v1)
 """
@@ -1272,19 +1273,48 @@ def render_impression():
     _sel = [k for k, v in _checks.items() if v]
 
     st.markdown("")
+
+    # Séparer les tests avec PDF fixe et ceux à générer dynamiquement
+    FIXED_PDF_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "fiches")
+
+    def _fixed_pdf_path(tid):
+        p = os.path.join(FIXED_PDF_DIR, f"{tid}.pdf")
+        return p if os.path.exists(p) else None
+
     if _sel:
-        with st.spinner("Génération du PDF…"):
-            try:
-                _pdf = generate_tests_pdf(_sel, info)
-                st.download_button(
-                    "📥 Télécharger les fiches",
-                    data=_pdf,
-                    file_name=f"fiches_{info.get('nom','')}_{bid}.pdf",
-                    mime="application/pdf",
-                    type="primary",
-                )
-            except Exception as _e:
-                st.error(f"Erreur : {_e}")
+        _fixed  = [tid for tid in _sel if _fixed_pdf_path(tid)]
+        _dynamic = [tid for tid in _sel if not _fixed_pdf_path(tid)]
+
+        # Afficher les PDFs fixes directement (téléchargement instantané)
+        if _fixed:
+            st.markdown("**📄 Fiches PDF fixes** — téléchargement instantané")
+            for _tid in _fixed:
+                _cls = _tests_map_imp[_tid]
+                with open(_fixed_pdf_path(_tid), "rb") as _f:
+                    st.download_button(
+                        f"📥 {_cls.tab_label()}",
+                        data=_f.read(),
+                        file_name=f"fiche_{_tid}.pdf",
+                        mime="application/pdf",
+                        key=f"dl_fixed_{_tid}",
+                    )
+
+        # Générer dynamiquement les fiches sans PDF fixe
+        if _dynamic:
+            st.markdown("**⚙️ Fiches générées**")
+            with st.spinner("Génération du PDF…"):
+                try:
+                    _pdf = generate_tests_pdf(_dynamic, info)
+                    st.download_button(
+                        "📥 Télécharger les fiches générées",
+                        data=_pdf,
+                        file_name=f"fiches_{info.get('nom','')}_{bid}.pdf",
+                        mime="application/pdf",
+                        type="primary",
+                        key="dl_dynamic",
+                    )
+                except Exception as _e:
+                    st.error(f"Erreur génération : {_e}")
     else:
         st.info("Sélectionnez au moins une fiche.")
 
