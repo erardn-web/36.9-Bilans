@@ -106,17 +106,35 @@ def _safe_resize(ws, n_cols):
         if n_cols > current:
             ws.resize(rows=ws.row_count, cols=n_cols)
     except Exception:
-        # En cas d'erreur API, on essaie quand même d'écrire
         pass
+
+
+def _write_headers_batch(ws, headers, start_col_idx=1, batch_size=200):
+    """Écrit des headers par petits batches pour éviter les limites API.
+    start_col_idx : index 1-based de la première colonne à écrire.
+    """
+    for i in range(0, len(headers), batch_size):
+        batch = headers[i:i+batch_size]
+        col_start = _col_letter(start_col_idx + i)
+        col_end   = _col_letter(start_col_idx + i + len(batch) - 1)
+        try:
+            ws.update(f"{col_start}1:{col_end}1", [batch])
+        except Exception:
+            # Retry une colonne à la fois si le batch échoue
+            for j, h in enumerate(batch):
+                try:
+                    ws.update(f"{_col_letter(start_col_idx+i+j)}1", [[h]])
+                except Exception:
+                    pass
 
 
 def _ensure_sheet(ss, name, headers):
     """Crée la feuille si elle n'existe pas, ajoute les colonnes manquantes.
 
-    Stratégie robuste pour les grandes feuilles (1000+ colonnes) :
-    - Resize d'abord pour allouer les colonnes nécessaires
-    - Écrire TOUS les headers depuis A1 en une seule requête
-    GSheets échoue si on tente d'écrire dans une colonne non allouée.
+    Stratégie :
+    - Feuille vide  → resize + écriture par batch
+    - Colonnes manquantes → resize + écriture UNIQUEMENT des colonnes manquantes
+      à la suite des existantes (jamais de réécriture de toute la ligne A1).
     """
     import gspread
     changed = False
@@ -125,19 +143,20 @@ def _ensure_sheet(ss, name, headers):
         existing = ws.row_values(1)
         if not existing:
             _safe_resize(ws, len(headers))
-            ws.update("A1", [headers])
+            _write_headers_batch(ws, headers, start_col_idx=1)
             changed = True
         else:
-            missing = [h for h in headers if h not in existing]
+            existing_set = set(existing)
+            missing = [h for h in headers if h not in existing_set]
             if missing:
-                new_hdrs = existing + missing
-                _safe_resize(ws, len(new_hdrs))
-                ws.update("A1", [new_hdrs])
+                next_col = len(existing) + 1
+                _safe_resize(ws, len(existing) + len(missing))
+                _write_headers_batch(ws, missing, start_col_idx=next_col)
                 changed = True
     except gspread.WorksheetNotFound:
         ws = ss.add_worksheet(name, rows=5000, cols=max(len(headers), 26))
         _safe_resize(ws, len(headers))
-        ws.update("A1", [headers])
+        _write_headers_batch(ws, headers, start_col_idx=1)
         changed = True
     if changed:
         try:
