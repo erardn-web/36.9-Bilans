@@ -534,6 +534,14 @@ def _log_audit(cas_id, bilan_id, patient_id, cabinet_id, therapeute, action):
     except Exception:
         pass
 
+def get_audit_log_all(limit=200) -> pd.DataFrame:
+    """Retourne les dernières entrées de l'audit log (toutes actions confondues)."""
+    df = _ws_to_df(_ws("Audit_Log"), AUDIT_HEADERS)
+    if "timestamp" in df.columns:
+        df = df.sort_values("timestamp", ascending=False).head(limit)
+    return df.reset_index(drop=True)
+
+
 def get_audit_log(cas_id) -> pd.DataFrame:
     df = _ws_to_df(_ws("Audit_Log"), AUDIT_HEADERS)
     df = df[df["cas_id"] == cas_id].sort_values("timestamp", ascending=False)
