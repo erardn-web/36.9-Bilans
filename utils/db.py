@@ -100,25 +100,43 @@ VOTES_HEADERS = [
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _ensure_sheet(ss, name, headers):
-    """Crée la feuille si elle n'existe pas, ajoute les colonnes manquantes."""
+    """Crée la feuille si elle n'existe pas, ajoute les colonnes manquantes.
+    Pour les grandes feuilles (ex: Bilans avec 1000+ colonnes), on ajoute
+    les colonnes manquantes une par une en fin de ligne au lieu de tout
+    redimensionner — évite les erreurs API GSheets sur les grands tableaux."""
     import gspread
     changed = False
     try:
         ws = ss.worksheet(name)
         existing = ws.row_values(1)
         if not existing:
-            ws.append_row(headers)
+            # Feuille vide : écrire les headers par batch de 200
+            for i in range(0, len(headers), 200):
+                batch = headers[i:i+200]
+                start_col = _col_letter(i+1)
+                ws.update([[h for h in batch]], f"{start_col}1")
             changed = True
         else:
             missing = [h for h in headers if h not in existing]
             if missing:
-                new_hdrs = existing + missing
-                ws.resize(cols=len(new_hdrs))
-                ws.update([new_hdrs], "A1")
+                # Ajouter les colonnes manquantes à la fin, par batch
+                next_col = len(existing) + 1
+                for i in range(0, len(missing), 100):
+                    batch = missing[i:i+100]
+                    start_col = _col_letter(next_col + i)
+                    ws.update([[h for h in batch]], f"{start_col}1")
                 changed = True
     except gspread.WorksheetNotFound:
-        ws = ss.add_worksheet(name, rows=5000, cols=max(len(headers), 50))
-        ws.append_row(headers)
+        # Créer avec assez de colonnes (max 1000 par création, on agrandit ensuite)
+        init_cols = min(len(headers), 1000)
+        ws = ss.add_worksheet(name, rows=5000, cols=init_cols)
+        for i in range(0, len(headers), 200):
+            batch = headers[i:i+200]
+            start_col = _col_letter(i+1)
+            try:
+                ws.update([[h for h in batch]], f"{start_col}1")
+            except Exception:
+                pass
         changed = True
     if changed:
         try:
