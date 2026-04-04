@@ -709,9 +709,25 @@ def get_all_validations() -> dict:
 
 
 def save_validation(test_id: str, statut: str, criteres: dict = None, notes: str = "") -> bool:
-    """Crée ou met à jour la ligne de validation pour un test (avec 4 critères)."""
+    """Crée ou met à jour la ligne de validation pour un test (avec 4 critères).
+    Ajoute la colonne criteres_json si elle n'existe pas encore dans GSheets.
+    """
     import json as _j
     criteres_json = _j.dumps(criteres or {})
+
+    # S'assurer que criteres_json existe dans le header Validation
+    try:
+        ws_val = _ws("Validation")
+        hdr = ws_val.row_values(1)
+        if "criteres_json" not in hdr:
+            # Ajouter la colonne manquante
+            next_col = len(hdr) + 1
+            _safe_resize(ws_val, next_col)
+            ws_val.update(f"{_col_letter(next_col)}1", [["criteres_json"]])
+            _cached_sheet_values.clear()
+    except Exception:
+        pass
+
     existing = _get_row("Validation", "test_id", test_id)
     data = {"test_id": test_id, "statut": statut,
             "criteres_json": criteres_json, "notes": notes, "updated_at": _now()}
