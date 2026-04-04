@@ -36,7 +36,8 @@ class SF12(BaseTest):
     def meta(cls):
         return {"id":"sf12","nom":"SF-12","tab_label":"📊 SF-12",
                 "categorie":"questionnaire","tags":["qualité de vie", "fonctionnel", "santé", "générique"],
-                "description":"SF-12 Health Survey — PCS et MCS /100, référence population = 50"}
+                "description":"SF-12 Health Survey — PCS et MCS /100, référence population = 50",
+                "has_fixed_pdf": True}
 
     @classmethod
     def fields(cls):
