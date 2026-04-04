@@ -47,7 +47,7 @@ _load_all()
 
 from core.registry import all_tests
 from utils.search  import search_items
-from utils.db      import get_all_validations, save_validation
+from utils.db      import get_all_validations
 
 tests_map    = all_tests()
 _validations = get_all_validations()
@@ -135,79 +135,21 @@ if selected_tid and selected_tid in tests_map:
         st.warning(f"Aperçu non disponible : {e}")
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # ── Validation 4 critères ─────────────────────────────────────────────────
+    # ── Statut validation (lecture seule) ───────────────────────────────────────
     st.markdown("---")
-    _vdata    = _validations.get(selected_tid, {})
-    _vstat    = _vdata.get("statut", "non_testé")
-    _vcrit    = _vdata.get("criteres", {})
-    _vnotes   = _vdata.get("notes", "")
+    _vdata  = _validations.get(selected_tid, {})
+    _vstat  = _vdata.get("statut", "non_testé")
+    _vcrit  = _vdata.get("criteres", {})
     _vi, _vbg, _vc = _VAL_STYLE.get(_vstat, _VAL_STYLE["non_testé"])
+    _n_ok   = sum(_vcrit.values()) if _vcrit else 0
+    _bar_col = "#388e3c" if _n_ok==4 else "#f57c00" if _n_ok>0 else "#ddd"
 
     st.markdown(
         f"<span style='display:inline-block;padding:3px 12px;background:{_vbg};"
         f"border-radius:12px;font-size:0.82rem;color:{_vc};font-weight:600'>"
-        f"{_vi} {_vstat.replace('_',' ').capitalize()}</span>",
+        f"{_vi} {_vstat.replace('_',' ').capitalize()}</span>"
+        f"&nbsp;<span style='font-size:11px;color:#aaa'>{_n_ok}/4 critères validés</span>",
         unsafe_allow_html=True)
-
-    with st.expander("🧪 Critères de validation", expanded=(_vstat != "validé")):
-        st.caption("Les 4 critères doivent être cochés pour passer le test en ✅ Validé.")
-        cc1, cc2 = st.columns(2)
-
-        # PDF vierge : auto si fichier présent
-        _fixed = _has_fixed_pdf(selected_tid, m)
-
-        _crit_contenu = cc1.checkbox(
-            "✅ Contenu — questions et options correctes",
-            value=_vcrit.get("contenu", False),
-            key=f"crit_contenu_{selected_tid}")
-
-        _crit_pdf = cc2.checkbox(
-            "📄 PDF vierge — fiche imprimable disponible",
-            value=_fixed or _vcrit.get("pdf_vierge", False),
-            disabled=_fixed,
-            key=f"crit_pdf_{selected_tid}",
-            help="Automatique : fichier PDF fixe détecté" if _fixed else "Cocher manuellement si une fiche papier existe")
-
-        _crit_valeurs = cc1.checkbox(
-            "🖨️ Valeurs imprimées — scores dans le rapport PDF",
-            value=_vcrit.get("valeurs_imprimees", False),
-            key=f"crit_val_{selected_tid}")
-
-        _crit_graph = cc2.checkbox(
-            "📊 Graphique — évolution correcte",
-            value=_vcrit.get("graphique", False),
-            key=f"crit_graph_{selected_tid}")
-
-        _new_crit = {
-            "contenu":          _crit_contenu,
-            "pdf_vierge":       _fixed or _crit_pdf,
-            "valeurs_imprimees":_crit_valeurs,
-            "graphique":        _crit_graph,
-        }
-        _n_ok = sum(_new_crit.values())
-        _auto_stat = "validé" if _n_ok == 4 else "en_cours" if _n_ok > 0 else "non_testé"
-        _bar_color = "#388e3c" if _n_ok==4 else "#f57c00" if _n_ok>0 else "#ddd"
-
-        st.markdown(
-            f'<div class="crit-bar-wrap">'
-            f'<div class="crit-bar" style="background:{_bar_color};width:{_n_ok*25}%"></div>'
-            f'</div>'
-            f'<span style="font-size:11px;color:#666">{_n_ok}/4 critères — statut automatique : '
-            f'<strong>{_auto_stat.replace("_"," ").capitalize()}</strong></span>',
-            unsafe_allow_html=True)
-
-        st.markdown("")
-        _new_notes = st.text_area("Notes / observations", value=_vnotes, height=70,
-            key=f"val_notes_{selected_tid}",
-            placeholder="Points à vérifier, bugs, comportement attendu…")
-
-        if st.button("💾 Enregistrer", type="primary", key=f"val_save_{selected_tid}"):
-            if save_validation(selected_tid, _auto_stat, _new_crit, _new_notes):
-                st.success(f"✅ Sauvegardé — {_auto_stat.replace('_',' ')}")
-                _validations.clear(); _validations.update(get_all_validations())
-                st.rerun()
-            else:
-                st.error("❌ Erreur GSheets.")
 
     # ── Téléchargement fiche ──────────────────────────────────────────────────
     st.markdown("---")
