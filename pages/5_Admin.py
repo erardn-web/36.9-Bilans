@@ -401,7 +401,6 @@ if tab_pdf:
         os.makedirs(FIXED_PDF_DIR, exist_ok=True)
         existing_pdfs = {f.replace(".pdf","") for f in os.listdir(FIXED_PDF_DIR) if f.endswith(".pdf")}
 
-        from utils.db import generate_tests_pdf
         from utils.pdf import generate_tests_pdf
 
         col_a, col_b = st.columns(2)
