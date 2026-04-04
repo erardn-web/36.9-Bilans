@@ -55,7 +55,7 @@ def _get_spreadsheet():
     _ensure_sheet(ss, "Audit_Log", AUDIT_HEADERS)
     _ensure_sheet(ss, "Feedback",   FEEDBACK_HEADERS)
     _ensure_sheet(ss, "Votes",      VOTES_HEADERS)
-    _ensure_sheet(ss, "Validation",          ["test_id", "statut", "notes", "updated_at"])
+    _ensure_sheet(ss, "Validation",          ["test_id", "statut", "criteres_json", "notes", "updated_at"])
     _ensure_sheet(ss, "Templates_Cabinet",    ["template_id","nom","icone","description","tests_json","actif","created_at","updated_at"])
     return ss
 
@@ -666,7 +666,8 @@ _VALIDATION_STATUTS = ["non_testé", "en_cours", "validé"]
 
 @st.cache_data(ttl=60)
 def get_all_validations() -> dict:
-    """Retourne {test_id: {"statut": ..., "notes": ...}}."""
+    """Retourne {test_id: {"statut": ..., "criteres": {...}, "notes": ...}}."""
+    import json as _j
     try:
         ws   = _ws("Validation")
         rows = ws.get_all_values()
@@ -678,21 +679,27 @@ def get_all_validations() -> dict:
             d = dict(zip(hdr, row))
             tid = d.get("test_id", "").strip()
             if tid:
-                result[tid] = {"statut": d.get("statut","non_testé"),
-                               "notes":  d.get("notes","")}
+                try:    criteres = _j.loads(d.get("criteres_json","{}") or "{}")
+                except: criteres = {}
+                result[tid] = {"statut":   d.get("statut","non_testé"),
+                               "criteres": criteres,
+                               "notes":    d.get("notes","")}
         return result
     except Exception:
         return {}
 
 
-def save_validation(test_id: str, statut: str, notes: str = "") -> bool:
-    """Crée ou met à jour la ligne de validation pour un test."""
+def save_validation(test_id: str, statut: str, criteres: dict = None, notes: str = "") -> bool:
+    """Crée ou met à jour la ligne de validation pour un test (avec 4 critères)."""
+    import json as _j
+    criteres_json = _j.dumps(criteres or {})
     existing = _get_row("Validation", "test_id", test_id)
     data = {"test_id": test_id, "statut": statut,
-            "notes": notes, "updated_at": _now()}
+            "criteres_json": criteres_json, "notes": notes, "updated_at": _now()}
     if existing:
         ok = _update_row("Validation", "test_id", test_id,
-                         {"statut": statut, "notes": notes, "updated_at": _now()})
+                         {"statut": statut, "criteres_json": criteres_json,
+                          "notes": notes, "updated_at": _now()})
     else:
         _append_row("Validation", data)
         ok = True
