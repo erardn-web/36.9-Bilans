@@ -408,13 +408,63 @@ if tab_pdf:
         col_b.metric("Tests sans PDF fixe", len(tests_map)-len(existing_pdfs))
 
         st.markdown("---")
-        st.markdown("**Générer une fiche vierge (ReportLab) pour la valider :**")
+
+        # ── Régénérer TOUTES les fiches → ZIP ─────────────────────────────────
+        st.markdown("**🔄 Regénérer toutes les fiches (nouveau logo ou mise à jour)**")
+        st.caption("Génère toutes les fiches en une fois et les emballe dans un ZIP. "
+                   "Extrayez le ZIP et commitez le contenu dans `assets/fiches/` du repo.")
+
+        regen_scope = st.radio("Périmètre",
+            ["Tous les tests","Seulement ceux avec PDF fixe existant"],
+            horizontal=True, key="regen_scope")
+
+        if st.button("⚙️ Générer le ZIP de toutes les fiches", type="primary", key="regen_all"):
+            if regen_scope == "Seulement ceux avec PDF fixe existant":
+                to_gen = [tid for tid in tests_map if tid in existing_pdfs]
+            else:
+                to_gen = list(tests_map.keys())
+
+            import zipfile, io
+            zip_buf = io.BytesIO()
+            errors  = []
+            bar = st.progress(0, text="Génération en cours…")
+
+            with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+                for i, tid in enumerate(to_gen):
+                    bar.progress((i+1)/len(to_gen), text=f"{i+1}/{len(to_gen)} — {tid}")
+                    try:
+                        pdf_bytes = generate_tests_pdf([tid], {})
+                        zf.writestr(f"{tid}.pdf", pdf_bytes)
+                    except Exception as e:
+                        errors.append(f"{tid}: {e}")
+
+            bar.empty()
+            zip_buf.seek(0)
+            st.session_state["admin_zip_bytes"] = zip_buf.read()
+
+            if errors:
+                err_msg = "⚠️ " + str(len(errors)) + " erreur(s) : " + " | ".join(errors[:5])
+            else:
+                st.success(f"✅ {len(to_gen)} fiches générées.")
+
+        if st.session_state.get("admin_zip_bytes"):
+            st.download_button(
+                f"📥 Télécharger le ZIP",
+                data=st.session_state["admin_zip_bytes"],
+                file_name=f"fiches_36_9_bilans_{datetime.now().strftime('%Y%m%d')}.zip",
+                mime="application/zip",
+                key="dl_zip_all")
+            st.caption("→ Extraire le ZIP · Copier les `.pdf` dans `assets/fiches/` · Commiter")
+
+        st.markdown("---")
+
+        # ── Générer une fiche individuelle ─────────────────────────────────────
+        st.markdown("**Générer une fiche individuelle :**")
         sel_test = st.selectbox("Test", list(tests_map.keys()),
             format_func=lambda t: tests_map[t].tab_label() if t in tests_map else t,
             key="pdf_sel_test")
 
-        gen_col, dl_col = st.columns(2)
-        if gen_col.button("⚙️ Générer la fiche", use_container_width=True):
+        if st.button("⚙️ Générer cette fiche", use_container_width=True, key="gen_one"):
             with st.spinner("Génération…"):
                 try:
                     pdf_bytes = generate_tests_pdf([sel_test], {})
@@ -424,20 +474,32 @@ if tab_pdf:
                     st.error(f"Erreur : {e}")
 
         if st.session_state.get("admin_pdf_bytes") and st.session_state.get("admin_pdf_tid") == sel_test:
-            st.download_button("📥 Télécharger la fiche générée",
+            st.download_button("📥 Télécharger la fiche",
                 data=st.session_state["admin_pdf_bytes"],
                 file_name=f"fiche_{sel_test}.pdf",
                 mime="application/pdf", key="admin_dl_pdf")
-            st.caption("Après validation, placez ce fichier dans `assets/fiches/` du repo.")
+            st.caption("Après validation → placer dans `assets/fiches/` du repo et commiter.")
 
         st.markdown("---")
+
+        # ── État des PDFs fixes ────────────────────────────────────────────────
         st.markdown("**État des PDFs fixes :**")
+        import pandas as pd
         rows = []
         for tid, cls in sorted(tests_map.items(), key=lambda x: x[1].tab_label()):
-            rows.append({"Test": cls.tab_label(), "ID": tid,
-                         "PDF fixe": "✅ Oui" if tid in existing_pdfs else "—"})
-        import pandas as pd
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            has_f = tid in existing_pdfs
+            rows.append({
+                "Test":     cls.tab_label(),
+                "ID":       tid,
+                "PDF fixe": "✅ Oui" if has_f else "—",
+                "meta()":   "✅" if cls.meta().get("has_fixed_pdf") else "—",
+            })
+        df_pdf = pd.DataFrame(rows)
+        st.dataframe(df_pdf, use_container_width=True, hide_index=True)
+        n_meta_ok = sum(1 for r in rows if r["meta()"]=="✅")
+        n_file_ok = sum(1 for r in rows if r["PDF fixe"]=="✅ Oui")
+        if n_meta_ok != n_file_ok:
+            st.warning(f"⚠️ {n_file_ok} fichiers dans `assets/fiches/` mais {n_meta_ok} tests avec `has_fixed_pdf:True` dans meta(). Pensez à synchroniser.")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
