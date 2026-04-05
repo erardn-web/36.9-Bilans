@@ -55,12 +55,12 @@ st.markdown("---")
 
 # ── Onglets selon niveau ──────────────────────────────────────────────────────
 if level == "super":
-    tabs = st.tabs(["📋 Templates", "👥 Thérapeutes", "🧪 Validation tests", "📄 PDFs fixes", "📋 Audit Log", "📊 Statistiques"])
-    tab_tmpl, tab_thera, tab_valid, tab_pdf, tab_audit, tab_stats = tabs
+    tabs = st.tabs(["📋 Templates", "👥 Thérapeutes", "🧪 Validation tests", "📄 PDFs fixes", "💬 Feedback", "📋 Audit Log", "📊 Statistiques"])
+    tab_tmpl, tab_thera, tab_valid, tab_pdf, tab_fb, tab_audit, tab_stats = tabs
 else:
     tabs = st.tabs(["📋 Templates", "👥 Thérapeutes", "📊 Statistiques"])
     tab_tmpl, tab_thera, tab_stats = tabs
-    tab_valid = tab_pdf = tab_audit = None
+    tab_valid = tab_pdf = tab_fb = tab_audit = None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -500,6 +500,100 @@ if tab_pdf:
         n_file_ok = sum(1 for r in rows if r["PDF fixe"]=="✅ Oui")
         if n_meta_ok != n_file_ok:
             st.warning(f"⚠️ {n_file_ok} fichiers dans `assets/fiches/` mais {n_meta_ok} tests avec `has_fixed_pdf:True` dans meta(). Pensez à synchroniser.")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ONGLET FEEDBACK (super admin uniquement)
+# ═══════════════════════════════════════════════════════════════════════════════
+if tab_fb:
+    with tab_fb:
+        st.markdown("### 💬 Gestion des feedbacks communauté")
+        from utils.db import (get_sheet, admin_update_feedback, admin_delete_feedback)
+        from datetime import date as _date
+        import pandas as _pd
+
+        STATUTS_COULEUR = {
+            "En vote":"#F59E0B","Accepté":"#10B981","En développement":"#3B82F6",
+            "Livré":"#6366F1","Refusé":"#EF4444","En traitement":"#F97316",
+        }
+        TOUS_STATUTS = list(STATUTS_COULEUR.keys())
+        TYPES_ICO = {"Bug":"🐛","Suggestion":"💡","Amélioration":"⚡","Bibliothèque":"📚"}
+
+        def _load_fb():
+            try:
+                df = get_sheet("Feedback")
+                if df.empty: return _pd.DataFrame()
+                df["votes_pour"]   = _pd.to_numeric(df.get("votes_pour",0),   errors="coerce").fillna(0).astype(int)
+                df["votes_contre"] = _pd.to_numeric(df.get("votes_contre",0), errors="coerce").fillna(0).astype(int)
+                if "reponse_admin" not in df.columns: df["reponse_admin"] = ""
+                return df
+            except Exception as e:
+                st.error(f"Erreur chargement : {e}"); return _pd.DataFrame()
+
+        df_fb = _load_fb()
+
+        if df_fb.empty:
+            st.info("Aucun feedback enregistré.")
+        else:
+            # Compteurs
+            m1,m2,m3,m4 = st.columns(4)
+            m1.metric("Total",       len(df_fb))
+            m2.metric("🐛 Bugs",     len(df_fb[df_fb["type"]=="Bug"]))
+            m3.metric("💡 En vote",  len(df_fb[df_fb["statut"]=="En vote"]))
+            m4.metric("✅ Livrés",   len(df_fb[df_fb["statut"]=="Livré"]))
+            st.markdown("---")
+
+            # Filtres
+            fa, fb2 = st.columns(2)
+            f_type   = fa.selectbox("Type",   ["Tous","Bug","Suggestion","Amélioration","Bibliothèque"], key="fb_ftype")
+            f_statut = fb2.selectbox("Statut", ["Tous"]+TOUS_STATUTS, key="fb_fstat")
+
+            df_view = df_fb.copy().sort_values("date_creation", ascending=False)
+            if f_type   != "Tous": df_view = df_view[df_view["type"]   == f_type]
+            if f_statut != "Tous": df_view = df_view[df_view["statut"] == f_statut]
+
+            st.caption(f"{len(df_view)} feedback(s)")
+
+            for _, row in df_view.iterrows():
+                fid     = row["id"]
+                couleur = STATUTS_COULEUR.get(row["statut"],"#9CA3AF")
+                ico     = TYPES_ICO.get(row["type"],"❓")
+                with st.expander(
+                    f'{ico} #{fid} — {row["titre"]}  ·  '
+                    f'[{row["statut"]}]  ·  {row["auteur"]}',
+                    expanded=False):
+
+                    st.markdown(
+                        f'**Auteur :** {row["auteur"]} · **Type :** {ico} {row["type"]} · **Soumis le :** {row["date_creation"]}')
+                    st.markdown(f'**Description :** {row["description"]}')
+                    if str(row.get("deadline_vote","")).strip():
+                        st.caption("Vote jusqu'au " + str(row["deadline_vote"]) + " · ✅ " + str(int(row["votes_pour"])) + " / ❌ " + str(int(row["votes_contre"])))
+                    if str(row.get("reponse_admin","")).strip():
+                        st.info(f'💬 Réponse actuelle : {row["reponse_admin"]}')
+                    st.markdown("---")
+
+                    ca, cb = st.columns(2)
+                    nouveau_statut = ca.selectbox("Statut", TOUS_STATUTS,
+                        index=TOUS_STATUTS.index(row["statut"]) if row["statut"] in TOUS_STATUTS else 0,
+                        key=f"fb_stat_{fid}")
+                    forcer_cloture = False
+                    if row["statut"] == "En vote":
+                        forcer_cloture = ca.checkbox("⏱️ Clôturer le vote maintenant", key=f"fb_cl_{fid}")
+                    reponse = cb.text_area("Réponse (visible par tous)", value=row.get("reponse_admin",""),
+                        height=100, key=f"fb_rep_{fid}")
+
+                    cs2, cd2 = st.columns([3,1])
+                    if cs2.button("💾 Enregistrer", key=f"fb_save_{fid}", type="primary", use_container_width=True):
+                        deadline_override = str(_date.today()) if forcer_cloture else None
+                        if admin_update_feedback(fid, nouveau_statut, reponse.strip(), deadline_override):
+                            st.success("✅ Mis à jour."); st.rerun()
+                        else:
+                            st.error("❌ Erreur mise à jour.")
+                    if cd2.button("🗑️ Supprimer", key=f"fb_del_{fid}", use_container_width=True):
+                        if admin_delete_feedback(fid):
+                            st.success("🗑️ Supprimé."); st.rerun()
+                        else:
+                            st.error("❌ Erreur suppression.")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
