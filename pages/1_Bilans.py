@@ -10,6 +10,44 @@ import pandas as pd
 from datetime import date
 
 # ── Charger tests et templates (une seule fois par session) ──────────────────
+def _load_cabinet_templates():
+    """Charge les templates cabinet depuis GSheets et les enregistre dynamiquement."""
+    import json as _jcab
+    from utils.db import get_all_cabinet_templates
+    from core.registry import all_templates as _at, all_tests as _ats
+    try:
+        from core.bilan_template import BilanTemplate
+        from core.registry import register_template
+    except ImportError:
+        return
+    try:
+        cab_templates = get_all_cabinet_templates()
+        existing   = _at()
+        tests_map  = _ats()
+        for tmpl in cab_templates:
+            if tmpl.get("actif","Oui") != "Oui":
+                continue
+            tid = tmpl.get("template_id","").strip()
+            if not tid or tid in existing:
+                continue
+            try:
+                test_ids     = _jcab.loads(tmpl.get("tests_json","[]") or "[]")
+                test_classes = [tests_map[t] for t in test_ids if t in tests_map]
+                if not test_classes:
+                    continue
+                register_template(BilanTemplate(
+                    template_id = tid,
+                    nom         = tmpl.get("nom", tid),
+                    icone       = tmpl.get("icone","📋"),
+                    description = tmpl.get("description",""),
+                    tests       = test_classes,
+                ))
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
 @st.cache_resource
 def _load_templates():
     """Chargé une seule fois par session — tous les tests + templates."""
