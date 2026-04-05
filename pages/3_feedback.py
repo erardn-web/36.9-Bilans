@@ -177,6 +177,95 @@ with st.container():
             st.info("Sélectionne ton nom pour participer.")
 
 
+# ─────────────────────────────────────────
+# ONGLETS
+# ─────────────────────────────────────────
+tab_nouveau, tab_votes, tab_roadmap, tab_bugs = st.tabs([
+    "✉️ Nouveau feedback",
+    "🗳️ Votes",
+    "🗺️ Roadmap",
+    "🐛 Bugs",
+])
+
+
+# ════════════════════════════════════════════
+# ONGLET NOUVEAU FEEDBACK
+# ════════════════════════════════════════════
+with tab_nouveau:
+    st.subheader("✉️ Soumettre un feedback")
+    nom_actif = st.session_state.get("fb_nom","")
+    if not nom_actif or nom_actif == "— Sélectionner —":
+        st.warning("Sélectionne ton nom dans le bandeau ci-dessus pour continuer.")
+        st.stop()
+
+    with st.form("form_nouveau_feedback", clear_on_submit=True):
+        type_label = st.selectbox("Type", list(TYPES.keys()), key="fb_type")
+        titre      = st.text_input("Titre *", placeholder="Résumé en une phrase", key="fb_titre")
+        description = st.text_area("Description *", height=120,
+            placeholder="Décris le problème ou la fonctionnalité souhaitée…", key="fb_desc")
+        est_bug = TYPES[type_label] == "Bug"
+        if est_bug:
+            st.info("🐛 Les bugs sont traités directement sans vote — tu recevras un retour rapide.")
+        else:
+            st.info(f"🗳️ Ta proposition sera soumise au vote de l'équipe pendant {DELAI_VOTE} jours.")
+        submitted = st.form_submit_button("Envoyer ✉️", use_container_width=True, type="primary")
+        if submitted:
+            if not titre.strip() or not description.strip():
+                st.error("Titre et description sont obligatoires.")
+            else:
+                type_val = TYPES[type_label]
+                fid = soumettre_feedback(nom_actif, type_val, titre.strip(), description.strip())
+                if type_val == "Bug":
+                    st.success(f"🐛 Bug #{fid} enregistré — il sera traité rapidement !")
+                else:
+                    st.success(f"✅ Proposition #{fid} soumise au vote pendant {DELAI_VOTE} jours !")
+                st.rerun()
+
+
+# ════════════════════════════════════════════
+# ONGLET VOTES
+# ════════════════════════════════════════════
+with tab_votes:
+    st.subheader("🗳️ Propositions en cours de vote")
+    nom_actif = st.session_state.get("fb_nom","")
+    if df_fb.empty:
+        st.info("Aucune proposition en cours.")
+    else:
+        en_vote = df_fb[df_fb["statut"] == "En vote"].sort_values("votes_pour", ascending=False)
+        if en_vote.empty:
+            st.info("Aucune proposition en cours de vote.")
+        else:
+            for _, row in en_vote.iterrows():
+                fid = row["id"]
+                has_voted = a_deja_vote(fid, nom_actif, df_votes) if nom_actif and nom_actif != "— Sélectionner —" else False
+                couleur = STATUTS_COULEUR.get(row["statut"],"#9CA3AF")
+                with st.expander(
+                    f'#{fid} — {badge_type(row["type"])} — {row["titre"]}  '
+                    f'· ✅ {int(row["votes_pour"])} / ❌ {int(row["votes_contre"])}',
+                    expanded=False,
+                ):
+                    st.markdown(f'**Auteur :** {row["auteur"]} · **Soumis le :** {row["date_creation"]}')
+                    st.markdown(f'**Description :** {row["description"]}')
+                    if str(row.get("deadline_vote","")).strip():
+                        st.caption("Vote jusqu'au " + str(row["deadline_vote"]))
+                    if row.get("reponse_admin","").strip():
+                        st.info(f'💬 {row["reponse_admin"]}')
+                    if has_voted:
+                        st.success("✅ Tu as déjà voté pour cette proposition.")
+                    elif not nom_actif or nom_actif == "— Sélectionner —":
+                        st.warning("Sélectionne ton nom pour voter.")
+                    else:
+                        cv1, cv2 = st.columns(2)
+                        if cv1.button("✅ Pour", key=f"pour_{fid}", use_container_width=True):
+                            ok, msg = enregistrer_vote(fid, nom_actif, "pour", df_fb, df_votes)
+                            st.success(msg) if ok else st.error(msg)
+                            st.rerun()
+                        if cv2.button("❌ Contre", key=f"contre_{fid}", use_container_width=True):
+                            ok, msg = enregistrer_vote(fid, nom_actif, "contre", df_fb, df_votes)
+                            st.success(msg) if ok else st.error(msg)
+                            st.rerun()
+
+
 # ════════════════════════════════════════════
 # ONGLET ROADMAP
 # ════════════════════════════════════════════
