@@ -469,6 +469,16 @@ def _sidebar_context(unsaved=False):
                         fn()
                 st.markdown('</div>', unsafe_allow_html=True)
         st.markdown("---")
+        # Champ thérapeute persistant
+        _thera = st.text_input(
+            "\U0001f464 Thérapeute",
+            value=st.session_state.get("therapeute",""),
+            placeholder="N. Rossier",
+            key="sidebar_therapeute_input")
+        if _thera:
+            st.session_state["therapeute"] = _thera
+            S["therapeute"] = _thera
+
 
 # ── ACCUEIL — recherche gauche / créer droite (v1) ────────────────────────────
 def render_accueil():
