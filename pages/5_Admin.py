@@ -211,8 +211,13 @@ with tab_tmpl:
             key="tmpl_search_ai")
 
         # Recherche IA
-        if tmpl_search_ai and S.get("tmpl_ai_prev") != tmpl_search_ai:
+        if tmpl_search_ai != S.get("tmpl_ai_prev", ""):
+            # Requête changée → vider les anciens résultats immédiatement
+            S.pop("tmpl_ai_ids", None)
             S["tmpl_ai_prev"] = tmpl_search_ai
+
+        if tmpl_search_ai and "tmpl_ai_ids" not in S:
+            # Lancer la recherche IA
             with st.spinner("Recherche IA…"):
                 try:
                     import anthropic as _ant, json as _jj, re as _re
@@ -231,7 +236,9 @@ with tab_tmpl:
                     S["tmpl_ai_ids"] = _jj.loads(_m.group()).get("ids",[]) if _m else []
                     if S["tmpl_ai_ids"]:
                         st.success(f"✨ {len(S['tmpl_ai_ids'])} test(s) suggérés")
-                except Exception as _e:
+                    else:
+                        st.warning("Aucun test trouvé par l'IA.")
+                except Exception:
                     S["tmpl_ai_ids"] = []
 
         # Construire la liste filtrée des tests disponibles
