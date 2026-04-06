@@ -216,20 +216,102 @@ with tab_tmpl:
             st.markdown("---")
 
         st.markdown("**Ajouter des tests :**")
-        by_cat = {}
-        for tid, cls in sorted(tests_map.items(), key=lambda x: x[1].tab_label()):
-            cat = cls.meta().get("categorie","autre")
-            by_cat.setdefault(cat,[]).append((tid,cls))
-        CAT_LABELS={"test_clinique":"🔬 Tests cliniques","questionnaire":"📋 Questionnaires","autre":"📁 Autres"}
-        for cat, items in sorted(by_cat.items()):
-            available = [(tid,cls) for tid,cls in items if tid not in selected_set]
-            if not available: continue
-            with st.expander(f"{CAT_LABELS.get(cat,cat)} — {len(available)} disponibles"):
+
+        # ── Recherche ────────────────────────────────────────────────────────
+        rs1, rs2 = st.columns([3, 3])
+        tmpl_search_q  = rs1.text_input("🔍 Recherche rapide",
+            placeholder="ex: épaule, genou, KOOS…",
+            key="tmpl_search_q")
+        tmpl_search_ai = rs2.text_input("🤖 Décrire le patient",
+            placeholder="ex: patient post-op LCA sportif…",
+            key="tmpl_search_ai")
+
+        # Recherche IA
+        if tmpl_search_ai and S.get("tmpl_ai_prev") != tmpl_search_ai:
+            S["tmpl_ai_prev"] = tmpl_search_ai
+            with st.spinner("Recherche IA…"):
+                try:
+                    import anthropic as _ant, json as _jj, re as _re
+                    _catalog = [{"id": tid, "nom": cls.meta().get("nom",""),
+                                 "tags": cls.meta().get("tags",[]),
+                                 "desc": cls.meta().get("description","")}
+                                for tid, cls in tests_map.items()
+                                if tid not in selected_set]
+                    _msg = _ant.Anthropic().messages.create(
+                        model="claude-haiku-4-5", max_tokens=400,
+                        system='Reponds UNIQUEMENT avec un JSON {"ids":[...]} avec les IDs pertinents.',
+                        messages=[{"role":"user","content":
+                            "Catalogue: " + _jj.dumps(_catalog, ensure_ascii=False)
+                            + "\nDescription patient: " + tmpl_search_ai}])
+                    _m = _re.search(r'\{"ids":\s*\[[^\]]*\]\}', _msg.content[0].text, _re.DOTALL)
+                    S["tmpl_ai_ids"] = _jj.loads(_m.group()).get("ids",[]) if _m else []
+                    if S["tmpl_ai_ids"]:
+                        st.success(f"✨ {len(S['tmpl_ai_ids'])} test(s) suggérés")
+                except Exception as _e:
+                    S["tmpl_ai_ids"] = []
+
+        # Construire la liste filtrée des tests disponibles
+        ai_ids = S.get("tmpl_ai_ids", [])
+        all_available = [(tid, cls) for tid, cls in
+                         sorted(tests_map.items(), key=lambda x: x[1].tab_label())
+                         if tid not in selected_set]
+
+        if tmpl_search_ai and ai_ids:
+            # Résultats IA en priorité, puis le reste
+            ai_avail     = [(tid, cls) for tid, cls in all_available if tid in ai_ids]
+            other_avail  = [(tid, cls) for tid, cls in all_available if tid not in ai_ids]
+            filtered_avail = ai_avail + other_avail
+            if ai_avail:
+                st.caption(f"✨ Suggestions IA en premier ({len(ai_avail)} tests)")
+        elif tmpl_search_q.strip():
+            q = tmpl_search_q.lower().strip()
+            filtered_avail = [(tid, cls) for tid, cls in all_available
+                              if q in cls.tab_label().lower()
+                              or q in cls.meta().get("nom","").lower()
+                              or any(q in t.lower() for t in cls.meta().get("tags",[]))
+                              or q in cls.meta().get("description","").lower()]
+        else:
+            filtered_avail = all_available
+
+        # Afficher par catégorie si pas de recherche, sinon liste plate
+        CAT_LABELS = {"test_clinique":"🔬 Tests cliniques",
+                      "questionnaire":"📋 Questionnaires","autre":"📁 Autres"}
+
+        if tmpl_search_q.strip() or tmpl_search_ai.strip():
+            # Vue liste plate avec recherche active
+            if not filtered_avail:
+                st.info("Aucun test ne correspond à la recherche.")
+            else:
+                st.caption(f"{len(filtered_avail)} test(s) trouvé(s)")
                 cols = st.columns(3)
-                for j,(tid,cls) in enumerate(available):
-                    if cols[j%3].button(cls.tab_label(), key=f"add_{tid}", use_container_width=True,
+                for j, (tid, cls) in enumerate(filtered_avail):
+                    is_ai = tid in ai_ids
+                    label = ("✨ " if is_ai else "") + cls.tab_label()
+                    if cols[j%3].button(label, key=f"add_{tid}",
+                                        use_container_width=True,
                                         help=" · ".join(cls.meta().get("tags",[])[:3])):
-                        selected_ids.append(tid); S["tmpl_selected"]=selected_ids; st.rerun()
+                        selected_ids.append(tid)
+                        S["tmpl_selected"] = selected_ids
+                        S.pop("tmpl_ai_ids", None)
+                        S.pop("tmpl_ai_prev", None)
+                        st.rerun()
+        else:
+            # Vue par catégorie (pas de recherche)
+            by_cat = {}
+            for tid, cls in filtered_avail:
+                cat = cls.meta().get("categorie","autre")
+                by_cat.setdefault(cat,[]).append((tid,cls))
+            for cat, items in sorted(by_cat.items()):
+                with st.expander(
+                    f"{CAT_LABELS.get(cat,cat)} — {len(items)} disponibles",
+                    expanded=False):
+                    cols = st.columns(3)
+                    for j, (tid, cls) in enumerate(items):
+                        if cols[j%3].button(cls.tab_label(), key=f"add_{tid}",
+                                            use_container_width=True,
+                                            help=" · ".join(cls.meta().get("tags",[])[:3])):
+                            selected_ids.append(tid)
+                            S["tmpl_selected"] = selected_ids; st.rerun()
 
         st.markdown("---")
         can_save = bool(nom.strip()) and len(selected_ids)>0
