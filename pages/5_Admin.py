@@ -210,14 +210,10 @@ with tab_tmpl:
             placeholder="ex: patient post-op LCA sportif…",
             key="tmpl_search_ai")
 
-        # Recherche IA
-        if tmpl_search_ai != S.get("tmpl_ai_prev", ""):
-            # Requête changée → vider les anciens résultats immédiatement
-            S.pop("tmpl_ai_ids", None)
+        # Recherche IA — déclencher uniquement quand la requête change
+        if tmpl_search_ai and S.get("tmpl_ai_prev") != tmpl_search_ai:
             S["tmpl_ai_prev"] = tmpl_search_ai
-
-        if tmpl_search_ai and "tmpl_ai_ids" not in S:
-            # Lancer la recherche IA
+            S["tmpl_ai_ids"]  = None  # Marqueur "en cours"
             with st.spinner("Recherche IA…"):
                 try:
                     import anthropic as _ant, json as _jj, re as _re
@@ -227,19 +223,23 @@ with tab_tmpl:
                                 for tid, cls in tests_map.items()
                                 if tid not in selected_set]
                     _msg = _ant.Anthropic().messages.create(
-                        model="claude-haiku-4-5", max_tokens=400,
+                        model="claude-haiku-4-5", max_tokens=600,
                         system='Reponds UNIQUEMENT avec un JSON {"ids":[...]} avec les IDs pertinents.',
                         messages=[{"role":"user","content":
                             "Catalogue: " + _jj.dumps(_catalog, ensure_ascii=False)
-                            + "\nDescription patient: " + tmpl_search_ai}])
-                    _m = _re.search(r'\{"ids":\s*\[[^\]]*\]\}', _msg.content[0].text, _re.DOTALL)
+                            + "\nDescription: " + tmpl_search_ai}])
+                    _m = _re.search(r'\{"ids":\s*\[[^\]]*\]\}',
+                                    _msg.content[0].text, _re.DOTALL)
                     S["tmpl_ai_ids"] = _jj.loads(_m.group()).get("ids",[]) if _m else []
                     if S["tmpl_ai_ids"]:
                         st.success(f"✨ {len(S['tmpl_ai_ids'])} test(s) suggérés")
-                    else:
-                        st.warning("Aucun test trouvé par l'IA.")
                 except Exception:
                     S["tmpl_ai_ids"] = []
+
+        elif not tmpl_search_ai:
+            # Champ vidé → reset complet
+            S.pop("tmpl_ai_ids", None)
+            S.pop("tmpl_ai_prev", None)
 
         # Construire la liste filtrée des tests disponibles
         ai_ids = S.get("tmpl_ai_ids", [])
