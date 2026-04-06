@@ -4,7 +4,7 @@ tests/questionnaires/had.py — HAD (copie fidèle v1)
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test
-from tests.tests_cliniques.shared_data import HAD_QUESTIONS, compute_had_scores
+from tests.shared_data import HAD_QUESTIONS, compute_had_scores
 
 
 def _had_color(s):
