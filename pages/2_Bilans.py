@@ -48,117 +48,25 @@ def _load_cabinet_templates():
 @st.cache_resource
 def _load_templates():
     """Chargé une seule fois par session — tous les tests + templates."""
-    from tests.had              import HAD              # noqa
-    from tests.sf12             import SF12             # noqa
-    from tests.nijmegen         import Nijmegen         # noqa
-    from tests.mrc_dyspnee      import MRCDyspnee      # noqa
-    from tests.comorbidites     import Comorbidites     # noqa
-    from tests.bolt             import BOLT             # noqa
-    from tests.hvt              import HVT              # noqa
-    from tests.gazometrie       import Gazometrie       # noqa
-    from tests.pattern_respi    import PatternRespi     # noqa
-    from tests.snif_pimax_pemax import SNIFPimaxPemax  # noqa
-    from tests.testing_mi       import TestingMI        # noqa
-    from tests.leg_press        import LegPress         # noqa
-    from tests.tinetti          import Tinetti          # noqa
-    from tests.berg             import Berg             # noqa
-    from tests.tug              import TUG              # noqa
-    from tests.sts              import STS              # noqa
-    from tests.unipodal         import Unipodal         # noqa
-    from tests.six_mwt          import SixMWT           # noqa
-    from tests.sppb             import SPPB             # noqa
-    from tests.spirometrie      import Spirometrie      # noqa
-    from tests.mmrc             import MMRC             # noqa
-    from tests.cat              import CAT              # noqa
-    from tests.bode             import BODE             # noqa
-    from tests.eva              import EVA              # noqa
-    from tests.drapeaux         import Drapeaux         # noqa
-    from tests.mobilite_lombaire import MobiliteLombaire # noqa
-    from tests.odi              import ODI              # noqa
-    from tests.tampa            import Tampa            # noqa
-    from tests.orebro           import Orebro           # noqa
-    import templates.shv        # noqa
-    import templates.equilibre  # noqa
-    import templates.bpco       # noqa
-    import templates.lombalgie  # noqa
-    import templates.neutre              # noqa
-    from tests.quick_dash            import QuickDASH            # noqa
-    from tests.ases                  import ASES                  # noqa
-    from tests.amplitudes_epaule     import AmplitudesEpaule     # noqa
-    from tests.testing_epaule        import TestingEpaule        # noqa
-    from tests.tests_epaule_speciaux import TestsEpauleSpeciaux  # noqa
-    from tests.classification_epaule import ClassificationEpaule # noqa
-    # Nouveaux tests
-    from tests.nrs       import NRS           # noqa
-    from tests.psfs       import PSFS          # noqa
-    from tests.groc       import GROC          # noqa
-    from tests.eq5d       import EQ5D          # noqa
-    from tests.ndi        import NDI           # noqa
-    from tests.koos       import KOOS          # noqa
-    from tests.hoos       import HOOS          # noqa
-    from tests.lysholm    import Lysholm       # noqa
-    from tests.dash       import DASH          # noqa
-    # Nouveaux templates
-    import templates.epaule_douloureuse  # noqa
-    import templates.cervicalgie         # noqa
-    import templates.genou               # noqa
-    import templates.hanche              # noqa
-    import templates.membre_superieur    # noqa
-    # Templates cabinet
+    import pathlib as _pl, importlib as _iml
+    _root = _pl.Path(__file__).parent.parent
+    # Templates codés
+    for _tmpl in ["templates.shv","templates.equilibre","templates.bpco","templates.lombalgie",
+                  "templates.neutre","templates.epaule_douloureuse","templates.cervicalgie",
+                  "templates.genou","templates.hanche","templates.membre_superieur"]:
+        try: _iml.import_module(_tmpl)
+        except Exception: pass
+    # Templates cabinet (depuis GSheets)
     _load_cabinet_templates()
-    # Tests batch 2 (FullPhysio + Physiotutors)
-    from tests.lefs          import LEFS          # noqa
-    from tests.womac         import WOMAC         # noqa
-    from tests.spadi         import SPADI         # noqa
-    from tests.constant_murley import ConstantMurley # noqa
-    from tests.prtee         import PRTEE         # noqa
-    from tests.bctq          import BCTQ          # noqa
-    from tests.roland_morris import RolandMorris  # noqa
-    from tests.start_back    import STarTBack     # noqa
-    from tests.fabq          import FABQ          # noqa
-    from tests.dn4           import DN4           # noqa
-    from tests.faos          import FAOS          # noqa
-    from tests.kujala        import Kujala        # noqa
-    from tests.acl_rsi       import ACLRSI        # noqa
-    from tests.visa_a        import VISAA        # noqa
-    from tests.visa_p        import VISAP        # noqa
-    from tests.visa_h        import VISAH        # noqa
-    from tests.visa_g        import VISAG        # noqa
-    from tests.cait          import CAIT         # noqa
-    from tests.tegner        import Tegner       # noqa
-    from tests.dhi           import DHI          # noqa
-    from tests.hit6          import HIT6         # noqa
-    from tests.hagos         import HAGOS        # noqa
-    from tests.ikdc          import IKDC         # noqa
-    from tests.csi           import CSI          # noqa
-    from tests.qbpds         import QBPDS        # noqa
-    from tests.atrs          import ATRS         # noqa
-    from tests.wosi          import WOSI         # noqa
-    from tests.borg_rpe      import BorgRPE              # noqa
-    from tests.sgrq          import SGRQ                 # noqa
-    from tests.lcadl         import LCADL                # noqa
-    from tests.pcfs          import PCFS                 # noqa
-    from tests.psqi          import PSQI                 # noqa
-    from tests.abc_scale     import ABCScale             # noqa
-    from tests.mini_bestest  import MiniBESTest          # noqa
-    from tests.fes_i         import FESI                 # noqa
-    from tests.barthel       import Barthel              # noqa
-    from tests.ten_mwt       import TenMWT               # noqa
-    from tests.ashworth      import AshworthScale        # noqa
-    from tests.iciq_ui       import ICIQUI               # noqa
-    from tests.pfdi20        import PFDI20               # noqa
-    from tests.pcs           import PCS                  # noqa
-    from tests.phq9          import PHQ9                 # noqa
-    from tests.gad7          import GAD7                 # noqa
-    from tests.isi           import ISI                  # noqa
-    from tests.haq           import HAQ                  # noqa
-    from tests.basdai        import BASDAI               # noqa
-    from tests.frailty_scale import ClinicalFrailtyScale # noqa
-    from tests.frail_scale   import FRAILScale           # noqa
-    from tests.gait_speed    import GaitSpeed4m          # noqa
-    from tests.k_ses         import KSES                 # noqa
-    from tests.prwe          import PRWE                 # noqa
-    from tests.bpi           import BPI                  # noqa
+    # Auto-découverte récursive de TOUS les tests
+    _tests_dir = _root / "tests"
+    if _tests_dir.exists():
+        for _py in sorted(_tests_dir.rglob("*.py")):
+            if _py.name.startswith("_"): continue
+            _rel = _py.relative_to(_root).with_suffix("")
+            _mod = str(_rel).replace("/", ".").replace("\\", ".")
+            try: _iml.import_module(_mod)
+            except Exception: pass
     return True
 
 try:
