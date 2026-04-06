@@ -47,15 +47,12 @@ with tab_cabinet:
     # ── Charger patients ──────────────────────────────────────────────────────
     @st.cache_data(ttl=30)
     def _load_patients_all():
+        """Charge tous les patients y compris les inactifs."""
         try:
-            ws_df = get_all_patients.__wrapped__("default") if hasattr(get_all_patients,"__wrapped__") else None
-        except Exception:
-            ws_df = None
-        # Charger avec et sans inactifs
-        from utils.db import _ws, _ws_to_df, PATIENTS_HEADERS
-        try:
-            df = _ws_to_df(_ws("Patients"), PATIENTS_HEADERS)
-            df["cabinet_id"] = df.get("cabinet_id","default")
+            from utils.db import get_sheet
+            df = get_sheet("Patients")
+            if df.empty: return pd.DataFrame()
+            if "actif" not in df.columns: df["actif"] = "1"
             return df
         except Exception:
             return pd.DataFrame()
@@ -270,13 +267,12 @@ with tab_moi:
     @st.cache_data(ttl=30)
     def _load_mes_cas(praticien):
         try:
-            from utils.db import _ws, _ws_to_df, CAS_HEADERS, PATIENTS_HEADERS
-            df_cas = _ws_to_df(_ws("Cas"), CAS_HEADERS)
-            df_pat = _ws_to_df(_ws("Patients"), PATIENTS_HEADERS)
+            from utils.db import get_sheet
+            df_cas = get_sheet("Cas")
+            df_pat = get_sheet("Patients")
             if df_cas.empty: return pd.DataFrame()
             mes = df_cas[df_cas["praticien_creation"].str.strip() == praticien.strip()]
             if mes.empty: return pd.DataFrame()
-            # Merger avec patients pour avoir le nom
             merged = mes.merge(
                 df_pat[["patient_id","nom","prenom"]],
                 on="patient_id", how="left")
