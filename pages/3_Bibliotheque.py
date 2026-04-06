@@ -24,13 +24,18 @@ def _load_all():
     # 2. Auto-découverte de tous les fichiers tests/ (récursif)
     tests_dir = root / "tests"
     if tests_dir.exists():
+        _import_errors = []
         for py_file in sorted(tests_dir.rglob("*.py")):
             if py_file.name.startswith("_"): continue
-            # Construire le nom du module relatif à root
             rel = py_file.relative_to(root).with_suffix("")
             module_name = str(rel).replace("/", ".").replace("\\", ".")
             try: importlib.import_module(module_name)
-            except Exception: pass
+            except Exception as _e: _import_errors.append(f"{module_name}: {type(_e).__name__}: {_e}")
+        if _import_errors:
+            import streamlit as _st
+            with _st.expander(f"⚠️ {len(_import_errors)} test(s) non chargé(s)", expanded=True):
+                for _err in _import_errors:
+                    _st.caption(_err)
 
     return True
 
