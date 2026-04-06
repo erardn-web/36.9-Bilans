@@ -3841,7 +3841,7 @@ QUESTIONNAIRES["leg_press"] = ("1RM Leg Press",                 build_leg_press)
 # ── Questionnaires Lombalgie ──────────────────────────────────────────────────
 
 def build_odi(story, styles):
-    from tests.tests_cliniques.odi import ODI_SECTIONS
+    from tests.odi import ODI_SECTIONS
     story.append(section_band("Oswestry Disability Index (ODI)"))
     story.append(Spacer(1, 0.2*cm))
     story.append(Paragraph(
@@ -3862,7 +3862,7 @@ QUESTIONNAIRES["odi"] = ("Oswestry Disability Index (ODI)", build_odi)
 
 
 def build_tampa(story, styles):
-    from tests.tests_cliniques.tampa import TAMPA_ITEMS, TAMPA_SCALE
+    from tests.tampa import TAMPA_ITEMS, TAMPA_SCALE
     story.append(section_band("Tampa Scale for Kinesiophobia (TSK-17)"))
     story.append(Spacer(1, 0.2*cm))
     story.append(Paragraph(
@@ -3885,7 +3885,7 @@ QUESTIONNAIRES["tampa"] = ("Tampa Scale (kinésiophobie)", build_tampa)
 
 
 def build_orebro(story, styles):
-    from tests.tests_cliniques.orebro import OREBRO_ITEMS
+    from tests.orebro import OREBRO_ITEMS
     from reportlab.platypus import TableStyle as _TS, Table as _T
     from reportlab.lib import colors as _rc
     story.append(section_band("Örebro Musculoskeletal Pain Questionnaire"))
@@ -3919,7 +3919,7 @@ QUESTIONNAIRES["orebro"] = ("Örebro", build_orebro)
 # ── Questionnaires BPCO ───────────────────────────────────────────────────────
 
 def build_mmrc_q(story, styles):
-    from tests.tests_cliniques.mmrc import MMRC_GRADES
+    from tests.mmrc import MMRC_GRADES
     story.append(section_band("Échelle mMRC — Dyspnée"))
     story.append(Spacer(1, 0.2*cm))
     story.append(Paragraph(
@@ -3937,7 +3937,7 @@ QUESTIONNAIRES["mmrc_bpco"] = ("mMRC Dyspnée (BPCO)", build_mmrc_q)
 
 
 def build_cat_q(story, styles):
-    from tests.tests_cliniques.cat import CAT_ITEMS
+    from tests.cat import CAT_ITEMS
     from reportlab.platypus import TableStyle as _TS, Table as _T
     from reportlab.lib import colors as _rc
     story.append(section_band("CAT — COPD Assessment Test"))
