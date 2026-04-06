@@ -7,18 +7,18 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.bilan_template import BilanTemplate
 from core.registry import register_template
 
-from tests.questionnaires.had            import HAD
-from tests.questionnaires.sf12           import SF12
-from tests.questionnaires.nijmegen       import Nijmegen
-from tests.questionnaires.mrc_dyspnee    import MRCDyspnee
-from tests.questionnaires.comorbidites   import Comorbidites
-from tests.tests_cliniques.bolt              import BOLT
-from tests.tests_cliniques.hvt               import HVT
-from tests.tests_cliniques.gazometrie        import Gazometrie
-from tests.tests_cliniques.pattern_respi     import PatternRespi
-from tests.tests_cliniques.snif_pimax_pemax  import SNIFPimaxPemax
-from tests.tests_cliniques.testing_mi        import TestingMI
-from tests.tests_cliniques.leg_press         import LegPress
+from tests.had            import HAD
+from tests.sf12           import SF12
+from tests.nijmegen       import Nijmegen
+from tests.mrc_dyspnee    import MRCDyspnee
+from tests.comorbidites   import Comorbidites
+from tests.bolt              import BOLT
+from tests.hvt               import HVT
+from tests.gazometrie        import Gazometrie
+from tests.pattern_respi     import PatternRespi
+from tests.snif_pimax_pemax  import SNIFPimaxPemax
+from tests.testing_mi        import TestingMI
+from tests.leg_press         import LegPress
 
 SHV = register_template(BilanTemplate(
     template_id = "shv",
