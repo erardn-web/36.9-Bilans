@@ -313,6 +313,14 @@ def create_patient(nom, prenom, date_naissance, sexe,
     })
     return pid
 
+def set_patient_actif(patient_id: str, actif: bool) -> bool:
+    """Active ou désactive un patient (actif=1 ou 0)."""
+    ok = _update_row("Patients", "patient_id", patient_id, {"actif": "1" if actif else "0"})
+    if ok:
+        _invalidate_read_cache()
+    return ok
+
+
 def update_patient(patient_id: str, nom: str, prenom: str,
                    date_naissance: str, sexe: str) -> bool:
     ok = _update_row("Patients", "patient_id", patient_id, {
