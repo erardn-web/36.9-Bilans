@@ -202,18 +202,26 @@ with tab_tmpl:
         st.markdown("**Ajouter des tests :**")
 
         # ── Recherche ────────────────────────────────────────────────────────
-        rs1, rs2 = st.columns([3, 3])
+        rs1, rs2, rs3 = st.columns([3, 3, 1])
         tmpl_search_q  = rs1.text_input("🔍 Recherche rapide",
             placeholder="ex: épaule, genou, KOOS…",
             key="tmpl_search_q")
         tmpl_search_ai = rs2.text_input("🤖 Décrire le patient",
             placeholder="ex: patient post-op LCA sportif…",
             key="tmpl_search_ai")
+        btn_ai = rs3.button("🔍", key="tmpl_ai_btn",
+                            help="Lancer la recherche IA",
+                            use_container_width=True)
 
-        # Recherche IA — déclencher uniquement quand la requête change
-        if tmpl_search_ai and S.get("tmpl_ai_prev") != tmpl_search_ai:
+        # Reset si champ IA vidé
+        if not tmpl_search_ai:
+            S.pop("tmpl_ai_ids", None)
+            S.pop("tmpl_ai_prev", None)
+
+        # Recherche IA — uniquement sur clic du bouton
+        if btn_ai and tmpl_search_ai:
+            S.pop("tmpl_ai_ids", None)
             S["tmpl_ai_prev"] = tmpl_search_ai
-            S["tmpl_ai_ids"]  = None  # Marqueur "en cours"
             with st.spinner("Recherche IA…"):
                 try:
                     import anthropic as _ant, json as _jj, re as _re
@@ -233,13 +241,11 @@ with tab_tmpl:
                     S["tmpl_ai_ids"] = _jj.loads(_m.group()).get("ids",[]) if _m else []
                     if S["tmpl_ai_ids"]:
                         st.success(f"✨ {len(S['tmpl_ai_ids'])} test(s) suggérés")
-                except Exception:
+                    else:
+                        st.warning("Aucun résultat — reformulez la description.")
+                except Exception as _e:
                     S["tmpl_ai_ids"] = []
-
-        elif not tmpl_search_ai:
-            # Champ vidé → reset complet
-            S.pop("tmpl_ai_ids", None)
-            S.pop("tmpl_ai_prev", None)
+                    st.error(f"Erreur IA : {_e}")
 
         # Construire la liste filtrée des tests disponibles
         ai_ids = S.get("tmpl_ai_ids", [])
@@ -255,12 +261,15 @@ with tab_tmpl:
             if ai_avail:
                 st.caption(f"✨ Suggestions IA en premier ({len(ai_avail)} tests)")
         elif tmpl_search_q.strip():
-            q = tmpl_search_q.lower().strip()
+            import unicodedata as _ud
+            def _norm(s):
+                return _ud.normalize("NFD", s.lower()).encode("ascii","ignore").decode()
+            q = _norm(tmpl_search_q.strip())
             filtered_avail = [(tid, cls) for tid, cls in all_available
-                              if q in cls.tab_label().lower()
-                              or q in cls.meta().get("nom","").lower()
-                              or any(q in t.lower() for t in cls.meta().get("tags",[]))
-                              or q in cls.meta().get("description","").lower()]
+                              if q in _norm(cls.tab_label())
+                              or q in _norm(cls.meta().get("nom",""))
+                              or any(q in _norm(t) for t in cls.meta().get("tags",[]))
+                              or q in _norm(cls.meta().get("description",""))]
         else:
             filtered_avail = all_available
 
