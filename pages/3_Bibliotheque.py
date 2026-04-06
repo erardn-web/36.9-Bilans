@@ -11,36 +11,27 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # ── Chargement de tous les tests ──────────────────────────────────────────────
 @st.cache_resource
 def _load_all():
-    import importlib
-    modules = [
-        "templates.shv","templates.equilibre","templates.bpco","templates.lombalgie",
-        "templates.neutre","templates.epaule_douloureuse","templates.cervicalgie",
-        "templates.genou","templates.hanche","templates.membre_superieur",
-        "tests.psfs","tests.groc","tests.eq5d",
-        "tests.ndi","tests.koos","tests.hoos",
-        "tests.lysholm","tests.dash","tests.lefs",
-        "tests.womac","tests.spadi","tests.constant_murley",
-        "tests.prtee","tests.bctq","tests.roland_morris",
-        "tests.start_back","tests.fabq","tests.dn4",
-        "tests.faos","tests.kujala","tests.acl_rsi",
-        "tests.hagos","tests.ikdc","tests.csi",
-        "tests.qbpds","tests.atrs","tests.wosi",
-        "tests.visa_a","tests.visa_p","tests.visa_h",
-        "tests.visa_g","tests.cait","tests.tegner",
-        "tests.dhi","tests.hit6","tests.nrs",
-        "tests.borg_rpe","tests.sgrq","tests.lcadl",
-        "tests.pcfs","tests.psqi","tests.abc_scale",
-        "tests.mini_bestest","tests.fes_i","tests.barthel",
-        "tests.ten_mwt","tests.ashworth","tests.iciq_ui",
-        "tests.pfdi20","tests.pcs","tests.phq9",
-        "tests.gad7","tests.isi","tests.haq",
-        "tests.basdai","tests.frailty_scale","tests.frail_scale",
-        "tests.gait_speed","tests.k_ses","tests.prwe",
-        "tests.bpi",
-    ]
-    for m in modules:
-        try: importlib.import_module(m)
+    import importlib, pathlib
+    root = pathlib.Path(__file__).parent.parent
+
+    # 1. Templates (chargent leurs propres tests)
+    for tmpl in ["templates.shv","templates.equilibre","templates.bpco","templates.lombalgie",
+                 "templates.neutre","templates.epaule_douloureuse","templates.cervicalgie",
+                 "templates.genou","templates.hanche","templates.membre_superieur"]:
+        try: importlib.import_module(tmpl)
         except Exception: pass
+
+    # 2. Auto-découverte de tous les fichiers tests/ (récursif)
+    tests_dir = root / "tests"
+    if tests_dir.exists():
+        for py_file in sorted(tests_dir.rglob("*.py")):
+            if py_file.name.startswith("_"): continue
+            # Construire le nom du module relatif à root
+            rel = py_file.relative_to(root).with_suffix("")
+            module_name = str(rel).replace("/", ".").replace("\\", ".")
+            try: importlib.import_module(module_name)
+            except Exception: pass
+
     return True
 
 _load_all()
