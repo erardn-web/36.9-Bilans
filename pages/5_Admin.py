@@ -215,10 +215,9 @@ with tab_tmpl:
             S.pop("tmpl_ai_ids", None)
             S.pop("tmpl_ai_prev", None)
 
-        # Recherche IA — déclenche quand la requête change
+        # Recherche IA — identique à 2_Bilans.py (pattern éprouvé)
         if tmpl_search_ai and S.get("tmpl_ai_prev") != tmpl_search_ai:
             S["tmpl_ai_prev"] = tmpl_search_ai
-            S.pop("tmpl_ai_ids", None)
             with st.spinner("Recherche IA…"):
                 try:
                     import anthropic as _ant, json as _jj, re as _re
@@ -239,12 +238,9 @@ with tab_tmpl:
                                     _msg.content[0].text, _re.DOTALL)
                     S["tmpl_ai_ids"] = _jj.loads(_m.group()).get("ids",[]) if _m else []
                     if S["tmpl_ai_ids"]:
-                        st.success(f"✨ {len(S['tmpl_ai_ids'])} test(s) suggérés")
-                    else:
-                        st.warning("Aucun résultat — reformulez la description.")
-                except Exception as _e:
+                        st.caption(f"✨ {len(S['tmpl_ai_ids'])} suggestion(s) IA")
+                except Exception:
                     S["tmpl_ai_ids"] = []
-                    st.error(f"Erreur IA : {_e}")
 
         # Construire la liste filtrée des tests disponibles
         ai_ids = S.get("tmpl_ai_ids", [])
