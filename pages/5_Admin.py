@@ -202,26 +202,23 @@ with tab_tmpl:
         st.markdown("**Ajouter des tests :**")
 
         # ── Recherche ────────────────────────────────────────────────────────
-        rs1, rs2, rs3 = st.columns([3, 3, 1])
+        rs1, rs2 = st.columns([3, 3])
         tmpl_search_q  = rs1.text_input("🔍 Recherche rapide",
             placeholder="ex: épaule, genou, KOOS…",
             key="tmpl_search_q")
         tmpl_search_ai = rs2.text_input("🤖 Décrire le patient",
             placeholder="ex: patient post-op LCA sportif…",
             key="tmpl_search_ai")
-        btn_ai = rs3.button("🔍", key="tmpl_ai_btn",
-                            help="Lancer la recherche IA",
-                            use_container_width=True)
 
         # Reset si champ IA vidé
         if not tmpl_search_ai:
             S.pop("tmpl_ai_ids", None)
             S.pop("tmpl_ai_prev", None)
 
-        # Recherche IA — uniquement sur clic du bouton
-        if btn_ai and tmpl_search_ai:
-            S.pop("tmpl_ai_ids", None)
+        # Recherche IA — déclenche quand la requête change
+        if tmpl_search_ai and S.get("tmpl_ai_prev") != tmpl_search_ai:
             S["tmpl_ai_prev"] = tmpl_search_ai
+            S.pop("tmpl_ai_ids", None)
             with st.spinner("Recherche IA…"):
                 try:
                     import anthropic as _ant, json as _jj, re as _re
