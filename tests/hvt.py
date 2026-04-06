@@ -4,7 +4,7 @@ tests/tests_cliniques/hvt.py — Test HVT (copie fidèle v1)
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test
-from tests.tests_cliniques.shared_data import (
+from tests.shared_data import (
     HVT_DESCRIPTION, HVT_SYMPTOMES, HVT_PHASES, HVT_PARAMS
 )
 
