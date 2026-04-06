@@ -1,10 +1,10 @@
 """
-tests/tests_cliniques/pattern_respi.py — Pattern respiratoire (copie fidèle v1)
+tests/pattern_respi.py — Pattern respiratoire (copie fidèle v1)
 """
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test
-from tests.tests_cliniques.shared_data import (
+from tests.shared_data import (
     PATTERN_MODES, PATTERN_AMPLITUDES, PATTERN_RYTHMES
 )
 

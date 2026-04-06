@@ -1,10 +1,10 @@
 """
-tests/questionnaires/mrc_dyspnee.py — MRC Dyspnée (copie fidèle v1)
+tests/mrc_dyspnee.py — MRC Dyspnée (copie fidèle v1)
 """
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test
-from tests.tests_cliniques.shared_data import MRC_GRADES
+from tests.shared_data import MRC_GRADES
 
 
 MRC_COLORS = ["#388e3c","#8bc34a","#f57c00","#e64a19","#d32f2f"]

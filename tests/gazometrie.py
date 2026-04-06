@@ -1,10 +1,10 @@
 """
-tests/tests_cliniques/gazometrie.py — Gazométrie + Capnographie (copie fidèle v1)
+tests/gazometrie.py — Gazométrie + Capnographie (copie fidèle v1)
 """
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test
-from tests.tests_cliniques.shared_data import (
+from tests.shared_data import (
     GAZO_FIELDS, interpret_gazo, ETCO2_PATTERNS
 )
 

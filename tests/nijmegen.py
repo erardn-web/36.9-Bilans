@@ -1,10 +1,10 @@
 """
-tests/questionnaires/nijmegen.py — Nijmegen (copie fidèle v1)
+tests/nijmegen.py — Nijmegen (copie fidèle v1)
 """
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test
-from tests.tests_cliniques.shared_data import (
+from tests.shared_data import (
     NIJMEGEN_ITEMS, NIJMEGEN_OPTIONS, NIJMEGEN_KEYS, compute_nijmegen
 )
 

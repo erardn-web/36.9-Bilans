@@ -1,10 +1,10 @@
 """
-tests/tests_cliniques/bolt.py — BOLT (copie fidèle v1)
+tests/bolt.py — BOLT (copie fidèle v1)
 """
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test
-from tests.tests_cliniques.shared_data import BOLT_DESCRIPTION, interpret_bolt
+from tests.shared_data import BOLT_DESCRIPTION, interpret_bolt
 
 
 def _safe_float(v):

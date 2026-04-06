@@ -1,10 +1,10 @@
 """
-tests/tests_cliniques/snif_pimax_pemax.py — SNIF/PImax/PEmax (copie fidèle v1)
+tests/snif_pimax_pemax.py — SNIF/PImax/PEmax (copie fidèle v1)
 """
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test
-from tests.tests_cliniques.shared_data import interpret_mip_mep
+from tests.shared_data import interpret_mip_mep
 
 
 def _safe_float(v):

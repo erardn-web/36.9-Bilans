@@ -1,10 +1,10 @@
 """
-tests/questionnaires/comorbidites.py — Comorbidités (copie fidèle v1)
+tests/comorbidites.py — Comorbidités (copie fidèle v1)
 """
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test
-from tests.tests_cliniques.shared_data import COMORB_CATEGORIES
+from tests.shared_data import COMORB_CATEGORIES
 
 
 @register_test
