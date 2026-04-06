@@ -1,4 +1,4 @@
-# pages/1_Bilans.py — Dossier patient → Cas → Bilans (UX fidèle v1)
+# pages/2_Bilans.py — Dossier patient → Cas → Bilans (UX fidèle v1)
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
