@@ -235,20 +235,21 @@ with tab_tmpl:
                             "Catalogue: " + _jj.dumps(_catalog, ensure_ascii=False)
                             + "\nDescription: " + tmpl_search_ai}])
                     _raw = _msg.content[0].text
-                    S["tmpl_ai_raw"] = _raw[:300]  # debug
-                    _m = _re.search(r'\{"ids":\s*\[[^\]]*\]\}',
-                                    _raw, _re.DOTALL)
-                    S["tmpl_ai_ids"] = _jj.loads(_m.group()).get("ids",[]) if _m else []
+                    # Parser robuste : strip markdown puis JSON, fallback regex
+                    _clean = _re.sub(r'```\w*\n?', '', _raw).strip()
+                    try:
+                        S["tmpl_ai_ids"] = _jj.loads(_clean).get("ids", [])
+                    except Exception:
+                        _m = _re.search(r'"ids"\s*:\s*\[([^\]]*)\]', _raw, _re.DOTALL)
+                        if _m:
+                            try: S["tmpl_ai_ids"] = _jj.loads(f'[{_m.group(1)}]')
+                            except: S["tmpl_ai_ids"] = []
+                        else:
+                            S["tmpl_ai_ids"] = []
                     if S["tmpl_ai_ids"]:
                         st.caption(f"✨ {len(S['tmpl_ai_ids'])} suggestion(s) IA")
-                except Exception as _ex:
+                except Exception:
                     S["tmpl_ai_ids"] = []
-                    S["tmpl_ai_raw"] = f"EXCEPTION: {_ex}"
-
-        # Debug temporaire
-        if S.get("tmpl_ai_raw"):
-            st.info(f"Debug API: {S['tmpl_ai_raw']}")
-            st.info(f"Debug IDs: {S.get('tmpl_ai_ids')}")
 
         # Construire la liste filtrée des tests disponibles
         ai_ids = S.get("tmpl_ai_ids", [])
