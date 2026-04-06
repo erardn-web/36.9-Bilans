@@ -80,7 +80,13 @@ def _load_stats():
         if not df_audit.empty and "action" in df_audit.columns:
             n_cas    = len(df_audit[df_audit["action"]=="creation_cas"])
             n_bilans = len(df_audit[df_audit["action"]=="creation_bilan"])
-            recent   = df_audit.head(8)
+            # Garder seulement les actions utiles avec un thérapeute identifié
+            ACTIONS_UTILES = ["creation_bilan","creation_cas","save_bilan",
+                              "modification_bilan","creation_patient","cloture_cas","reouverture_cas"]
+            recent = df_audit[
+                df_audit["action"].isin(ACTIONS_UTILES) &
+                df_audit["therapeute"].fillna("").str.strip().ne("")
+            ].head(8)
         else:
             n_cas = n_bilans = 0; recent = pd.DataFrame()
         validations = get_all_validations()
@@ -162,12 +168,22 @@ if votes:
 # 4. Activité récente
 if stats["recent"] is not None and not stats["recent"].empty:
     st.markdown("### \U0001f550 Activité récente")
-    ACTIONS = {"creation_bilan":"\U0001f4cb Nouveau bilan","creation_cas":"\U0001f4c1 Nouveau cas",
-               "save_bilan":"\U0001f4be Bilan sauvegardé","creation_patient":"\U0001f464 Nouveau patient"}
+    ACTIONS = {
+        "creation_bilan":    ("📋", "Nouveau bilan"),
+        "creation_cas":      ("📁", "Nouveau cas"),
+        "save_bilan":        ("💾", "Bilan modifié"),
+        "modification_bilan":("✏️", "Bilan modifié"),
+        "creation_patient":  ("👤", "Nouveau patient"),
+        "cloture_cas":       ("✅", "Cas clôturé"),
+        "reouverture_cas":   ("🔄", "Cas réouvert"),
+    }
     for _,row in stats["recent"].iterrows():
-        action = ACTIONS.get(row.get("action",""),row.get("action",""))
+        action_key = str(row.get("action","")).strip()
+        ico, lbl = ACTIONS.get(action_key, ("⚙️", action_key.replace("_"," ").capitalize()))
+        thera = str(row.get("therapeute","")).strip() or "—"
+        ts    = str(row.get("timestamp",""))[:16]
         st.markdown(
-            f'<div class="activity-row"><strong>{action}</strong>'            f'<span style="color:var(--color-text-secondary)"> · {row.get("therapeute","—")} · {str(row.get("timestamp",""))[:16]}</span></div>',
+            f'<div class="activity-row">'            f'<span style="font-size:1.1rem">{ico}</span> '            f'<strong>{lbl}</strong> '            f'<span style="color:var(--color-text-secondary)"> · {thera} · {ts}</span>'            f'</div>',
             unsafe_allow_html=True)
     st.markdown("")
     st.markdown("---")
