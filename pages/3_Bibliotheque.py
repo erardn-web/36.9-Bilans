@@ -1,4 +1,4 @@
-"""pages/2_Bibliotheque.py — Bibliothèque des tests cliniques"""
+"""pages/3_Bibliotheque.py — Bibliothèque des tests cliniques"""
 import streamlit as st
 import os
 
