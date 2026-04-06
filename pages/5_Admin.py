@@ -232,7 +232,9 @@ with tab_tmpl:
                                 if tid not in selected_set]
                     _msg = _ant.Anthropic().messages.create(
                         model="claude-haiku-4-5", max_tokens=600,
-                        system='Reponds UNIQUEMENT avec un JSON {"ids":[...]} avec les IDs pertinents.',
+                        system=('Tu es un assistant physiothérapeute. '
+                                'Reponds UNIQUEMENT avec un JSON {"ids":[...]} '
+                                'contenant TOUS les IDs de tests pertinents.'),
                         messages=[{"role":"user","content":
                             "Catalogue: " + _jj.dumps(_catalog, ensure_ascii=False)
                             + "\nDescription: " + tmpl_search_ai}])
