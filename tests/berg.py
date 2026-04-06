@@ -1,8 +1,8 @@
-"""tests/tests_cliniques/berg.py — Berg Balance Scale (copie fidèle v1)"""
+"""tests/berg.py — Berg Balance Scale (copie fidèle v1)"""
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test
-from tests.tests_cliniques.shared_data import BERG_ITEMS, BERG_KEYS, compute_berg
+from tests.shared_data import BERG_ITEMS, BERG_KEYS, compute_berg
 
 @register_test
 class Berg(BaseTest):
@@ -96,7 +96,7 @@ class Berg(BaseTest):
         from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
         from reportlab.lib.units import cm
         from reportlab.lib import colors
-        from tests.tests_cliniques.shared_data import BERG_ITEMS
+        from tests.shared_data import BERG_ITEMS
         LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
         story.append(Paragraph("Berg Balance Scale (0–56)", styles["section"]))
         story.append(Paragraph("Évaluation de l'équilibre. Seuil risque de chute : < 45/56", styles["intro"]))

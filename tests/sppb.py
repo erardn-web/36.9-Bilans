@@ -1,8 +1,8 @@
-"""tests/tests_cliniques/sppb.py — SPPB Short Physical Performance Battery (copie fidèle v1)"""
+"""tests/sppb.py — SPPB Short Physical Performance Battery (copie fidèle v1)"""
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test
-from tests.tests_cliniques.shared_data import (
+from tests.shared_data import (
     SPPB_BALANCE_OPTS, SPPB_WALK_OPTS, SPPB_CHAIR_OPTS, compute_sppb
 )
 

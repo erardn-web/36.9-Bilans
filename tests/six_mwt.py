@@ -1,8 +1,8 @@
-"""tests/tests_cliniques/six_mwt.py — Test de marche 6 minutes (copie fidèle v1)"""
+"""tests/six_mwt.py — Test de marche 6 minutes (copie fidèle v1)"""
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test
-from tests.tests_cliniques.shared_data import interpret_6mwt
+from tests.shared_data import interpret_6mwt
 
 @register_test
 class SixMWT(BaseTest):
