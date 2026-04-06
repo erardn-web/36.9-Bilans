@@ -1,5 +1,5 @@
 """
-tests/tests_cliniques/leg_press.py — 1RM Leg Press (séparé du testing musculaire)
+tests/leg_press.py — 1RM Leg Press (séparé du testing musculaire)
 """
 import streamlit as st
 from core.test_base import BaseTest
