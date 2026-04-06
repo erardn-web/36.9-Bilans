@@ -257,21 +257,18 @@ with tab_tmpl:
         else:
             filtered_avail = all_available
 
-        # Afficher par catégorie si pas de recherche, sinon liste plate
-        CAT_LABELS = {"test_clinique":"🔬 Tests cliniques",
-                      "questionnaire":"📋 Questionnaires","autre":"📁 Autres"}
-
-        if tmpl_search_q.strip() or tmpl_search_ai.strip():
-            # Vue liste plate avec recherche active
-            if not filtered_avail:
-                st.info("Aucun test ne correspond à la recherche.")
-            else:
-                st.caption(f"{len(filtered_avail)} test(s) trouvé(s)")
+        # Afficher tous les tests dans un seul expander (plus de catégories)
+        if not filtered_avail:
+            st.info("Aucun test ne correspond à la recherche.")
+        else:
+            label_count = f"{len(filtered_avail)} test(s)"
+            if tmpl_search_q.strip() or tmpl_search_ai.strip():
+                st.caption(label_count + " trouvé(s)")
                 cols = st.columns(3)
                 for j, (tid, cls) in enumerate(filtered_avail):
                     is_ai = tid in ai_ids
-                    label = ("✨ " if is_ai else "") + cls.tab_label()
-                    if cols[j%3].button(label, key=f"add_{tid}",
+                    lbl = ("✨ " if is_ai else "") + cls.tab_label()
+                    if cols[j%3].button(lbl, key=f"add_{tid}",
                                         use_container_width=True,
                                         help=" · ".join(cls.meta().get("tags",[])[:3])):
                         selected_ids.append(tid)
@@ -279,18 +276,11 @@ with tab_tmpl:
                         S.pop("tmpl_ai_ids", None)
                         S.pop("tmpl_ai_prev", None)
                         st.rerun()
-        else:
-            # Vue par catégorie (pas de recherche)
-            by_cat = {}
-            for tid, cls in filtered_avail:
-                cat = cls.meta().get("categorie","autre")
-                by_cat.setdefault(cat,[]).append((tid,cls))
-            for cat, items in sorted(by_cat.items()):
-                with st.expander(
-                    f"{CAT_LABELS.get(cat,cat)} — {len(items)} disponibles",
-                    expanded=False):
+            else:
+                with st.expander(f"📋 Tous les tests — {len(filtered_avail)} disponibles",
+                                 expanded=False):
                     cols = st.columns(3)
-                    for j, (tid, cls) in enumerate(items):
+                    for j, (tid, cls) in enumerate(filtered_avail):
                         if cols[j%3].button(cls.tab_label(), key=f"add_{tid}",
                                             use_container_width=True,
                                             help=" · ".join(cls.meta().get("tags",[])[:3])):
