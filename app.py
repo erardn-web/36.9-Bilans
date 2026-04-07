@@ -22,7 +22,7 @@ def _load_all_templates():
     for m in ["templates.shv","templates.equilibre","templates.bpco",
               "templates.lombalgie","templates.neutre","templates.epaule_douloureuse",
               "templates.cervicalgie","templates.genou","templates.hanche",
-              "templates.membre_superieur"]:
+              "templates.membre_superieur","templates.vestibulaire"]:
         try: __import__(m)
         except Exception: pass
     return True
