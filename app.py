@@ -184,19 +184,6 @@ if stats["recent"] is not None and not stats["recent"].empty:
     st.markdown("")
     st.markdown("---")
 
-# 5. Navigation rapide
-st.markdown("### \U0001f680 Navigation rapide")
-pages = [("\U0001f4cb","Bilans","Créer et gérer les bilans"),
-         ("\U0001f4da","Bibliothèque","Explorer les tests"),
-         ("\U0001f4ac","Feedback","Proposer, voter, signaler")]
-if is_super or is_cabinet:
-    pages.append(("\U0001f510","Admin","Gestion du cabinet"))
-cols_n = st.columns(len(pages))
-for col,(ico,lbl,desc) in zip(cols_n,pages):
-    col.markdown(
-        f'<div class="nav-card"><div class="nav-card-ico">{ico}</div>'        f'<div class="nav-card-lbl">{lbl}</div>'        f'<div style="font-size:0.75rem;color:var(--color-text-secondary);margin-top:4px">{desc}</div></div>',
-        unsafe_allow_html=True)
 
-st.markdown("")
 if st.button("\U0001f504 Actualiser", key="refresh"):
     _load_stats.clear(); _load_votes.clear(); st.rerun()
