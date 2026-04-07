@@ -53,7 +53,7 @@ def _load_templates():
     # Templates codés
     for _tmpl in ["templates.shv","templates.equilibre","templates.bpco","templates.lombalgie",
                   "templates.neutre","templates.epaule_douloureuse","templates.cervicalgie",
-                  "templates.genou","templates.hanche","templates.membre_superieur"]:
+                  "templates.genou","templates.hanche","templates.membre_superieur","templates.vestibulaire"]:
         try: _iml.import_module(_tmpl)
         except Exception: pass
     # Templates cabinet (depuis GSheets)
