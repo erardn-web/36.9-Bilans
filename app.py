@@ -68,11 +68,10 @@ st.caption(f"Tableau de bord · {date.today().strftime('%d/%m/%Y')}")
 st.markdown("---")
 
 # Stats
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=300, show_spinner=False)
 def _load_stats():
     try:
-        from utils.db import get_all_patients, get_audit_log_all, get_all_validations
-        from core.registry import all_tests
+        from utils.db import get_all_patients, get_audit_log_all
         import pandas as pd
         df_p = get_all_patients()
         n_patients = len(df_p)
@@ -80,7 +79,6 @@ def _load_stats():
         if not df_audit.empty and "action" in df_audit.columns:
             n_cas    = len(df_audit[df_audit["action"]=="creation_cas"])
             n_bilans = len(df_audit[df_audit["action"]=="creation_bilan"])
-            # Garder seulement les actions utiles avec un thérapeute identifié
             ACTIONS_UTILES = ["creation_bilan","creation_cas","save_bilan",
                               "modification_bilan","creation_patient","cloture_cas","reouverture_cas"]
             recent = df_audit[
@@ -89,17 +87,12 @@ def _load_stats():
             ].head(8)
         else:
             n_cas = n_bilans = 0; recent = pd.DataFrame()
-        validations = get_all_validations()
-        n_tests   = len(all_tests())
-        n_valides = sum(1 for v in validations.values() if v.get("statut")=="validé")
-        n_enc     = sum(1 for v in validations.values() if v.get("statut")=="en_cours")
-        return {"n_patients":n_patients,"n_cas":n_cas,"n_bilans":n_bilans,
-                "n_tests":n_tests,"n_valides":n_valides,"n_enc":n_enc,"recent":recent}
+        return {"n_patients":n_patients,"n_cas":n_cas,"n_bilans":n_bilans,"recent":recent}
     except Exception:
         import pandas as pd
-        return {"n_patients":0,"n_cas":0,"n_bilans":0,"n_tests":0,"n_valides":0,"n_enc":0,"recent":pd.DataFrame()}
+        return {"n_patients":0,"n_cas":0,"n_bilans":0,"recent":pd.DataFrame()}
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=300, show_spinner=False)
 def _load_votes():
     try:
         from utils.db import get_sheet
@@ -125,30 +118,31 @@ is_cabinet = st.session_state.get("admin_level") == "cabinet"
 
 # 1. Métriques
 st.markdown("### \U0001f4ca Activité du cabinet")
-m1,m2,m3,m4 = st.columns(4)
+m1,m2,m3 = st.columns(3)
 for col,val,lbl in [(m1,stats["n_patients"],"Patients"),(m2,stats["n_cas"],"Cas créés"),
-                    (m3,stats["n_bilans"],"Bilans"),(m4,f'{stats["n_valides"]}/{stats["n_tests"]}',
-                    "Tests validés")]:
+                    (m3,stats["n_bilans"],"Bilans")]:
     col.markdown(f'<div class="dash-metric"><div class="dash-metric-val">{val}</div>'                 f'<div class="dash-metric-lbl">{lbl}</div></div>',unsafe_allow_html=True)
 st.markdown("")
 
-# 2. Progression validation (super admin)
-if is_super and stats["n_tests"] > 0:
-    st.markdown("### \U0001f9ea Préparation au lancement")
-    n_v,n_t,n_enc = stats["n_valides"],stats["n_tests"],stats["n_enc"]
-    n_non = n_t-n_v-n_enc
-    pct = int(n_v/n_t*100) if n_t else 0
-    color = "#388e3c" if pct==100 else "#f57c00" if pct>=50 else "#d32f2f"
-    st.markdown(
-        f'<div class="prog-wrap"><div class="prog-bar" style="background:{color};width:{pct}%"></div></div>'        f'<span style="font-size:0.85rem;color:#666">✅ {n_v} validés &nbsp;·&nbsp; '        f'\U0001f504 {n_enc} en cours &nbsp;·&nbsp; ⬜ {n_non} non testés &nbsp;·&nbsp; '        f'<strong style="color:{color}">{pct}% prêt</strong></span>',
-        unsafe_allow_html=True)
-    if pct < 100:
-        st.caption("Gérer dans Admin › Validation tests")
-    else:
-        st.success("✅ Tous les tests sont validés — l'app est prête pour la vente !")
-    st.markdown("---")
-
-st.markdown("---")
+# 2. Validation (super admin) — chargé séparément pour ne pas bloquer le dashboard
+if is_super:
+    try:
+        from utils.db import get_all_validations
+        from core.registry import all_tests as _at
+        _vals = get_all_validations()
+        _n_t  = len(_at())
+        _n_v  = sum(1 for v in _vals.values() if v.get("statut")=="validé")
+        _n_e  = sum(1 for v in _vals.values() if v.get("statut")=="en_cours")
+        _pct  = int(_n_v/_n_t*100) if _n_t else 0
+        _col  = "#388e3c" if _pct==100 else "#f57c00" if _pct>=50 else "#d32f2f"
+        st.markdown("### 🧪 Préparation au lancement")
+        st.markdown(
+            f'<div class="prog-wrap"><div class="prog-bar" style="background:{_col};width:{_pct}%"></div></div>'
+            f'<span style="font-size:0.85rem;color:#666">✅ {_n_v} validés · 🔄 {_n_e} en cours · ⬜ {_n_t-_n_v-_n_e} non testés · <strong style="color:{_col}">{_pct}% prêt</strong></span>',
+            unsafe_allow_html=True)
+        st.markdown("---")
+    except Exception:
+        pass
 
 # 3. Votes ouverts
 TYPES_ICO = {"Bug":"\U0001f41b","Suggestion":"\U0001f4a1","Amélioration":"\u26a1","Bibliothèque":"\U0001f4da"}
@@ -190,4 +184,19 @@ if stats["recent"] is not None and not stats["recent"].empty:
     st.markdown("")
     st.markdown("---")
 
+# 5. Navigation rapide
+st.markdown("### \U0001f680 Navigation rapide")
+pages = [("\U0001f4cb","Bilans","Créer et gérer les bilans"),
+         ("\U0001f4da","Bibliothèque","Explorer les tests"),
+         ("\U0001f4ac","Feedback","Proposer, voter, signaler")]
+if is_super or is_cabinet:
+    pages.append(("\U0001f510","Admin","Gestion du cabinet"))
+cols_n = st.columns(len(pages))
+for col,(ico,lbl,desc) in zip(cols_n,pages):
+    col.markdown(
+        f'<div class="nav-card"><div class="nav-card-ico">{ico}</div>'        f'<div class="nav-card-lbl">{lbl}</div>'        f'<div style="font-size:0.75rem;color:var(--color-text-secondary);margin-top:4px">{desc}</div></div>',
+        unsafe_allow_html=True)
+
+st.markdown("")
+if st.button("\U0001f504 Actualiser", key="refresh"):
     _load_stats.clear(); _load_votes.clear(); st.rerun()
