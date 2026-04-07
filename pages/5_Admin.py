@@ -258,12 +258,8 @@ with tab_tmpl:
                          if tid not in selected_set]
 
         if tmpl_search_ai and ai_ids:
-            # Résultats IA en priorité, puis le reste
-            ai_avail     = [(tid, cls) for tid, cls in all_available if tid in ai_ids]
-            other_avail  = [(tid, cls) for tid, cls in all_available if tid not in ai_ids]
-            filtered_avail = ai_avail + other_avail
-            if ai_avail:
-                st.caption(f"✨ Suggestions IA en premier ({len(ai_avail)} tests)")
+            # IA : montrer uniquement les suggestions, pas les autres
+            filtered_avail = [(tid, cls) for tid, cls in all_available if tid in ai_ids]
         elif tmpl_search_q.strip():
             import unicodedata as _ud
             def _norm(s):
@@ -284,11 +280,11 @@ with tab_tmpl:
             label_count = f"{len(filtered_avail)} test(s)"
             if tmpl_search_q.strip() or tmpl_search_ai.strip():
                 st.caption(label_count + " trouvé(s)")
+                if tmpl_search_ai and ai_ids:
+                    st.caption(f"✨ {len(filtered_avail)} test(s) suggérés par l'IA")
                 cols = st.columns(3)
                 for j, (tid, cls) in enumerate(filtered_avail):
-                    is_ai = tid in ai_ids
-                    lbl = ("✨ " if is_ai else "") + cls.tab_label()
-                    if cols[j%3].button(lbl, key=f"add_{tid}",
+                    if cols[j%3].button(cls.tab_label(), key=f"add_{tid}",
                                         use_container_width=True,
                                         help=" · ".join(cls.meta().get("tags",[])[:3])):
                         selected_ids.append(tid)
