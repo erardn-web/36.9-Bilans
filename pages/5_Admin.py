@@ -208,7 +208,9 @@ with tab_tmpl:
             key="tmpl_search_q")
         tmpl_search_ai = rs2.text_input("🤖 Décrire le patient",
             placeholder="ex: patient post-op LCA sportif…",
-            key="tmpl_search_ai")
+            key="tmpl_search_ai",
+            help="Décrivez le tableau clinique en langage naturel — l'IA sélectionne "
+                 "les tests les plus pertinents parmi les 96 disponibles.")
 
         # Reset si champ IA vidé
         if not tmpl_search_ai:
