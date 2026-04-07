@@ -22,7 +22,7 @@ def _load_all_templates():
     for m in ["templates.shv","templates.equilibre","templates.bpco",
               "templates.lombalgie","templates.neutre","templates.epaule_douloureuse",
               "templates.cervicalgie","templates.genou","templates.hanche",
-              "templates.membre_superieur","templates.vestibulaire"]:
+              "templates.membre_superieur"]:
         try: __import__(m)
         except Exception: pass
     return True
@@ -148,6 +148,8 @@ if is_super and stats["n_tests"] > 0:
         st.success("✅ Tous les tests sont validés — l'app est prête pour la vente !")
     st.markdown("---")
 
+st.markdown("---")
+
 # 3. Votes ouverts
 TYPES_ICO = {"Bug":"\U0001f41b","Suggestion":"\U0001f4a1","Amélioration":"\u26a1","Bibliothèque":"\U0001f4da"}
 if votes:
@@ -188,19 +190,4 @@ if stats["recent"] is not None and not stats["recent"].empty:
     st.markdown("")
     st.markdown("---")
 
-# 5. Navigation rapide
-st.markdown("### \U0001f680 Navigation rapide")
-pages = [("\U0001f4cb","Bilans","Créer et gérer les bilans"),
-         ("\U0001f4da","Bibliothèque","Explorer les tests"),
-         ("\U0001f4ac","Feedback","Proposer, voter, signaler")]
-if is_super or is_cabinet:
-    pages.append(("\U0001f510","Admin","Gestion du cabinet"))
-cols_n = st.columns(len(pages))
-for col,(ico,lbl,desc) in zip(cols_n,pages):
-    col.markdown(
-        f'<div class="nav-card"><div class="nav-card-ico">{ico}</div>'        f'<div class="nav-card-lbl">{lbl}</div>'        f'<div style="font-size:0.75rem;color:var(--color-text-secondary);margin-top:4px">{desc}</div></div>',
-        unsafe_allow_html=True)
-
-st.markdown("")
-if st.button("\U0001f504 Actualiser", key="refresh"):
     _load_stats.clear(); _load_votes.clear(); st.rerun()
