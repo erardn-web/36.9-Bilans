@@ -2,15 +2,15 @@
 from core.bilan_template import BilanTemplate
 from core.registry import register_template
 
-from tests.tests_cliniques.nrs       import NRS
-from tests.questionnaires.koos       import KOOS
-from tests.questionnaires.lysholm    import Lysholm
-from tests.questionnaires.psfs       import PSFS
-from tests.questionnaires.groc       import GROC
-from tests.tests_cliniques.tug       import TUG
-from tests.tests_cliniques.sts       import STS
-from tests.tests_cliniques.unipodal  import Unipodal
-from tests.tests_cliniques.testing_mi import TestingMI
+from tests.nrs       import NRS
+from tests.koos       import KOOS
+from tests.lysholm    import Lysholm
+from tests.psfs       import PSFS
+from tests.groc       import GROC
+from tests.tug       import TUG
+from tests.sts       import STS
+from tests.unipodal  import Unipodal
+from tests.testing_mi import TestingMI
 
 GENOU = register_template(BilanTemplate(
     template_id = "genou",

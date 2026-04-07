@@ -2,14 +2,14 @@
 from core.bilan_template import BilanTemplate
 from core.registry import register_template
 
-from tests.tests_cliniques.nrs       import NRS
-from tests.questionnaires.hoos       import HOOS
-from tests.questionnaires.psfs       import PSFS
-from tests.questionnaires.groc       import GROC
-from tests.tests_cliniques.tug       import TUG
-from tests.tests_cliniques.sts       import STS
-from tests.tests_cliniques.six_mwt   import SixMWT
-from tests.tests_cliniques.testing_mi import TestingMI
+from tests.nrs       import NRS
+from tests.hoos       import HOOS
+from tests.psfs       import PSFS
+from tests.groc       import GROC
+from tests.tug       import TUG
+from tests.sts       import STS
+from tests.six_mwt   import SixMWT
+from tests.testing_mi import TestingMI
 
 HANCHE = register_template(BilanTemplate(
     template_id = "hanche",

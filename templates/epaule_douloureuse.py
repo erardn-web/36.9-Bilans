@@ -2,13 +2,13 @@
 from core.bilan_template import BilanTemplate
 from core.registry import register_template
 
-from tests.tests_cliniques.eva                   import EVA
-from tests.tests_cliniques.quick_dash            import QuickDASH
-from tests.tests_cliniques.ases                  import ASES
-from tests.tests_cliniques.amplitudes_epaule     import AmplitudesEpaule
-from tests.tests_cliniques.testing_epaule        import TestingEpaule
-from tests.tests_cliniques.tests_epaule_speciaux import TestsEpauleSpeciaux
-from tests.tests_cliniques.classification_epaule import ClassificationEpaule
+from tests.eva                   import EVA
+from tests.quick_dash            import QuickDASH
+from tests.ases                  import ASES
+from tests.amplitudes_epaule     import AmplitudesEpaule
+from tests.testing_epaule        import TestingEpaule
+from tests.tests_epaule_speciaux import TestsEpauleSpeciaux
+from tests.classification_epaule import ClassificationEpaule
 EPAULE_DOULOUREUSE = register_template(BilanTemplate(
     template_id = "epaule_douloureuse",
     nom         = "Épaule douloureuse",
