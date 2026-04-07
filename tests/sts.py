@@ -1,4 +1,4 @@
-"""tests/tests_cliniques/sts.py — STS Sit to Stand 1 minute (copie fidèle v1)"""
+"""tests/sts.py — STS Sit to Stand 1 minute (copie fidèle v1)"""
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test

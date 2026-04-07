@@ -1,4 +1,4 @@
-"""tests/tests_cliniques/quick_dash.py — QuickDASH (11 items)"""
+"""tests/quick_dash.py — QuickDASH (11 items)"""
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test

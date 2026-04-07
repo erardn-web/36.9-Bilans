@@ -1,4 +1,4 @@
-"""tests/tests_cliniques/testing_epaule.py — Testing musculaire épaule (MRC 0-5)"""
+"""tests/testing_epaule.py — Testing musculaire épaule (MRC 0-5)"""
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test

@@ -1,4 +1,4 @@
-"""tests/tests_cliniques/classification_epaule.py — Classification clinique + raisonnement épaule douloureuse"""
+"""tests/classification_epaule.py — Classification clinique + raisonnement épaule douloureuse"""
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test

@@ -1,4 +1,4 @@
-"""tests/tests_cliniques/amplitudes_epaule.py — Amplitudes articulaires épaule"""
+"""tests/amplitudes_epaule.py — Amplitudes articulaires épaule"""
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test

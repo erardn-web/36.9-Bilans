@@ -1,4 +1,4 @@
-"""tests/tests_cliniques/ases.py — ASES (American Shoulder and Elbow Surgeons)"""
+"""tests/ases.py — ASES (American Shoulder and Elbow Surgeons)"""
 import streamlit as st
 from core.test_base import BaseTest
 from core.registry  import register_test
