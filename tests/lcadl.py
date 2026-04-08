@@ -30,6 +30,13 @@ class LCADL(BaseTest):
     OPTS=["1 — Je ne ferais pas","2 — Je n'ai pas de problème","3 — Problème léger","4 — Problème modéré","5 — Je ne peux pas le faire"]
     @classmethod
     def fields(cls): return [k for k,*_ in cls.ITEMS]+["lcadl_score"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score LCADL (/90)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🏠 LCADL — Limitations respiratoires AVQ</div>', unsafe_allow_html=True)
         collected={}; total=0

@@ -21,6 +21,14 @@ class HAQ(BaseTest):
     OPTS=["0 — Sans aucune difficulté","1 — Avec quelque difficulté","2 — Avec beaucoup de difficulté","3 — Incapable de le faire"]
     @classmethod
     def fields(cls): return [k for k,_ in cls.CATEGORIES]+["haq_score"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score HAQ (/3)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦴 HAQ — Indice d\'incapacité fonctionnelle</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0 = aucune incapacité · 3 = incapacité maximale. MCID = 0.22.</div>', unsafe_allow_html=True)

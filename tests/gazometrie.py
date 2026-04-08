@@ -28,6 +28,12 @@ class Gazometrie(BaseTest):
         return (["gazo_type"] + [f[0] for f in GAZO_FIELDS] + ["gazo_notes"]
                 + ["etco2_repos","etco2_post_effort","etco2_pattern","etco2_notes"])
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "tableau", "label": "Valeurs gazométriques", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         # ── Gazométrie ────────────────────────────────────────────────────────
         st.markdown('<div class="section-title">🧪 Gazométrie</div>',unsafe_allow_html=True)

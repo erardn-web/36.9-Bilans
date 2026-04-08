@@ -79,6 +79,15 @@ class DASH(BaseTest):
         all_items = DASH_ITEMS_FUNC + DASH_ITEMS_SYMP + DASH_ITEMS_SOCIAL
         return [k for k, _ in all_items] + ["dash_score"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score DASH (/100)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+            {"key": "detail_items", "label": "Détail des items", "default": False},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">💪 DASH — Membre supérieur</div>',
                     unsafe_allow_html=True)

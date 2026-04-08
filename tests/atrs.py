@@ -27,6 +27,13 @@ class ATRS(BaseTest):
         "Difficulté à pratiquer des activités physiques lourdes",
     ]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score ATRS (/100)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦶 ATRS — Tendon Achille (rupture)</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0 = limitation maximale · 10 = aucune limitation. Score /100.</div>', unsafe_allow_html=True)

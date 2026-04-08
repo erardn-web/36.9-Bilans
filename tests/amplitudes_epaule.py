@@ -31,6 +31,14 @@ class AmplitudesEpaule(BaseTest):
     def fields(cls):
         return [f"{k}_{s}" for k,_,_,_,_ in AMPLITUDES for s in ("d","g")] + ["ep_notes"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "tableau", "label": "Tableau amplitudes D/G", "default": True},
+            {"key": "graphique", "label": "Graphiques d'évolution", "default": True},
+            {"key": "notes", "label": "Notes", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         def _lf(k):
             v = lv(k, None)

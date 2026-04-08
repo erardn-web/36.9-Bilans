@@ -18,6 +18,13 @@ class BorgRPE(BaseTest):
     OPTS={0:"0 — Rien du tout",0.5:"0.5 — Très très légère",1:"1 — Très légère",2:"2 — Légère",
           3:"3 — Modérée",4:"4 — Assez forte",5:"5 — Forte",6:"6",7:"7 — Très forte",8:"8",
           9:"9 — Très très forte",10:"10 — Maximale"}
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "dyspnee", "label": "Borg dyspnée", "default": True},
+            {"key": "fatigue", "label": "Borg fatigue", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">💨 Borg RPE — Effort perçu</div>', unsafe_allow_html=True)
         collected={}

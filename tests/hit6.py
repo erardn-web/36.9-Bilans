@@ -25,6 +25,14 @@ class HIT6(BaseTest):
         "Au cours des 4 dernières semaines, avez-vous trouvé vos capacités de concentration limitées à cause de vos maux de tête ?",
     ]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score total (/78)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🤕 HIT-6 — Impact des céphalées</div>', unsafe_allow_html=True)
         collected={}; total=0

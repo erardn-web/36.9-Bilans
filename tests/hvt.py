@@ -32,6 +32,13 @@ class HVT(BaseTest):
         return fields + ["hvt_symptomes_reproduits","hvt_symptomes_list",
                          "hvt_duree_retour","hvt_notes"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "symptomes", "label": "Symptômes reproduits", "default": True},
+            {"key": "mode_respi", "label": "Mode respiratoire", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🌬️ Test d\'hyperventilation volontaire</div>',
                     unsafe_allow_html=True)

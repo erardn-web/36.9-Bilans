@@ -36,6 +36,15 @@ class CAT(BaseTest):
     def fields(cls):
         return CAT_KEYS + ["cat_score","cat_interpretation"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score CAT (/40)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+            {"key": "detail_items", "label": "Détail des items", "default": False},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">CAT — COPD Assessment Test</div>',
                     unsafe_allow_html=True)

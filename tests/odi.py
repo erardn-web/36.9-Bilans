@@ -39,6 +39,15 @@ class ODI(BaseTest):
     def fields(cls):
         return ODI_KEYS+["odi_score","odi_interpretation"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score total (/100)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+            {"key": "detail_items", "label": "Détail des items", "default": False},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">ODI — Oswestry Disability Index</div>',
                     unsafe_allow_html=True)

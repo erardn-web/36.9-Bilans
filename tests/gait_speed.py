@@ -14,6 +14,14 @@ class GaitSpeed4m(BaseTest):
                 "description":"Gait Speed 4 mètres — prédicteur de mortalité et fragilité chez le sujet âgé"}
     @classmethod
     def fields(cls): return ["gait_temps_1","gait_temps_2","gait_vitesse","gait_aide"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Vitesse (m/s)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🚶 Vitesse de marche 4 mètres</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Mesurer le temps sur 4 mètres à vitesse habituelle. Seuil fragilité < 0.8 m/s. Seuil sarcopénie < 1.0 m/s.</div>', unsafe_allow_html=True)

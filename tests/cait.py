@@ -15,6 +15,14 @@ class CAIT(BaseTest):
     @classmethod
     def fields(cls): return [f"cait_q{i}" for i in range(1,10)]+["cait_score"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score CAIT (/30)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦶 CAIT — Instabilité de cheville</div>', unsafe_allow_html=True)
         collected={}; total=0

@@ -59,6 +59,13 @@ class HAGOS(BaseTest):
         all_items=HAGOS_PAIN+HAGOS_SYMP+HAGOS_ADL+HAGOS_SPORT+HAGOS_PR+HAGOS_QOL
         return [k for k,_ in all_items]+["hagos_pain","hagos_symp","hagos_adl","hagos_sport","hagos_pr","hagos_qol"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "sous_scores", "label": "Sous-scores HAGOS", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦴 HAGOS — Hanche/Aine</div>', unsafe_allow_html=True)
         collected={}

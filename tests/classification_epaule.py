@@ -54,6 +54,15 @@ class ClassificationEpaule(BaseTest):
                 "ep_appreciation","ep_objectifs","ep_traitement",
                 "ep_frequence","ep_duree","ep_education","ep_autogestion"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "classification", "label": "Classification clinique", "default": True},
+            {"key": "drapeaux", "label": "Drapeaux rouges", "default": True},
+            {"key": "raisonnement", "label": "Raisonnement clinique", "default": True},
+            {"key": "plan", "label": "Plan thérapeutique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         collected = {}
 

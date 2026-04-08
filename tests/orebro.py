@@ -47,6 +47,14 @@ class Orebro(BaseTest):
     def fields(cls):
         return OREBRO_KEYS+["orebro_score","orebro_interpretation"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score Örebro (/210)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">Örebro Musculoskeletal Screening Questionnaire</div>',
                     unsafe_allow_html=True)

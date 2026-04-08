@@ -31,6 +31,14 @@ class CSI(BaseTest):
     ]
     OPTS=["0 — Jamais","1 — Rarement","2 — Parfois","3 — Souvent","4 — Toujours"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score CSI (/100)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">⚡ CSI — Inventaire de sensibilisation centrale</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0 = jamais · 4 = toujours. Score ≥ 40 : sensibilisation centrale probable.</div>', unsafe_allow_html=True)

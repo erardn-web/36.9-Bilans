@@ -23,6 +23,15 @@ class MiniBESTest(BaseTest):
     ]
     @classmethod
     def fields(cls): return [k for k,_ in cls.ITEMS]+["mini_bestest_score"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score total (/28)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+            {"key": "detail_items", "label": "Détail des items", "default": False},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🧍 Mini-BESTest — Équilibre</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Chaque item 0-2 (0=incapable, 1=aide/correction, 2=normal). Score /28. Seuil risque chutes ≤ 20.</div>', unsafe_allow_html=True)

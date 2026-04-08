@@ -54,6 +54,13 @@ class FAOS(BaseTest):
         all_items=FAOS_PAIN+FAOS_SYMP+FAOS_ADL+FAOS_SPORT+FAOS_QOL
         return [k for k,_ in all_items]+["faos_pain","faos_symptoms","faos_adl","faos_sport","faos_qol"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "sous_scores", "label": "Sous-scores FAOS", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦶 FAOS — Cheville/Pied</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0 = aucune difficulté → 100 = difficulté maximale (scores inversés : 100 = meilleure fonction)</div>', unsafe_allow_html=True)

@@ -26,6 +26,12 @@ class AshworthScale(BaseTest):
         for k,_ in cls.MUSCLES:
             fields+=[f"{k}_d",f"{k}_g"]
         return fields+["ashworth_notes"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "tableau", "label": "Tableau Ashworth par muscle", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">💪 Ashworth modifié — Spasticité</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0 = pas de spasticité · 4 = rigidité complète. Évaluation passive.</div>', unsafe_allow_html=True)

@@ -39,6 +39,13 @@ class GROC(BaseTest):
     def fields(cls):
         return ["groc_score", "groc_appreciation", "groc_notes"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score", "label": "Score GROC (-7 à +7)", "default": True},
+            {"key": "appreciation", "label": "Appréciation textuelle", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">📈 GROC — Changement global perçu</div>',
                     unsafe_allow_html=True)

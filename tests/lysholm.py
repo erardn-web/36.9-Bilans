@@ -64,6 +64,14 @@ class Lysholm(BaseTest):
     def fields(cls):
         return [i[0] for i in LYSHOLM_ITEMS] + ["lysholm_score_total"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score Lysholm (/100)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦵 Score de Lysholm</div>',
                     unsafe_allow_html=True)

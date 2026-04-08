@@ -23,6 +23,13 @@ class KSES(BaseTest):
     ]
     @classmethod
     def fields(cls): return [k for k,_ in cls.ITEMS_NOW+cls.ITEMS_FUTURE]+["kses_now","kses_future","kses_total"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score K-SES (/100)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🏃 K-SES — Confiance dans son genou</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0 = pas du tout confiant · 10 = totalement confiant. Score ≥ 8 = bonne auto-efficacité.</div>', unsafe_allow_html=True)

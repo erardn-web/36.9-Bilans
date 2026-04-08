@@ -22,6 +22,14 @@ class Nijmegen(BaseTest):
     def fields(cls):
         return NIJMEGEN_KEYS + ["nij_score","nij_interpretation"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score Nijmegen (/64)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">📋 Questionnaire de Nijmegen</div>',
                     unsafe_allow_html=True)

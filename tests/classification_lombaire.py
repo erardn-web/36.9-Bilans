@@ -36,6 +36,14 @@ class ClassificationLombaire(BaseTest):
         return ["groupe_clinique","diag_notes","a_appreciation",
                 "p_objectifs","p_traitement","p_frequence","p_duree","p_education","p_autogestion"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "classification", "label": "Classification", "default": True},
+            {"key": "drapeaux", "label": "Drapeaux rouges", "default": True},
+            {"key": "plan", "label": "Plan thérapeutique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         collected={}
 

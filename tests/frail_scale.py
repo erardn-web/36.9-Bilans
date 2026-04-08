@@ -14,6 +14,13 @@ class FRAILScale(BaseTest):
                 "description":"FRAIL Scale — 5 critères de dépistage rapide de la fragilité /5"}
     @classmethod
     def fields(cls): return ["frail_fatigue","frail_resistance","frail_ambulation","frail_illness","frail_weight","frail_score"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score FRAIL", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">👴 FRAIL Scale — Dépistage fragilité</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0-1 : robuste · 2 : pré-fragile · 3-5 : fragile</div>', unsafe_allow_html=True)

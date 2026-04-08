@@ -48,6 +48,13 @@ class BCTQ(BaseTest):
     def fields(cls):
         return ([k for k,*_ in BCTQ_SSS]+[k for k,_ in BCTQ_FSS]+["bctq_sss","bctq_fss"])
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "sous_scores", "label": "SSS + FSS", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🤚 BCTQ — Canal carpien</div>', unsafe_allow_html=True)
         collected={}

@@ -25,6 +25,15 @@ class FESI(BaseTest):
     OPTS=["1 — Pas du tout","2 — Un peu","3 — Assez","4 — Très préoccupé(e)"]
     @classmethod
     def fields(cls): return [k for k,_ in cls.ITEMS]+["fes_i_score"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score total (/64)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+            {"key": "detail_items", "label": "Détail des items", "default": False},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">😨 FES-I — Peur de tomber</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">1 = pas du tout préoccupé(e) · 4 = très préoccupé(e). Score 16 (aucune peur) → 64 (peur maximale). Seuil risque modéré ≥ 23.</div>', unsafe_allow_html=True)

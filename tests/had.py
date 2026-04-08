@@ -27,6 +27,16 @@ class HAD(BaseTest):
         return ([f"had_{k}" for k,*_ in HAD_QUESTIONS]
                 + ["had_score_anxiete","had_score_depression"])
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_anxiete", "label": "Score anxiété (/21)", "default": True},
+            {"key": "score_depression", "label": "Score dépression (/21)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+            {"key": "detail_items", "label": "Détail des items", "default": False},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">😟 Échelle HAD — Anxiété & Dépression</div>',
                     unsafe_allow_html=True)

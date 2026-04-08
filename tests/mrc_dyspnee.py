@@ -22,6 +22,13 @@ class MRCDyspnee(BaseTest):
     def fields(cls):
         return ["mrc_score"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "grade", "label": "Grade MRC (1-5)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🚶 Échelle de dyspnée MRC</div>',
                     unsafe_allow_html=True)

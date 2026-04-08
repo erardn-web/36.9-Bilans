@@ -19,6 +19,13 @@ class Comorbidites(BaseTest):
     def fields(cls):
         return ["comorb_list","comorb_traitements","comorb_notes"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "liste", "label": "Liste des comorbidités", "default": True},
+            {"key": "indice", "label": "Indice de Charlson", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🏥 Comorbidités & traitements</div>',
                     unsafe_allow_html=True)

@@ -21,6 +21,15 @@ class NRS(BaseTest):
     def fields(cls):
         return ["nrs_repos", "nrs_mouvement", "nrs_nuit", "nrs_region", "nrs_notes"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "repos", "label": "NRS repos", "default": True},
+            {"key": "mouvement", "label": "NRS mouvement", "default": True},
+            {"key": "nuit", "label": "NRS nuit", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🔢 NRS — Échelle numérique de la douleur</div>',
                     unsafe_allow_html=True)

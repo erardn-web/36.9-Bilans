@@ -39,6 +39,13 @@ class Kujala(BaseTest):
     def fields(cls):
         return [k for k,*_ in KUJALA_ITEMS]+["kujala_score"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score Kujala (/100)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦵 Kujala AKPS — Genou antérieur</div>', unsafe_allow_html=True)
         collected={}; total=0

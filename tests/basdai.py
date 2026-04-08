@@ -20,6 +20,13 @@ class BASDAI(BaseTest):
     ]
     @classmethod
     def fields(cls): return [k for k,_ in cls.ITEMS]+["basdai_score"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score BASDAI (/10)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦴 BASDAI — Spondylarthrite ankylosante</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0 = aucun · 10 = maximal. Score ≥ 4 = activité de la maladie élevée.</div>', unsafe_allow_html=True)

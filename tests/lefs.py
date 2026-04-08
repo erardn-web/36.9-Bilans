@@ -49,6 +49,14 @@ class LEFS(BaseTest):
     def fields(cls):
         return [k for k, _ in LEFS_ITEMS] + ["lefs_score"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score LEFS (/80)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦿 LEFS — Échelle fonctionnelle membres inférieurs</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Pour chaque activité, indiquez votre niveau de difficulté aujourd\'hui. Score max = 80 (aucune limitation).</div>', unsafe_allow_html=True)

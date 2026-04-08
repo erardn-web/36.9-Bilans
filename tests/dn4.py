@@ -33,6 +33,13 @@ class DN4(BaseTest):
     def fields(cls):
         return [k for k,_ in DN4_ITEMS]+["dn4_score"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score DN4 (/10)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">⚡ DN4 — Douleur neuropathique</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Répondez Oui ou Non pour chaque item. Score ≥ 4/10 = probable douleur neuropathique.</div>', unsafe_allow_html=True)

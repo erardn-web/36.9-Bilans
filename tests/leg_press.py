@@ -52,6 +52,13 @@ class LegPress(BaseTest):
     def fields(cls):
         return ["lp_charge_kg","lp_reps","lp_1rm_estime","lp_interpretation","lp_notes"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "1rm", "label": "1RM estimé (kg)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">1RM Leg Press (estimé)</div>',
                     unsafe_allow_html=True)

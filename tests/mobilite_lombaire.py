@@ -20,6 +20,13 @@ class MobiliteLombaire(BaseTest):
                 "o_lat_droite_mob","o_lat_gauche_mob",
                 "o_rot_droite_mob","o_rot_gauche_mob"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "tableau", "label": "Amplitudes lombaires", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         def _lf(k):
             v=lv(k,None)

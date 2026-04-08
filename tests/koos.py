@@ -88,6 +88,14 @@ class KOOS(BaseTest):
         return [k for k, _ in all_items] + [
             "koos_pain", "koos_symptoms", "koos_adl", "koos_sport", "koos_qol"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "sous_scores", "label": "Sous-scores (douleur, symptômes, AVQ, sport, QdV)", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+            {"key": "detail_items", "label": "Détail des items", "default": False},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦵 KOOS — Score fonctionnel du genou</div>',
                     unsafe_allow_html=True)

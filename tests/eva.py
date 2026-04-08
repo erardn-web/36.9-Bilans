@@ -40,6 +40,13 @@ class EVA(BaseTest):
                 "s_debut_douleur","s_duree_episode","s_antecedents",
                 "s_arret_travail","s_reveil_nuit"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score", "label": "Score EVA (0-10)", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         def _eva_default(key):
             v=lv(key,None)

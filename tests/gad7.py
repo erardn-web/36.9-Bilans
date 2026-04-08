@@ -24,6 +24,14 @@ class GAD7(BaseTest):
     OPTS=["0 — Jamais","1 — Plusieurs jours","2 — Plus de la moitié des jours","3 — Presque tous les jours"]
     @classmethod
     def fields(cls): return [k for k,_ in cls.ITEMS]+["gad7_score"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score GAD-7 (/21)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">😟 GAD-7 — Dépistage anxiété généralisée</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Au cours des 2 dernières semaines, à quelle fréquence avez-vous été gêné(e) par les problèmes suivants ?</div>', unsafe_allow_html=True)

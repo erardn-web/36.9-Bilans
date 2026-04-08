@@ -26,6 +26,13 @@ class Luomajoki(BaseTest):
     def fields(cls):
         return LUOM_KEYS + ["o_luomajoki_score"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score Luomajoki (/10)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">Tests de Luomajoki — Contrôle moteur lombaire</div>',
                     unsafe_allow_html=True)

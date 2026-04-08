@@ -34,6 +34,12 @@ class Drapeaux(BaseTest):
         return ["drapeaux_rouges_list","drapeaux_rouges_notes",
                 "drapeaux_jaunes_list","drapeaux_jaunes_notes"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "liste", "label": "Drapeaux cochés", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🚩 Drapeaux rouges</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box" style="background:#fff3f3;border-left:4px solid #d32f2f;">'

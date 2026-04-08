@@ -31,6 +31,14 @@ class ACLRSI(BaseTest):
     def fields(cls):
         return [k for k,_ in ACL_RSI_ITEMS]+["acl_rsi_score"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score ACL-RSI (/100)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🏃 ACL-RSI — Préparation psychologique retour sport</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0 = Pas du tout d\'accord · 100 = Tout à fait d\'accord. Score élevé = bonne préparation psychologique.</div>', unsafe_allow_html=True)

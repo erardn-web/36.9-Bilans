@@ -86,6 +86,14 @@ class HOOS(BaseTest):
         return [k for k, _ in all_items] + [
             "hoos_pain", "hoos_symptoms", "hoos_adl", "hoos_sport", "hoos_qol"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "sous_scores", "label": "Sous-scores (douleur, symptômes, AVQ, sport, QdV)", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+            {"key": "detail_items", "label": "Détail des items", "default": False},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦴 HOOS — Score fonctionnel de la hanche</div>',
                     unsafe_allow_html=True)

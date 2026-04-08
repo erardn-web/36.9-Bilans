@@ -44,6 +44,14 @@ class EQ5D(BaseTest):
     def fields(cls):
         return [d[0] for d in EQ5D_DIMS] + ["eq5d_vas", "eq5d_index"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "index", "label": "Index EQ-5D", "default": True},
+            {"key": "vas", "label": "EVA santé (/100)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🌡️ EQ-5D — Qualité de vie</div>',
                     unsafe_allow_html=True)

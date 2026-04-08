@@ -76,6 +76,14 @@ class NDI(BaseTest):
     def fields(cls):
         return [i[0] for i in NDI_ITEMS] + ["ndi_score_total", "ndi_score_pct"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score NDI (/100)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦴 NDI — Index d\'incapacité cervicale</div>',
                     unsafe_allow_html=True)

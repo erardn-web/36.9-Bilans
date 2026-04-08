@@ -24,6 +24,15 @@ class ABCScale(BaseTest):
     ]
     @classmethod
     def fields(cls): return [k for k,_ in cls.ITEMS]+["abc_score"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score moyen (/100)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+            {"key": "detail_items", "label": "Détail des activités", "default": False},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">⚖️ ABC Scale — Confiance dans l\'équilibre</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0% = aucune confiance · 100% = confiance totale. Score ≥ 80% = bonne confiance. Seuil risque chutes < 67%.</div>', unsafe_allow_html=True)

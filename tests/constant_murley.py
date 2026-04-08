@@ -18,6 +18,13 @@ class ConstantMurley(BaseTest):
                 "cm_amp_flex","cm_amp_abd","cm_amp_re","cm_amp_ri",
                 "cm_force_kg","cm_score_total","cm_score_ajuste"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score Constant-Murley (/100)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">📐 Score de Constant-Murley</div>', unsafe_allow_html=True)
         collected = {}

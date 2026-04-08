@@ -24,6 +24,14 @@ class ISI(BaseTest):
     OPTS_GEN=["0 — Aucunement","1 — Un peu","2 — Assez","3 — Beaucoup","4 — Extrêmement"]
     @classmethod
     def fields(cls): return [k for k,_ in cls.ITEMS]+["isi_score"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score ISI (/28)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🌙 ISI — Indice de sévérité de l\'insomnie</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Score ≤ 7 : pas d\'insomnie · 8-14 : légère · 15-21 : modérée · 22-28 : sévère</div>', unsafe_allow_html=True)

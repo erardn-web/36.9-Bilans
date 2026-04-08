@@ -17,6 +17,14 @@ class BPI(BaseTest):
         return ["bpi_worst","bpi_least","bpi_average","bpi_now",
                 "bpi_activity","bpi_mood","bpi_walk","bpi_work","bpi_relations","bpi_sleep","bpi_enjoyment",
                 "bpi_severity_score","bpi_interference_score"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "severity", "label": "Sévérité (/10)", "default": True},
+            {"key": "interference", "label": "Interférence (/10)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">📊 BPI — Inventaire bref de la douleur</div>', unsafe_allow_html=True)
         collected={}

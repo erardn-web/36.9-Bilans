@@ -15,6 +15,13 @@ class IKDC(BaseTest):
     @classmethod
     def fields(cls): return [f"ikdc_q{i}" for i in range(1,11)]+["ikdc_score"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score IKDC (/100)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">📊 IKDC — Genou</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">10 questions sur la fonction du genou. Score 0 = incapacité maximale · 100 = aucune limitation.</div>', unsafe_allow_html=True)

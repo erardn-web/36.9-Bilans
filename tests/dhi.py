@@ -15,6 +15,16 @@ class DHI(BaseTest):
     @classmethod
     def fields(cls): return [f"dhi_q{i}" for i in range(1,26)]+["dhi_score","dhi_physique","dhi_emotionnel","dhi_fonctionnel"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score total (/100)", "default": True},
+            {"key": "sous_scores", "label": "Sous-scores (fonct., émot., physique)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+            {"key": "detail_items", "label": "Détail des items", "default": False},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🌀 DHI — Inventaire du handicap lié aux vertiges</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">25 questions — Oui (4 pts) / Parfois (2 pts) / Non (0 pt). Score 0 = pas de handicap · 100 = handicap maximal.</div>', unsafe_allow_html=True)

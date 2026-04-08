@@ -20,6 +20,14 @@ class ICIQUI(BaseTest):
     TYPE_OPTS=["Pertes avant d'atteindre les toilettes","Pertes lors d'efforts (toux, éternuement, activité physique)",
                "Pertes sans raison apparente","Pertes permanentes","Pertes pendant le sommeil",
                "Pertes lors de rapports sexuels"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score ICIQ-UI (/21)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">💧 ICIQ-UI SF — Incontinence urinaire</div>', unsafe_allow_html=True)
         collected={}

@@ -32,6 +32,13 @@ class FABQ(BaseTest):
     def fields(cls):
         return [k for k,_ in FABQ_PA+FABQ_WORK]+["fabq_pa_score","fabq_work_score"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "sous_scores", "label": "FABQ-PA + FABQ-W", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">😨 FABQ — Croyances de peur-évitement</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0 = Pas du tout d\'accord · 6 = Complètement d\'accord. Seuil clinique : PA ≥ 15, Travail ≥ 34.</div>', unsafe_allow_html=True)

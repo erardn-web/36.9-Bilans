@@ -25,6 +25,13 @@ class ClinicalFrailtyScale(BaseTest):
     }
     @classmethod
     def fields(cls): return ["frailty_grade","frailty_notes"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "grade", "label": "Grade Clinical Frailty", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">👴 Clinical Frailty Scale</div>', unsafe_allow_html=True)
         raw=lv("frailty_grade",None)

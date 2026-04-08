@@ -30,6 +30,14 @@ class ASES(BaseTest):
     def fields(cls):
         return ["ases_eva_pain"] + [a[0] for a in ASES_ACTIVITES] + ["ases_score","ases_interpretation"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score ASES (/100)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">ASES — Score fonctionnel de l\'épaule</div>',
                     unsafe_allow_html=True)

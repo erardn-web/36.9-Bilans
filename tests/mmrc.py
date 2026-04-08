@@ -23,6 +23,14 @@ class MMRC(BaseTest):
     def fields(cls):
         return ["mmrc_grade"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "grade", "label": "Grade mMRC (0-4)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">mMRC — Dyspnée</div>', unsafe_allow_html=True)
         opts = ["— Non renseigné —"] + [d for _,d in MMRC_GRADES]

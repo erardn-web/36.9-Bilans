@@ -39,6 +39,14 @@ class BODE(BaseTest):
     def fields(cls):
         return ["bode_score","bode_interpretation"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Index BODE (/10)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         def _lf(k):
             v=lv(k,None)
