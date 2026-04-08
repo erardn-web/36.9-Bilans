@@ -96,32 +96,83 @@ class Tinetti(BaseTest):
         except: return False
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=""):
         import plotly.graph_objects as go
-        import pandas as pd
-        vals = []
-        for _,row in bilans_df.iterrows():
-            try:
-                import math; f=float(row.get("tinetti_total",""))
-                vals.append(None if not math.isfinite(f) else f)
-            except: vals.append(None)
-        xp = [labels[i] for i,v in enumerate(vals) if v is not None and v==v]
-        yp = [v for v in vals if v is not None and v==v]
-        fig = go.Figure()
+        import math, pandas as pd
+
+        def _vals(col):
+            out = []
+            for _, row in bilans_df.iterrows():
+                try:
+                    f = float(row.get(col, ""))
+                    out.append(None if not math.isfinite(f) else f)
+                except: out.append(None)
+            return out
+
+        # ── Graphique score total ──────────────────────────────────────────────
+        vals = _vals("tinetti_total")
+        xp = [labels[i] for i,v in enumerate(vals) if v is not None]
+        yp = [v for v in vals if v is not None]
+        fig_total = go.Figure()
         if xp:
-            fig.add_trace(go.Scatter(x=xp,y=yp,mode="lines+markers+text",name="Tinetti /28",
-                line=dict(color="#2B57A7",width=2.5),marker=dict(size=9),
-                text=[f"{v:.0f}/28" for v in yp],textposition="top center"))
-        for y,color,label in [(19,"#d32f2f","< 19 risque élevé"),(24,"#f57c00","< 24 risque modéré")]:
-            fig.add_hline(y=y,line_dash="dot",line_color=color,
-                          annotation_text=label,annotation_position="right")
-        fig.update_layout(yaxis=dict(range=[0,30],title="Score /28"),height=350,
-                          plot_bgcolor="white",paper_bgcolor="white")
-        st.plotly_chart(fig,use_container_width=True)
-        rows = [{"Bilan":lbl,"Tinetti /28":row.get("tinetti_total","—"),
-                 "Interprétation":row.get("tinetti_interpretation","—")}
-                for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+            fig_total.add_trace(go.Scatter(
+                x=xp, y=yp, mode="lines+markers+text", name="Tinetti /28",
+                line=dict(color="#2B57A7", width=2.5), marker=dict(size=9),
+                text=[f"{v:.0f}/28" for v in yp], textposition="top center"))
+        for y, color, lbl in [(19,"#d32f2f","< 19 risque élevé"),(24,"#f57c00","< 24 risque modéré")]:
+            fig_total.add_hline(y=y, line_dash="dot", line_color=color,
+                                annotation_text=lbl, annotation_position="right")
+        fig_total.update_layout(yaxis=dict(range=[0,30], title="Score /28"),
+                                height=350, plot_bgcolor="white", paper_bgcolor="white",
+                                title="Tinetti — Score total (/28)")
+        st.plotly_chart(fig_total, use_container_width=True)
+        if show_print_controls:
+            key_total = cls._print_chart_key("total", cas_id)
+            cls._render_print_checkbox(key_total, "🖨️ Inclure ce graphique dans le PDF")
+            cls._store_chart(key_total, fig_total, cas_id)
+
+        # ── Graphiques sous-scores (optionnels) ───────────────────────────────
+        vals_eq = _vals("tinetti_eq_score")
+        vals_ma = _vals("tinetti_ma_score")
+        has_eq = any(v is not None for v in vals_eq)
+        has_ma = any(v is not None for v in vals_ma)
+
+        if has_eq or has_ma:
+            fig_sub = go.Figure()
+            if has_eq:
+                xq = [labels[i] for i,v in enumerate(vals_eq) if v is not None]
+                yq = [v for v in vals_eq if v is not None]
+                fig_sub.add_trace(go.Scatter(
+                    x=xq, y=yq, mode="lines+markers+text", name="Équilibre (/16)",
+                    line=dict(color="#1D9E75", width=2), marker=dict(size=8),
+                    text=[f"{v:.0f}" for v in yq], textposition="top center"))
+            if has_ma:
+                xm = [labels[i] for i,v in enumerate(vals_ma) if v is not None]
+                ym = [v for v in vals_ma if v is not None]
+                fig_sub.add_trace(go.Scatter(
+                    x=xm, y=ym, mode="lines+markers+text", name="Marche (/12)",
+                    line=dict(color="#D85A30", width=2), marker=dict(size=8),
+                    text=[f"{v:.0f}" for v in ym], textposition="top center"))
+            fig_sub.update_layout(
+                height=300, plot_bgcolor="white", paper_bgcolor="white",
+                title="Tinetti — Sous-scores",
+                legend=dict(orientation="h", y=-0.2))
+            st.plotly_chart(fig_sub, use_container_width=True)
+            if show_print_controls:
+                key_sub = cls._print_chart_key("sous_scores", cas_id)
+                cls._render_print_checkbox(key_sub, "🖨️ Inclure les sous-scores dans le PDF",
+                                           default=False)
+                cls._store_chart(key_sub, fig_sub, cas_id)
+
+        # ── Tableau récap ─────────────────────────────────────────────────────
+        rows = [{"Bilan": lbl,
+                 "Équilibre (/16)": row.get("tinetti_eq_score","—"),
+                 "Marche (/12)":    row.get("tinetti_ma_score","—"),
+                 "Total (/28)":     row.get("tinetti_total","—"),
+                 "Interprétation":  row.get("tinetti_interpretation","—")}
+                for lbl, (_, row) in zip(labels, bilans_df.iterrows())]
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
     @classmethod
     def render_pdf_with_config(cls, story, styles, bilans_df, labels, config=None):
