@@ -94,7 +94,7 @@ class Luomajoki(BaseTest):
             rows=[{"Bilan":lbl,"Score /6":row.get("o_luomajoki_score","—"),
                            **{n:row.get(f"o_{LUOM_TESTS[i][0]}","—") for i,n in enumerate(LUOM_NOMS)}}
               for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
 
     @classmethod
     def render_print_sheet(cls, story: list, styles: dict) -> None:

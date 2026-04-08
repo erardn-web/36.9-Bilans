@@ -133,4 +133,4 @@ class Tampa(BaseTest):
         else:
             rows=[{"Bilan":lbl,"Tampa":row.get("tampa_score","—"),"Kinésiophobie":row.get("tampa_interpretation","—")}
                           for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)

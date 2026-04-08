@@ -177,7 +177,7 @@ class EVA(BaseTest):
             rows=[{"Bilan":lbl,"Repos":row.get("s_eva_repos","—"),
                            "Mouvement":row.get("s_eva_mouvement","—"),"Nuit":row.get("s_eva_nuit","—")}
               for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
 
     @classmethod
     def render_print_sheet(cls, story: list, styles: dict) -> None:

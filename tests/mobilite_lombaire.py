@@ -127,7 +127,7 @@ class MobiliteLombaire(BaseTest):
                "Lat D":row.get("o_lat_droite_mob","—"),"Lat G":row.get("o_lat_gauche_mob","—"),
                "Rot D":row.get("o_rot_droite_mob","—"),"Rot G":row.get("o_rot_gauche_mob","—")}
               for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
 
     @classmethod
     def render_print_sheet(cls, story: list, styles: dict) -> None:

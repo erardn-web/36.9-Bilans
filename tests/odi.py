@@ -120,4 +120,4 @@ class ODI(BaseTest):
         else:
             rows=[{"Bilan":lbl,"ODI %":row.get("odi_score","—"),"Incapacité":row.get("odi_interpretation","—")}
                           for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)

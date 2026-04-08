@@ -129,4 +129,4 @@ class Orebro(BaseTest):
         else:
             rows=[{"Bilan":lbl,"Örebro":row.get("orebro_score","—"),"Risque":row.get("orebro_interpretation","—")}
                           for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)

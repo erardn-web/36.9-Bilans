@@ -141,7 +141,7 @@ class BODE(BaseTest):
             rows=[{"Bilan":lbl,"BODE /10":row.get("bode_score","—"),
                            "IMC":row.get("bmi","—"),"Pronostic":row.get("bode_interpretation","—")}
               for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
 
     @classmethod
     def render_print_sheet(cls, story: list, styles: dict) -> None:

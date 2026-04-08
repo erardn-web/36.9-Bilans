@@ -117,7 +117,7 @@ class ClassificationLombaire(BaseTest):
                            "Groupe":row.get("groupe_clinique","—"),
                "Pronostic":str(row.get("a_appreciation",""))[:80]+"..." if len(str(row.get("a_appreciation","")))>80 else row.get("a_appreciation","—")}
               for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
 
     @classmethod
     def render_print_sheet(cls, story: list, styles: dict) -> None:

@@ -125,4 +125,4 @@ class CAT(BaseTest):
         else:
             rows=[{"Bilan":lbl,"CAT /40":row.get("cat_score","—"),"Impact":row.get("cat_interpretation","—")}
                           for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
