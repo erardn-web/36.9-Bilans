@@ -460,6 +460,36 @@ if tab_valid:
                         st.error("❌ Erreur GSheets.")
 
 
+# ── Bouton regénération _bilans_fields.py ────────────────────────────────────
+if tab_valid:
+    with tab_valid:
+        st.markdown("---")
+        st.markdown("### 🔧 Maintenance")
+        if st.button("♻️ Regénérer `_bilans_fields.py`",
+                     help="À faire après ajout de nouveaux tests"):
+            try:
+                from core.registry import all_tests as _at_regen
+                import pathlib as _pl
+                _tests  = _at_regen()
+                _fields = []
+                _seen   = set()
+                for _tid, _cls in _tests.items():
+                    for _f in _cls.fields():
+                        if _f not in _seen:
+                            _fields.append(_f)
+                            _seen.add(_f)
+                _lines = [
+                    "# Auto-generated — champs plats de tous les tests",
+                    f"ALL_TEST_FIELDS = {repr(_fields)}",
+                ]
+                _content = "\n".join(_lines) + "\n"
+                _path = _pl.Path(__file__).parent.parent / "utils" / "_bilans_fields.py"
+                _path.write_text(_content, encoding="utf-8")
+                st.success(f"✅ Regénéré — {len(_fields)} colonnes, {len(_tests)} tests")
+                st.code(_content[:200] + "...", language="python")
+            except Exception as _e:
+                st.error(f"❌ Erreur : {_e}")
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # ONGLET PDFs FIXES (super admin uniquement)
 # ═══════════════════════════════════════════════════════════════════════════════
