@@ -473,6 +473,8 @@ def render_evolution_view(bilans_df, patient_info: dict,
         render_analyse_section(bilans_df, patient_info, module_id,
                                cas_id=cas_id or patient_id)
 
+    n_bilans = len(bilans_df)
+
     # Onglets par test (visibles seulement)
     for i, test_cls in enumerate(visible_classes):
         with tabs[i + 1]:
@@ -480,7 +482,10 @@ def render_evolution_view(bilans_df, patient_info: dict,
                 f'<div class="section-title">{test_cls.tab_label()} — Évolution</div>',
                 unsafe_allow_html=True
             )
-            test_cls.render_evolution(bilans_df, labels)
+            # Appel render_evolution — capture les figures Plotly si n_bilans >= 2
+            test_cls.render_evolution(bilans_df, labels,
+                                      show_print_controls=(n_bilans >= 2),
+                                      cas_id=cas_id)
 
 
 
