@@ -161,7 +161,7 @@ class Gazometrie(BaseTest):
                  "ETCO₂ repos":row.get("etco2_repos","—"),
                  "Pattern":row.get("etco2_pattern","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
 
     @classmethod
     def render_print_sheet(cls, story: list, styles: dict) -> None:

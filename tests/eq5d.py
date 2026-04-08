@@ -148,4 +148,4 @@ class EQ5D(BaseTest):
         else:
             rows = [{"Bilan": lbl, "Index": row.get("eq5d_index", "—"), "VAS": row.get("eq5d_vas", "—")}
                             for lbl, (_, row) in zip(labels, bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)

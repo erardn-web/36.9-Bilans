@@ -142,4 +142,4 @@ class GROC(BaseTest):
             rows = [{"Bilan": lbl, "GROC": row.get("groc_score", "—"),
                              "Commentaire": row.get("groc_appreciation", "—")}
                 for lbl, (_, row) in zip(labels, bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)

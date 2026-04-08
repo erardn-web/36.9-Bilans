@@ -183,4 +183,4 @@ class NDI(BaseTest):
                              "NDI %": row.get("ndi_score_pct", "—"),
                  "Interprétation": _ndi_interp(float(row.get("ndi_score_pct", 0) or 0))}
                 for lbl, (_, row) in zip(labels, bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)

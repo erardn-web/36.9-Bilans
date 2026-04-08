@@ -220,4 +220,4 @@ class KOOS(BaseTest):
                              "AVQ": row.get("koos_adl","—"), "Sport": row.get("koos_sport","—"),
                  "QoL": row.get("koos_qol","—")}
                 for lbl, (_, row) in zip(labels, bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)

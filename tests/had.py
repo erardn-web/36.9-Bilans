@@ -148,4 +148,4 @@ class HAD(BaseTest):
             rows = [{"Bilan":lbl,"Anxiété /21":row.get("had_score_anxiete","—"),
                              "Dépression /21":row.get("had_score_depression","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)

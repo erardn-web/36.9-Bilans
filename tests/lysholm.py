@@ -156,4 +156,4 @@ class Lysholm(BaseTest):
             rows = [{"Bilan": lbl, "Lysholm": row.get("lysholm_score_total", "—"),
                              "Interprétation": _lysholm_interp(float(row.get("lysholm_score_total", 0) or 0))}
                 for lbl, (_, row) in zip(labels, bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)

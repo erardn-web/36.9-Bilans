@@ -110,7 +110,7 @@ class Unipodal(BaseTest):
                              "D ouvert":row.get("unipodal_d_ouvert","—"),"G ouvert":row.get("unipodal_g_ouvert","—"),
                  "D fermé":row.get("unipodal_d_ferme","—"),"G fermé":row.get("unipodal_g_ferme","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
 
     @classmethod
     def render_print_sheet(cls, story: list, styles: dict) -> None:

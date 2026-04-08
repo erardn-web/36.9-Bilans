@@ -216,4 +216,4 @@ class HOOS(BaseTest):
                              "AVQ": row.get("hoos_adl","—"), "Sport": row.get("hoos_sport","—"),
                  "QoL": row.get("hoos_qol","—")}
                 for lbl, (_, row) in zip(labels, bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)

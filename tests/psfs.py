@@ -122,4 +122,4 @@ class PSFS(BaseTest):
         else:
             rows = [{"Bilan": lbl, "PSFS moyen": row.get("psfs_score_moyen", "—")}
                             for lbl, (_, row) in zip(labels, bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)

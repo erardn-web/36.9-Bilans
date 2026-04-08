@@ -103,4 +103,4 @@ class MRCDyspnee(BaseTest):
                              "Description":next((g[1] for g in MRC_GRADES
                      if str(g[0])==str(row.get("mrc_score",""))), "—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)

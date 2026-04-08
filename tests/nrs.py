@@ -146,4 +146,4 @@ class NRS(BaseTest):
             rows = [{"Bilan": lbl, "Repos": row.get("nrs_repos", "—"),
                              "Mouvement": row.get("nrs_mouvement", "—"), "Nuit": row.get("nrs_nuit", "—")}
                 for lbl, (_, row) in zip(labels, bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)

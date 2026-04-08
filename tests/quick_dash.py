@@ -124,7 +124,7 @@ class QuickDASH(BaseTest):
             rows = [{"Bilan":lbl,"QuickDASH":row.get("qdash_score","—"),
                              "Incapacité":row.get("qdash_interpretation","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
     @classmethod
     def render_print_sheet(cls, story: list, styles: dict) -> None:

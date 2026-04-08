@@ -173,4 +173,4 @@ class SF12(BaseTest):
         else:
             rows = [{"Bilan":lbl,"PCS /100":row.get("sf12_pcs","—"),"MCS /100":row.get("sf12_mcs","—")}
                             for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)

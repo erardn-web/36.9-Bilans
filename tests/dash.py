@@ -191,4 +191,4 @@ class DASH(BaseTest):
             rows = [{"Bilan": lbl, "DASH": row.get("dash_score", "—"),
                              "Interprétation": _dash_interp(float(row.get("dash_score", 0) or 0))}
                 for lbl, (_, row) in zip(labels, bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
