@@ -215,6 +215,46 @@ class BaseTest(ABC):
             ]))
             story.append(tbl)
 
+    # ── Configuration impression ─────────────────────────────────────────────
+
+    @classmethod
+    def print_options(cls) -> list:
+        """
+        Déclare les éléments imprimables dans le PDF d'évolution.
+        Override dans chaque test pour définir les options disponibles.
+
+        Format attendu :
+        [
+            {"key": "score_total",    "label": "Score total",      "default": True},
+            {"key": "graphique",      "label": "Graphique",        "default": True},
+            {"key": "interpretation", "label": "Interprétation",   "default": True},
+            {"key": "detail_items",   "label": "Détail des items", "default": False},
+        ]
+
+        Les clés disponibles (utilisées par render_pdf_with_config) :
+          score_total    : score principal du test
+          sous_scores    : scores secondaires (ex: PCS/MCS du SF-12)
+          graphique      : graphique d'évolution
+          interpretation : texte d'interprétation clinique
+          detail_items   : détail de chaque item/question
+          tableau        : tableau de données brutes
+
+        Si le test ne définit pas print_options(), tout est imprimé (comportement par défaut).
+        """
+        return []
+
+    @classmethod
+    def render_pdf_with_config(cls, story: list, styles: dict,
+                                bilans_df, labels: list,
+                                config: dict = None) -> None:
+        """
+        Version de render_pdf qui tient compte de la configuration d'impression.
+        config = {"score_total": True, "graphique": False, ...}
+        Par défaut appelle render_pdf() (compatibilité totale).
+        Override dans les tests qui supportent la config fine.
+        """
+        cls.render_pdf(story, styles, bilans_df, labels)
+
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     @classmethod
