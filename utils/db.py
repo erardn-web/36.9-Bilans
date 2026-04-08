@@ -759,6 +759,59 @@ def save_validation(test_id: str, statut: str, criteres: dict = None, notes: str
     return ok
 
 
+def save_print_config(test_id: str, config: dict) -> bool:
+    """Sauvegarde la configuration d'impression d'un test dans la feuille Validation."""
+    import json as _j
+    config_json = _j.dumps(config)
+    # S'assurer que la colonne print_config_json existe
+    try:
+        ws_val = _ws("Validation")
+        hdr = ws_val.row_values(1)
+        if "print_config_json" not in hdr:
+            next_col = len(hdr) + 1
+            _safe_resize(ws_val, next_col)
+            ws_val.update(f"{_col_letter(next_col)}1", [["print_config_json"]])
+            _cached_sheet_values.clear()
+    except Exception:
+        pass
+    existing = _get_row("Validation", "test_id", test_id)
+    if existing:
+        ok = _update_row("Validation", "test_id", test_id,
+                         {"print_config_json": config_json, "updated_at": _now()})
+    else:
+        _append_row("Validation", {"test_id": test_id, "statut": "non_testé",
+                                    "print_config_json": config_json,
+                                    "notes": "", "updated_at": _now()})
+        ok = True
+    if ok:
+        get_all_print_configs.clear()
+        get_all_validations.clear()
+    return ok
+
+
+@st.cache_data(ttl=60)
+def get_all_print_configs() -> dict:
+    """Retourne {test_id: {key: bool}} pour tous les tests avec config d'impression."""
+    import json as _j
+    try:
+        ws   = _ws("Validation")
+        rows = ws.get_all_values()
+        if not rows or len(rows) < 2: return {}
+        hdr = rows[0]
+        if "print_config_json" not in hdr: return {}
+        result = {}
+        for row in rows[1:]:
+            d = dict(zip(hdr, row))
+            tid = d.get("test_id","").strip()
+            cfg_raw = d.get("print_config_json","").strip()
+            if tid and cfg_raw:
+                try: result[tid] = _j.loads(cfg_raw)
+                except: pass
+        return result
+    except Exception:
+        return {}
+
+
 # ── Templates cabinet (créés dans l'application) ─────────────────────────────
 CAB_TMPL_HEADERS = ["template_id","nom","icone","description","tests_json","actif","created_at","updated_at"]
 
