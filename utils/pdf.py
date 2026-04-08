@@ -2561,8 +2561,9 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
 _CHART_SPECS = [
     ("mwt_distance",    "6MWT — Distance",      "m",   400,  "≥ 400 m",   True),
     ("tinetti_total",   "Tinetti Total",         "/28", 19,   "≥ 19",      True),
-    ("tinetti_eq_score","Tinetti Équilibre",     "/16", 12,   "≥ 12",      True),
-    ("tinetti_ma_score","Tinetti Marche",        "/12", 9,    "≥ 9",       True),
+    # tinetti_eq_score et tinetti_ma_score gérés séparément via config print_options
+    # ("tinetti_eq_score","Tinetti Équilibre",   "/16", 12,   "≥ 12",      True),
+    # ("tinetti_ma_score","Tinetti Marche",      "/12", 9,    "≥ 9",       True),
     ("cat_score",       "Score CAT",             "",    10,   "seuil 10",  False),
     ("bode_score",      "Score BODE",            "",    None, None,        False),
     ("spiro_vems_pct",  "VEMS",                  "%",   80,   "80%",       True),
@@ -2648,11 +2649,28 @@ def _make_sparkline_png(title, values, bilans_labels, unit="",
     return buf.getvalue()
 
 
-def _make_evolution_charts(bilans_df, n_bilans, page_w, excluded_test_ids=None, ordered_test_ids=None, active_test_ids=None):
+def _make_evolution_charts(bilans_df, n_bilans, page_w, excluded_test_ids=None,
+                            ordered_test_ids=None, active_test_ids=None,
+                            print_configs=None):
     """
     Génère les mini-graphiques d'évolution pour les scores numériques disponibles.
     Retourne une liste de Flowables (Table de 2 colonnes).
+    print_configs = {test_id: {key: bool}} pour filtrer par config d'impression.
     """
+    _pconfigs = print_configs or {}
+
+    # Ajouter dynamiquement les sous-scores Tinetti si config l'autorise
+    _dynamic_specs = list(_CHART_SPECS)
+    _tinetti_cfg = _pconfigs.get("tinetti", {})
+    if _tinetti_cfg.get("graphique_sous_scores", False):
+        _dynamic_specs.extend([
+            ("tinetti_eq_score","Tinetti Équilibre","/16", 12, "≥ 12", True),
+            ("tinetti_ma_score","Tinetti Marche",   "/12", 9,  "≥ 9",  True),
+        ])
+    # Exclure graphique_total Tinetti si désactivé
+    if _tinetti_cfg and not _tinetti_cfg.get("graphique_total", True):
+        _dynamic_specs = [(col,l,u,r,rl,h) for col,l,u,r,rl,h in _dynamic_specs
+                          if col != "tinetti_total"]
     from reportlab.platypus import Table, TableStyle, Image, Spacer
     from reportlab.lib import colors as _rc
     import io
@@ -2766,11 +2784,11 @@ def _make_evolution_charts(bilans_df, n_bilans, page_w, excluded_test_ids=None, 
     if ordered_test_ids:
         _tid_order = {tid: i for i, tid in enumerate(ordered_test_ids)}
         _CHART_SPECS_SORTED = sorted(
-            _CHART_SPECS,
+            _dynamic_specs,
             key=lambda x: _tid_order.get(_chart_tid(x[0]), 999)
         )
     else:
-        _CHART_SPECS_SORTED = _CHART_SPECS
+        _CHART_SPECS_SORTED = _dynamic_specs
     for col, label, unit, ref_val, ref_lbl, higher_ok in _CHART_SPECS_SORTED:
         if _ch_excluded(col):
             continue
@@ -2786,9 +2804,9 @@ def _make_evolution_charts(bilans_df, n_bilans, page_w, excluded_test_ids=None, 
                 except ValueError:
                     vals.append(None)
 
-        # Ne faire un graphique que si ≥ 2 valeurs non-nulles OU 1 valeur avec contexte
+        # Graphique seulement si ≥ 2 bilans avec valeur (évolution sans sens avec 1 seul bilan)
         n_vals = sum(1 for v in vals if v is not None)
-        if n_vals < 1:
+        if n_vals < 2:
             continue
 
         ref = (ref_val, ref_lbl) if ref_val is not None else None
@@ -3508,12 +3526,13 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             ]))
 
         # ── Graphiques d'évolution ─────────────────────────────────────────────
-        if show_charts:
+        if show_charts and n_bilans >= 2:
             story.append(Spacer(1, 0.5*cm))
             charts = _make_evolution_charts(bilans_df, n_bilans, w,
                                             excluded_test_ids=set(excluded_sections or []),
                                             ordered_test_ids=ordered_test_ids,
-                                            active_test_ids=_active_test_ids_all if _filter_by_tests else None)
+                                            active_test_ids=_active_test_ids_all if _filter_by_tests else None,
+                                            print_configs=_print_configs)
             if charts:
                 # Garder le titre avec au moins le premier graphique
                 story.append(KeepTogether([
