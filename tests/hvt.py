@@ -166,3 +166,73 @@ class HVT(BaseTest):
                 v = bilan_data.get(f"hvt_{phase_key}_{t}_petco2","")
                 if str(v).strip() not in ("","0","None","nan"): return True
         return False
+
+    @classmethod
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=""):
+        import plotly.graph_objects as go
+        import pandas as pd
+
+        # Graphique : symptômes reproduits + temps de retour par bilan
+        opts_color = {
+            "Oui ✅": "#388e3c",
+            "Partiellement ⚠️": "#f57c00",
+            "Non ❌": "#d32f2f",
+            "Non réalisé": "#888888",
+        }
+
+        fig = go.Figure()
+        durees = []
+        colors_pt = []
+        labels_pt = []
+        for i, (_, row) in enumerate(bilans_df.iterrows()):
+            rep   = str(row.get("hvt_symptomes_reproduits", "") or "Non réalisé")
+            duree = row.get("hvt_duree_retour", "")
+            try:    d = float(duree) if duree not in ("", None, "None") else None
+            except: d = None
+            durees.append(d)
+            colors_pt.append(opts_color.get(rep, "#888"))
+            labels_pt.append(f"{labels[i]}<br>{rep}")
+
+        xp = [labels[i] for i, v in enumerate(durees) if v is not None]
+        yp = [v for v in durees if v is not None]
+        cp = [colors_pt[i] for i, v in enumerate(durees) if v is not None]
+
+        if xp:
+            fig.add_trace(go.Bar(
+                x=xp, y=yp,
+                marker_color=cp,
+                text=[f"{v:.0f} min" for v in yp],
+                textposition="outside",
+                name="Temps retour (min)"))
+        fig.update_layout(
+            yaxis=dict(title="Temps de retour (min)", rangemode="tozero"),
+            height=320, plot_bgcolor="white", paper_bgcolor="white",
+            title="HVT — Temps de retour à la normale")
+        st.plotly_chart(fig, use_container_width=True)
+        if show_print_controls:
+            _key = cls._print_chart_key("hvt", cas_id)
+            cls._render_print_checkbox(_key, "🖨️ Inclure ce graphique dans le PDF")
+            cls._store_chart(_key, fig, cas_id)
+
+        # Tableau
+        table_rows = [
+            {"label": "Symptômes reproduits", "col_key": "hvt_symptomes_reproduits",
+             "values": [str(r.get("hvt_symptomes_reproduits", "—") or "—")
+                        for _, r in bilans_df.iterrows()]},
+            {"label": "Temps retour (min)",   "col_key": "hvt_duree_retour",
+             "values": [str(r.get("hvt_duree_retour", "—") or "—")
+                        for _, r in bilans_df.iterrows()]},
+            {"label": "Symptômes",            "col_key": "hvt_symptomes_list",
+             "values": [str(r.get("hvt_symptomes_list", "—") or "—")
+                        for _, r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows = [{"Bilan": lbl,
+                     "Symptômes reproduits": r.get("hvt_symptomes_reproduits", "—"),
+                     "Temps retour (min)":   r.get("hvt_duree_retour", "—"),
+                     "Symptômes":            str(r.get("hvt_symptomes_list", "—") or "—")[:60]}
+                    for lbl, (_, r) in zip(labels, bilans_df.iterrows())]
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
