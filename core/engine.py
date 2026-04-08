@@ -482,10 +482,15 @@ def render_evolution_view(bilans_df, patient_info: dict,
                 f'<div class="section-title">{test_cls.tab_label()} — Évolution</div>',
                 unsafe_allow_html=True
             )
-            # Appel render_evolution — capture les figures Plotly si n_bilans >= 2
-            test_cls.render_evolution(bilans_df, labels,
-                                      show_print_controls=(n_bilans >= 2),
-                                      cas_id=cas_id)
+            # Appel render_evolution — passe les nouveaux params si le test les supporte
+            import inspect as _inspect
+            _ev_params = _inspect.signature(test_cls.render_evolution).parameters
+            if "show_print_controls" in _ev_params:
+                test_cls.render_evolution(bilans_df, labels,
+                                          show_print_controls=(n_bilans >= 2),
+                                          cas_id=cas_id)
+            else:
+                test_cls.render_evolution(bilans_df, labels)
 
 
 
