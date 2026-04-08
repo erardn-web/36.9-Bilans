@@ -96,9 +96,13 @@ class BaseTest(ABC):
     # ── Évolution ─────────────────────────────────────────────────────────────
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels: list) -> None:
+    def render_evolution(cls, bilans_df, labels: list,
+                         show_print_controls: bool = False,
+                         cas_id: str = "") -> None:
         """
         Affiche graphique + tableau d'évolution dans la vue Évolution.
+        show_print_controls : si True, affiche une checkbox "Inclure dans le PDF"
+                              sous chaque graphique (uniquement si n >= 2 bilans).
         Par défaut : tableau simple. Override pour graphique personnalisé.
         """
         import streamlit as st
@@ -254,6 +258,50 @@ class BaseTest(ABC):
         Override dans les tests qui supportent la config fine.
         """
         cls.render_pdf(story, styles, bilans_df, labels)
+
+    # ── Helpers impression graphiques ─────────────────────────────────────────
+
+    @classmethod
+    def _print_chart_key(cls, suffix: str = "", cas_id: str = "") -> str:
+        """Clé session_state pour une checkbox d'impression."""
+        tid = cls.meta()["id"]
+        parts = [p for p in ["print_chart", tid, suffix, cas_id] if p]
+        return "_".join(parts)
+
+    @classmethod
+    def _render_print_checkbox(cls, key: str, label: str = "🖨️ Inclure dans le PDF",
+                                default: bool = True) -> bool:
+        """Affiche la checkbox et retourne son état."""
+        import streamlit as st
+        return st.checkbox(label, value=st.session_state.get(key, default),
+                           key=key, help="Décochez pour exclure ce graphique du PDF")
+
+    @classmethod
+    def _export_plotly_png(cls, fig, width: int = 900, height: int = 360) -> bytes | None:
+        """Exporte une figure Plotly en PNG via kaleido."""
+        try:
+            import plotly.io as pio, warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                return pio.to_image(fig, format="png", width=width, height=height, scale=2)
+        except Exception:
+            return None
+
+    @classmethod
+    def _store_chart(cls, key: str, fig, cas_id: str = "") -> None:
+        """Si la checkbox est cochée, exporte la figure et la stocke dans session_state."""
+        import streamlit as st
+        if not st.session_state.get(key, True):
+            # Décoché → retirer du store
+            st.session_state.get("pdf_charts", {}).get(cas_id, {}).pop(key, None)
+            return
+        png = cls._export_plotly_png(fig)
+        if png:
+            if "pdf_charts" not in st.session_state:
+                st.session_state["pdf_charts"] = {}
+            if cas_id not in st.session_state["pdf_charts"]:
+                st.session_state["pdf_charts"][cas_id] = {}
+            st.session_state["pdf_charts"][cas_id][key] = png
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
