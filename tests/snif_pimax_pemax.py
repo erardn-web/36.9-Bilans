@@ -88,7 +88,8 @@ class SNIFPimaxPemax(BaseTest):
         return False
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go
         import pandas as pd
         fig = go.Figure()
@@ -111,8 +112,29 @@ class SNIFPimaxPemax(BaseTest):
                           height=350,legend=dict(orientation="h",y=-0.2),
                           plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
-        rows = [{"Bilan":lbl,
-                 "SNIF (cmH₂O)":row.get("snif_val","—"),"SNIF %":row.get("snif_pct","—"),
+        if show_print_controls:
+            _key = cls._print_chart_key('snif_pimax_pemax', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
+        table_rows = [
+            {"label": "SNIF (cmH₂O)", "col_key": "snif_val",
+             "values": [r.get("snif_val","—") for _,r in bilans_df.iterrows()]},
+            {"label": "SNIF %", "col_key": "snif_pct",
+             "values": [r.get("snif_pct","—") for _,r in bilans_df.iterrows()]},
+            {"label": "PImax (cmH₂O)", "col_key": "pimax_val",
+             "values": [r.get("pimax_val","—") for _,r in bilans_df.iterrows()]},
+            {"label": "PImax %", "col_key": "pimax_pct",
+             "values": [r.get("pimax_pct","—") for _,r in bilans_df.iterrows()]},
+            {"label": "PEmax (cmH₂O)", "col_key": "pemax_val",
+             "values": [r.get("pemax_val","—") for _,r in bilans_df.iterrows()]},
+            {"label": "PEmax %", "col_key": "pemax_pct",
+             "values": [r.get("pemax_pct","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows = [{"Bilan":lbl,
+                             "SNIF (cmH₂O)":row.get("snif_val","—"),"SNIF %":row.get("snif_pct","—"),
                  "PImax (cmH₂O)":row.get("pimax_val","—"),"PImax %":row.get("pimax_pct","—"),
                  "PEmax (cmH₂O)":row.get("pemax_val","—"),"PEmax %":row.get("pemax_pct","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]

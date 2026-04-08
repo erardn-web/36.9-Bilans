@@ -77,7 +77,8 @@ class FABQ(BaseTest):
         except: return False
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go; import pandas as pd
         fig=go.Figure()
         for f,l,c,mx in [("fabq_pa_score","PA","#2B57A7",24),("fabq_work_score","Travail","#D85A30",42)]:
@@ -89,4 +90,8 @@ class FABQ(BaseTest):
             if xp: fig.add_trace(go.Scatter(x=xp,y=yp,mode="lines+markers+text",name=f"{l} /{mx}",line=dict(color=c,width=2.5),marker=dict(size=8),text=[f"{v:.0f}" for v in yp],textposition="top center"))
         fig.update_layout(yaxis=dict(title="Score"),height=300,legend=dict(orientation="h",y=-0.2),plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
+        if show_print_controls:
+            _key = cls._print_chart_key('fabq', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
         st.dataframe(pd.DataFrame([{"Bilan":l,"FABQ-PA":r.get("fabq_pa_score","—"),"FABQ-W":r.get("fabq_work_score","—")} for l,(_,r) in zip(labels,bilans_df.iterrows())]),use_container_width=True,hide_index=True)

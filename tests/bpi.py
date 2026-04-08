@@ -72,7 +72,8 @@ class BPI(BaseTest):
         try: return float(data.get("bpi_severity_score",""))>=0
         except: return False
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go; import pandas as pd
         fig=go.Figure()
         for f,l,c in [("bpi_severity_score","Sévérité","#D85A30"),("bpi_interference_score","Retentissement","#2B57A7")]:
@@ -84,4 +85,8 @@ class BPI(BaseTest):
             if xp: fig.add_trace(go.Scatter(x=xp,y=yp,mode="lines+markers+text",name=l,line=dict(color=c,width=2.5),marker=dict(size=8),text=[f"{v:.1f}" for v in yp],textposition="top center"))
         fig.update_layout(yaxis=dict(range=[0,11],title="/10"),height=280,legend=dict(orientation="h",y=-0.2),plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
+        if show_print_controls:
+            _key = cls._print_chart_key('bpi', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
         st.dataframe(pd.DataFrame([{"Bilan":l,"Sévérité":r.get("bpi_severity_score","—"),"Retentissement":r.get("bpi_interference_score","—")} for l,(_,r) in zip(labels,bilans_df.iterrows())]),use_container_width=True,hide_index=True)

@@ -86,7 +86,8 @@ class QuickDASH(BaseTest):
         except: return False
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go, pandas as pd
         vals = []
         for _, row in bilans_df.iterrows():
@@ -107,8 +108,21 @@ class QuickDASH(BaseTest):
         fig.update_layout(yaxis=dict(range=[0,105],title="QuickDASH /100"),
                           height=300, plot_bgcolor="white", paper_bgcolor="white")
         st.plotly_chart(fig, use_container_width=True)
-        rows = [{"Bilan":lbl,"QuickDASH":row.get("qdash_score","—"),
-                 "Incapacité":row.get("qdash_interpretation","—")}
+        if show_print_controls:
+            _key = cls._print_chart_key('quick_dash', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
+        table_rows = [
+            {"label": "QuickDASH", "col_key": "qdash_score",
+             "values": [r.get("qdash_score","—") for _,r in bilans_df.iterrows()]},
+            {"label": "Incapacité", "col_key": "qdash_interpretation",
+             "values": [r.get("qdash_interpretation","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows = [{"Bilan":lbl,"QuickDASH":row.get("qdash_score","—"),
+                             "Incapacité":row.get("qdash_interpretation","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 

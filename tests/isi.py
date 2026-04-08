@@ -60,7 +60,8 @@ class ISI(BaseTest):
         try: return float(data.get("isi_score",""))>=0
         except: return False
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go; import pandas as pd
         vals=[]
         for _,row in bilans_df.iterrows():
@@ -71,4 +72,8 @@ class ISI(BaseTest):
         fig.add_hline(y=15,line_dash="dot",line_color="#d32f2f",annotation_text="Insomnie modérée ≥15")
         fig.update_layout(yaxis=dict(range=[0,30],title="ISI /28"),height=280,plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
+        if show_print_controls:
+            _key = cls._print_chart_key('isi', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
         st.dataframe(pd.DataFrame([{"Bilan":l,"ISI":r.get("isi_score","—")} for l,(_,r) in zip(labels,bilans_df.iterrows())]),use_container_width=True,hide_index=True)

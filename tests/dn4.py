@@ -75,7 +75,8 @@ class DN4(BaseTest):
         except: return False
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go; import pandas as pd
         vals=[]
         for _,row in bilans_df.iterrows():
@@ -87,4 +88,8 @@ class DN4(BaseTest):
         fig.add_hline(y=4,line_dash="dot",line_color="#d32f2f",annotation_text="Seuil neuropathique ≥4")
         fig.update_layout(yaxis=dict(range=[0,11],title="DN4 /10"),height=280,plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
+        if show_print_controls:
+            _key = cls._print_chart_key('dn4', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
         st.dataframe(pd.DataFrame([{"Bilan":l,"DN4":r.get("dn4_score","—")} for l,(_,r) in zip(labels,bilans_df.iterrows())]),use_container_width=True,hide_index=True)

@@ -50,7 +50,8 @@ class PCFS(BaseTest):
     def is_filled(cls,data):
         return str(data.get("pcfs_grade","")).strip() not in ("","None","nan")
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go; import pandas as pd
         vals=[]
         for _,row in bilans_df.iterrows():
@@ -60,6 +61,10 @@ class PCFS(BaseTest):
         if xp: fig.add_trace(go.Scatter(x=xp,y=yp,mode="lines+markers+text",name="PCFS",line=dict(color="#7F77DD",width=2.5),marker=dict(size=9),text=[f"G{v:.0f}" for v in yp],textposition="top center"))
         fig.update_layout(yaxis=dict(range=[-0.2,4.5],tickvals=[0,1,2,3,4],title="Grade"),height=250,plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
+        if show_print_controls:
+            _key = cls._print_chart_key('pcfs', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
         st.dataframe(pd.DataFrame([{"Bilan":l,"PCFS Grade":r.get("pcfs_grade","—")} for l,(_,r) in zip(labels,bilans_df.iterrows())]),use_container_width=True,hide_index=True)
 
 

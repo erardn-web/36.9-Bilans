@@ -117,7 +117,8 @@ class Gazometrie(BaseTest):
         return bool(gt) and gt not in ("— Non renseigné —","Non réalisé")
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go
         import pandas as pd
         fig = go.Figure()
@@ -138,8 +139,25 @@ class Gazometrie(BaseTest):
         fig.update_layout(height=350,yaxis_title="mmHg",
                           plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
-        rows = [{"Bilan":lbl,"PaCO₂":row.get("gazo_paco2","—"),
-                 "pH":row.get("gazo_ph","—"),
+        if show_print_controls:
+            _key = cls._print_chart_key('gazometrie', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
+        table_rows = [
+            {"label": "PaCO₂", "col_key": "gazo_paco2",
+             "values": [r.get("gazo_paco2","—") for _,r in bilans_df.iterrows()]},
+            {"label": "pH", "col_key": "gazo_ph",
+             "values": [r.get("gazo_ph","—") for _,r in bilans_df.iterrows()]},
+            {"label": "ETCO₂ repos", "col_key": "etco2_repos",
+             "values": [r.get("etco2_repos","—") for _,r in bilans_df.iterrows()]},
+            {"label": "Pattern", "col_key": "etco2_pattern",
+             "values": [r.get("etco2_pattern","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows = [{"Bilan":lbl,"PaCO₂":row.get("gazo_paco2","—"),
+                             "pH":row.get("gazo_ph","—"),
                  "ETCO₂ repos":row.get("etco2_repos","—"),
                  "Pattern":row.get("etco2_pattern","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]

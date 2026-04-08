@@ -82,7 +82,8 @@ class ODI(BaseTest):
         except: return False
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go
         import pandas as pd
         vals=[]
@@ -104,6 +105,19 @@ class ODI(BaseTest):
         fig.update_layout(yaxis=dict(range=[0,105],title="ODI %"),height=320,
                           plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
-        rows=[{"Bilan":lbl,"ODI %":row.get("odi_score","—"),"Incapacité":row.get("odi_interpretation","—")}
-              for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
+        if show_print_controls:
+            _key = cls._print_chart_key('odi', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
+        table_rows = [
+            {"label": "ODI %", "col_key": "odi_score",
+             "values": [r.get("odi_score","—") for _,r in bilans_df.iterrows()]},
+            {"label": "Incapacité", "col_key": "odi_interpretation",
+             "values": [r.get("odi_interpretation","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows=[{"Bilan":lbl,"ODI %":row.get("odi_score","—"),"Incapacité":row.get("odi_interpretation","—")}
+                          for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)

@@ -66,7 +66,8 @@ class MRCDyspnee(BaseTest):
         return str(bilan_data.get("mrc_score","")).strip() not in ("","None","nan")
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go
         import pandas as pd
         vals = []
@@ -87,8 +88,19 @@ class MRCDyspnee(BaseTest):
         fig.update_layout(yaxis=dict(range=[0,5],title="Grade MRC",dtick=1),
                           height=320,plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
-        rows = [{"Bilan":lbl,"Grade MRC":row.get("mrc_score","—"),
-                 "Description":next((g[1] for g in MRC_GRADES
+        if show_print_controls:
+            _key = cls._print_chart_key('mrc_dyspnee', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
+        table_rows = [
+            {"label": "Grade MRC", "col_key": "mrc_score",
+             "values": [r.get("mrc_score","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows = [{"Bilan":lbl,"Grade MRC":row.get("mrc_score","—"),
+                             "Description":next((g[1] for g in MRC_GRADES
                      if str(g[0])==str(row.get("mrc_score",""))), "—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)

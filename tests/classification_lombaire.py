@@ -103,10 +103,18 @@ class ClassificationLombaire(BaseTest):
         return bool(g and g not in ("—","— Non classifié —",""))
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import pandas as pd
-        rows=[{"Bilan":lbl,
-               "Groupe":row.get("groupe_clinique","—"),
+        table_rows = [
+            {"label": "Groupe", "col_key": "groupe_clinique",
+             "values": [r.get("groupe_clinique","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows=[{"Bilan":lbl,
+                           "Groupe":row.get("groupe_clinique","—"),
                "Pronostic":str(row.get("a_appreciation",""))[:80]+"..." if len(str(row.get("a_appreciation","")))>80 else row.get("a_appreciation","—")}
               for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)

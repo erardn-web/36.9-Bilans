@@ -52,7 +52,8 @@ class SGRQ(BaseTest):
         try: return float(data.get("sgrq_total",""))>=0
         except: return False
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go; import pandas as pd
         fig=go.Figure()
         for f,l,c in [("sgrq_total","Total","#2B57A7"),("sgrq_symptomes","Symptômes","#D85A30"),("sgrq_activite","Activité","#1D9E75")]:
@@ -65,6 +66,10 @@ class SGRQ(BaseTest):
         fig.add_hline(y=25,line_dash="dot",line_color="#388e3c",annotation_text="≤25 léger")
         fig.update_layout(yaxis=dict(range=[0,105],title="SGRQ /100"),height=320,legend=dict(orientation="h",y=-0.2),plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
+        if show_print_controls:
+            _key = cls._print_chart_key('sgrq', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
         st.dataframe(pd.DataFrame([{"Bilan":l,"Total":r.get("sgrq_total","—")} for l,(_,r) in zip(labels,bilans_df.iterrows())]),use_container_width=True,hide_index=True)
 
 

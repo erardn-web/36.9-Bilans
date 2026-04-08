@@ -115,7 +115,8 @@ class SixMWT(BaseTest):
         except: return False
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go
         import pandas as pd
         vals = []
@@ -137,8 +138,25 @@ class SixMWT(BaseTest):
         fig.update_layout(yaxis_title="Mètres",height=350,
                           plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
-        rows = [{"Bilan":lbl,"Distance (m)":row.get("mwt_distance","—"),
-                 "SpO₂ avant":row.get("mwt_spo2_avant","—"),
+        if show_print_controls:
+            _key = cls._print_chart_key('six_mwt', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
+        table_rows = [
+            {"label": "Distance (m)", "col_key": "mwt_distance",
+             "values": [r.get("mwt_distance","—") for _,r in bilans_df.iterrows()]},
+            {"label": "SpO₂ avant", "col_key": "mwt_spo2_avant",
+             "values": [r.get("mwt_spo2_avant","—") for _,r in bilans_df.iterrows()]},
+            {"label": "SpO₂ après", "col_key": "mwt_spo2_apres",
+             "values": [r.get("mwt_spo2_apres","—") for _,r in bilans_df.iterrows()]},
+            {"label": "Interprétation", "col_key": "mwt_interpretation",
+             "values": [r.get("mwt_interpretation","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows = [{"Bilan":lbl,"Distance (m)":row.get("mwt_distance","—"),
+                             "SpO₂ avant":row.get("mwt_spo2_avant","—"),
                  "SpO₂ après":row.get("mwt_spo2_apres","—"),
                  "Interprétation":row.get("mwt_interpretation","—")}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]

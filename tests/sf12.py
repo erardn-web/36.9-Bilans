@@ -133,7 +133,8 @@ class SF12(BaseTest):
         return str(bilan_data.get("sf12_pcs","")).strip() not in ("","None","nan")
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go
         import pandas as pd
         fig = go.Figure()
@@ -157,6 +158,19 @@ class SF12(BaseTest):
                           legend=dict(orientation="h",y=-0.2),
                           plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
-        rows = [{"Bilan":lbl,"PCS /100":row.get("sf12_pcs","—"),"MCS /100":row.get("sf12_mcs","—")}
-                for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
+        if show_print_controls:
+            _key = cls._print_chart_key('sf12', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
+        table_rows = [
+            {"label": "PCS /100", "col_key": "sf12_pcs",
+             "values": [r.get("sf12_pcs","—") for _,r in bilans_df.iterrows()]},
+            {"label": "MCS /100", "col_key": "sf12_mcs",
+             "values": [r.get("sf12_mcs","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows = [{"Bilan":lbl,"PCS /100":row.get("sf12_pcs","—"),"MCS /100":row.get("sf12_mcs","—")}
+                            for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)

@@ -64,7 +64,8 @@ class Luomajoki(BaseTest):
         return v not in ("","None","nan")
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go
         import pandas as pd
         vals=[float(row.get("o_luomajoki_score",0) or 0) for _,row in bilans_df.iterrows()]
@@ -78,9 +79,20 @@ class Luomajoki(BaseTest):
             fig.update_layout(yaxis=dict(range=[0,7],title="Échecs /6"),
                               height=300,plot_bgcolor="white",paper_bgcolor="white")
             st.plotly_chart(fig,use_container_width=True)
+            if show_print_controls:
+                _key = cls._print_chart_key('luomajoki', cas_id)
+                cls._render_print_checkbox(_key)
+                cls._store_chart(_key, fig, cas_id)
         LUOM_NOMS=["Waiters Bow","Pelvic Tilt","Knee Lift","One-Leg Stance","Sitting Knee Ext.","Prone Knee Bend"]
-        rows=[{"Bilan":lbl,"Score /6":row.get("o_luomajoki_score","—"),
-               **{n:row.get(f"o_{LUOM_TESTS[i][0]}","—") for i,n in enumerate(LUOM_NOMS)}}
+        table_rows = [
+            {"label": "Score /6", "col_key": "o_luomajoki_score",
+             "values": [r.get("o_luomajoki_score","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows=[{"Bilan":lbl,"Score /6":row.get("o_luomajoki_score","—"),
+                           **{n:row.get(f"o_{LUOM_TESTS[i][0]}","—") for i,n in enumerate(LUOM_NOMS)}}
               for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
 

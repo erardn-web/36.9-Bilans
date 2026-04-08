@@ -115,7 +115,8 @@ class HAGOS(BaseTest):
         return False
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go; import pandas as pd
         fig=go.Figure()
         for f,l,c in [("hagos_pain","Douleur","#2B57A7"),("hagos_adl","AVQ","#1D9E75"),("hagos_sport","Sport","#D85A30")]:
@@ -127,4 +128,8 @@ class HAGOS(BaseTest):
             if xp: fig.add_trace(go.Scatter(x=xp,y=yp,mode="lines+markers",name=l,line=dict(color=c,width=2.5),marker=dict(size=8)))
         fig.update_layout(yaxis=dict(range=[0,105],title="HAGOS /100"),height=320,legend=dict(orientation="h",y=-0.2),plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
+        if show_print_controls:
+            _key = cls._print_chart_key('hagos', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
         st.dataframe(pd.DataFrame([{"Bilan":l,"Douleur":r.get("hagos_pain","—"),"Sport":r.get("hagos_sport","—")} for l,(_,r) in zip(labels,bilans_df.iterrows())]),use_container_width=True,hide_index=True)

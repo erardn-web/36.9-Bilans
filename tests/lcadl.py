@@ -70,7 +70,8 @@ class LCADL(BaseTest):
         try: return float(data.get("lcadl_score",""))>=0
         except: return False
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go; import pandas as pd
         vals=[]
         for _,row in bilans_df.iterrows():
@@ -80,6 +81,10 @@ class LCADL(BaseTest):
         if xp: fig.add_trace(go.Scatter(x=xp,y=yp,mode="lines+markers+text",name="LCADL",line=dict(color="#2B57A7",width=2.5),marker=dict(size=9),text=[f"{v:.0f}" for v in yp],textposition="top center"))
         fig.update_layout(yaxis=dict(range=[15,80],title="LCADL /75"),height=280,plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
+        if show_print_controls:
+            _key = cls._print_chart_key('lcadl', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
         st.dataframe(pd.DataFrame([{"Bilan":l,"LCADL":r.get("lcadl_score","—")} for l,(_,r) in zip(labels,bilans_df.iterrows())]),use_container_width=True,hide_index=True)
 
 

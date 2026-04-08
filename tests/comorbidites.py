@@ -64,7 +64,8 @@ class Comorbidites(BaseTest):
         return bool(str(bilan_data.get("comorb_list","")).strip())
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import pandas as pd
         rows = [{"Bilan":lbl,
                  "Comorbidités":str(row.get("comorb_list","—")).replace("|"," · "),

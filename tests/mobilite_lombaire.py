@@ -69,7 +69,8 @@ class MobiliteLombaire(BaseTest):
                    for k in ["o_extension_mob","o_lat_droite_mob"])
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go
         import pandas as pd
         mob_keys=[("o_extension_mob","Extension"),("o_lat_droite_mob","Lat D"),
@@ -89,6 +90,10 @@ class MobiliteLombaire(BaseTest):
             height=350,plot_bgcolor="white",paper_bgcolor="white",
             legend=dict(orientation="h"))
         st.plotly_chart(fig,use_container_width=True)
+        if show_print_controls:
+            _key = cls._print_chart_key('mobilite_lombaire', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
         schober_vals=[float(row.get("o_schober",0) or 0) for _,row in bilans_df.iterrows()]
         if any(v>0 for v in schober_vals):
             fig2=go.Figure()
@@ -100,8 +105,25 @@ class MobiliteLombaire(BaseTest):
             fig2.update_layout(title="Schober modifié (cm)",yaxis_title="cm",
                                height=250,plot_bgcolor="white",paper_bgcolor="white")
             st.plotly_chart(fig2,use_container_width=True)
-        rows=[{"Bilan":lbl,"Schober (cm)":row.get("o_schober","—"),
-               "Extension":row.get("o_extension_mob","—"),
+        table_rows = [
+            {"label": "Schober (cm)", "col_key": "o_schober",
+             "values": [r.get("o_schober","—") for _,r in bilans_df.iterrows()]},
+            {"label": "Extension", "col_key": "o_extension_mob",
+             "values": [r.get("o_extension_mob","—") for _,r in bilans_df.iterrows()]},
+            {"label": "Lat D", "col_key": "o_lat_droite_mob",
+             "values": [r.get("o_lat_droite_mob","—") for _,r in bilans_df.iterrows()]},
+            {"label": "Lat G", "col_key": "o_lat_gauche_mob",
+             "values": [r.get("o_lat_gauche_mob","—") for _,r in bilans_df.iterrows()]},
+            {"label": "Rot D", "col_key": "o_rot_droite_mob",
+             "values": [r.get("o_rot_droite_mob","—") for _,r in bilans_df.iterrows()]},
+            {"label": "Rot G", "col_key": "o_rot_gauche_mob",
+             "values": [r.get("o_rot_gauche_mob","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows=[{"Bilan":lbl,"Schober (cm)":row.get("o_schober","—"),
+                           "Extension":row.get("o_extension_mob","—"),
                "Lat D":row.get("o_lat_droite_mob","—"),"Lat G":row.get("o_lat_gauche_mob","—"),
                "Rot D":row.get("o_rot_droite_mob","—"),"Rot G":row.get("o_rot_gauche_mob","—")}
               for lbl,(_,row) in zip(labels,bilans_df.iterrows())]

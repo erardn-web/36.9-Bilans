@@ -144,10 +144,18 @@ class ClassificationEpaule(BaseTest):
         return bool(g and g not in ("—","— Non classifié —",""))
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import pandas as pd
-        rows = [{"Bilan":lbl,
-                 "Classification":row.get("ep_groupe_clinique","—"),
+        table_rows = [
+            {"label": "Classification", "col_key": "ep_groupe_clinique",
+             "values": [r.get("ep_groupe_clinique","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows = [{"Bilan":lbl,
+                             "Classification":row.get("ep_groupe_clinique","—"),
                  "Pronostic":str(row.get("ep_appreciation",""))[:80]}
                 for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)

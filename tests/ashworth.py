@@ -66,7 +66,8 @@ class AshworthScale(BaseTest):
     @classmethod
     def is_filled(cls,data): return bool(data.get("ashworth_notes","") or any(data.get(f"{k}_d","") for k,_ in cls.MUSCLES))
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         st.info("Évolution Ashworth : consultez les tableaux de données pour le suivi par muscle.")
         import pandas as pd
         rows=[]

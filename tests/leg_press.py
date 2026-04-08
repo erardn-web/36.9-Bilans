@@ -108,7 +108,8 @@ class LegPress(BaseTest):
         except: return False
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go
         import pandas as pd
         vals = []
@@ -126,7 +127,22 @@ class LegPress(BaseTest):
         fig.update_layout(height=300,yaxis_title="kg",
                           plot_bgcolor="white",paper_bgcolor="white")
         if xp: st.plotly_chart(fig,use_container_width=True)
-        rows = [{"Bilan":lbl,"Charge (kg)":row.get("lp_charge_kg","—"),
-                 "Reps":row.get("lp_reps","—"),"1RM estimé":row.get("lp_1rm_estime","—")}
-                for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
+        if show_print_controls and xp:
+            _key = cls._print_chart_key('leg_press', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
+        table_rows = [
+            {"label": "Charge (kg)",  "col_key": "lp_charge_kg",
+             "values": [r.get("lp_charge_kg","—") for _,r in bilans_df.iterrows()]},
+            {"label": "Reps",         "col_key": "lp_reps",
+             "values": [r.get("lp_reps","—") for _,r in bilans_df.iterrows()]},
+            {"label": "1RM estimé",   "col_key": "lp_1rm_estime",
+             "values": [r.get("lp_1rm_estime","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows = [{"Bilan":lbl,"Charge (kg)":r.get("lp_charge_kg","—"),
+                     "Reps":r.get("lp_reps","—"),"1RM estimé":r.get("lp_1rm_estime","—")}
+                    for lbl,(_,r) in zip(labels,bilans_df.iterrows())]
+            st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)

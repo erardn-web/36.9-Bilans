@@ -100,7 +100,8 @@ class BCTQ(BaseTest):
         except: return False
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go; import pandas as pd
         fig=go.Figure()
         for f,l,c in [("bctq_sss","SSS","#2B57A7"),("bctq_fss","FSS","#1D9E75")]:
@@ -113,4 +114,8 @@ class BCTQ(BaseTest):
         fig.add_hline(y=2,line_dash="dot",line_color="#388e3c",annotation_text="Seuil mild")
         fig.update_layout(yaxis=dict(range=[1,5.5],title="Score /5"),height=300,legend=dict(orientation="h",y=-0.2),plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
+        if show_print_controls:
+            _key = cls._print_chart_key('bctq', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
         st.dataframe(pd.DataFrame([{"Bilan":l,"SSS":r.get("bctq_sss","—"),"FSS":r.get("bctq_fss","—")} for l,(_,r) in zip(labels,bilans_df.iterrows())]),use_container_width=True,hide_index=True)

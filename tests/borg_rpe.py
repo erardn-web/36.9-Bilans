@@ -49,7 +49,8 @@ class BorgRPE(BaseTest):
     def is_filled(cls,data):
         return str(data.get("borg_dyspnee_effort","")).strip() not in ("","None","nan")
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go; import pandas as pd
         fig=go.Figure()
         for f,l,c in [("borg_dyspnee_effort","Dyspnée effort","#2B57A7"),("borg_fatigue_effort","Fatigue effort","#D85A30")]:
@@ -61,6 +62,10 @@ class BorgRPE(BaseTest):
             if xp: fig.add_trace(go.Scatter(x=xp,y=yp,mode="lines+markers+text",name=l,line=dict(color=c,width=2.5),marker=dict(size=8),text=[f"{v}" for v in yp],textposition="top center"))
         fig.update_layout(yaxis=dict(range=[0,11],title="Borg /10"),height=280,legend=dict(orientation="h",y=-0.2),plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
+        if show_print_controls:
+            _key = cls._print_chart_key('borg_rpe', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
         st.dataframe(pd.DataFrame([{"Bilan":l,"Dyspnée":r.get("borg_dyspnee_effort","—"),"Fatigue":r.get("borg_fatigue_effort","—")} for l,(_,r) in zip(labels,bilans_df.iterrows())]),use_container_width=True,hide_index=True)
 
 

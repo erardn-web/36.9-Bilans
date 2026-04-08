@@ -53,7 +53,8 @@ class MMRC(BaseTest):
         return v not in ("","None","nan")
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go
         import pandas as pd
         vals = []
@@ -71,8 +72,19 @@ class MMRC(BaseTest):
         fig.update_layout(yaxis=dict(range=[-0.5,4.5],tickvals=[0,1,2,3,4],title="Grade"),
                           height=300,plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
-        rows=[{"Bilan":lbl,"mMRC Grade":row.get("mmrc_grade","—")}
-              for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
+        if show_print_controls:
+            _key = cls._print_chart_key('mmrc', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
+        table_rows = [
+            {"label": "mMRC Grade", "col_key": "mmrc_grade",
+             "values": [r.get("mmrc_grade","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows=[{"Bilan":lbl,"mMRC Grade":row.get("mmrc_grade","—")}
+                          for lbl,(_,row) in zip(labels,bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
 
     @classmethod

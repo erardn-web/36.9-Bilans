@@ -89,7 +89,8 @@ class PFDI20(BaseTest):
         try: return float(data.get("pfdi_total",""))>=0
         except: return False
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go; import pandas as pd
         fig=go.Figure()
         for f,l,c in [("pfdi_udi","UDI","#2B57A7"),("pfdi_popdi","POPDI","#1D9E75"),("pfdi_cradi","CRADI","#D85A30")]:
@@ -101,4 +102,8 @@ class PFDI20(BaseTest):
             if xp: fig.add_trace(go.Scatter(x=xp,y=yp,mode="lines+markers",name=l,line=dict(color=c,width=2.5),marker=dict(size=8)))
         fig.update_layout(yaxis=dict(range=[0,105],title="Score /100"),height=320,legend=dict(orientation="h",y=-0.2),plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
+        if show_print_controls:
+            _key = cls._print_chart_key('pfdi20', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
         st.dataframe(pd.DataFrame([{"Bilan":l,"Total":r.get("pfdi_total","—"),"UDI":r.get("pfdi_udi","—"),"POPDI":r.get("pfdi_popdi","—")} for l,(_,r) in zip(labels,bilans_df.iterrows())]),use_container_width=True,hide_index=True)

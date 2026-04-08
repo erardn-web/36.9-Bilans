@@ -78,7 +78,8 @@ class AmplitudesEpaule(BaseTest):
                    for k,_,_,_,_ in AMPLITUDES[:4])
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go, pandas as pd
         move_keys = [("ep_flex","Flexion",180),("ep_abd","Abduction",180),
                      ("ep_re","Rot. ext.",90),("ep_ri","Rot. int.",80)]
@@ -103,6 +104,10 @@ class AmplitudesEpaule(BaseTest):
                 fig.update_layout(title=label,barmode="group",yaxis_title="°",
                                   height=280,plot_bgcolor="white",paper_bgcolor="white")
                 st.plotly_chart(fig,use_container_width=True)
+                if show_print_controls:
+                    _key = cls._print_chart_key('amplitudes_epaule', cas_id)
+                    cls._render_print_checkbox(_key)
+                    cls._store_chart(_key, fig, cas_id)
 
     @classmethod
     def render_print_sheet(cls, story: list, styles: dict) -> None:

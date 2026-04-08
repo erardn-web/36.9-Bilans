@@ -153,7 +153,8 @@ class DASH(BaseTest):
         except: return False
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go
         import pandas as pd
         fig = go.Figure()
@@ -176,7 +177,18 @@ class DASH(BaseTest):
         fig.update_layout(yaxis=dict(range=[0, 105], title="DASH /100"),
                           height=320, plot_bgcolor="white", paper_bgcolor="white")
         st.plotly_chart(fig, use_container_width=True)
-        rows = [{"Bilan": lbl, "DASH": row.get("dash_score", "—"),
-                 "Interprétation": _dash_interp(float(row.get("dash_score", 0) or 0))}
+        if show_print_controls:
+            _key = cls._print_chart_key('dash', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
+        table_rows = [
+            {"label": "DASH", "col_key": "dash_score",
+             "values": [r.get("dash_score","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows = [{"Bilan": lbl, "DASH": row.get("dash_score", "—"),
+                             "Interprétation": _dash_interp(float(row.get("dash_score", 0) or 0))}
                 for lbl, (_, row) in zip(labels, bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)

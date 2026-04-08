@@ -59,7 +59,8 @@ class GAD7(BaseTest):
         try: return float(data.get("gad7_score",""))>=0
         except: return False
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go; import pandas as pd
         vals=[]
         for _,row in bilans_df.iterrows():
@@ -70,6 +71,10 @@ class GAD7(BaseTest):
         fig.add_hline(y=10,line_dash="dot",line_color="#f57c00",annotation_text="Anxiété modérée ≥10")
         fig.update_layout(yaxis=dict(range=[0,22],title="GAD-7 /21"),height=280,plot_bgcolor="white",paper_bgcolor="white")
         st.plotly_chart(fig,use_container_width=True)
+        if show_print_controls:
+            _key = cls._print_chart_key('gad7', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
         st.dataframe(pd.DataFrame([{"Bilan":l,"GAD-7":r.get("gad7_score","—")} for l,(_,r) in zip(labels,bilans_df.iterrows())]),use_container_width=True,hide_index=True)
 
 

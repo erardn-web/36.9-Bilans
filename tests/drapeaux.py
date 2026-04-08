@@ -85,7 +85,8 @@ class Drapeaux(BaseTest):
         return bool(dr) or bool(dj)
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import pandas as pd
         rows=[]
         for lbl,(_,row) in zip(labels,bilans_df.iterrows()):

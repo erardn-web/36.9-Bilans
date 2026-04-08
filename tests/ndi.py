@@ -142,7 +142,8 @@ class NDI(BaseTest):
         except: return False
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go
         import pandas as pd
         fig = go.Figure()
@@ -165,8 +166,21 @@ class NDI(BaseTest):
         fig.update_layout(yaxis=dict(range=[0, 105], title="NDI (%)"),
                           height=320, plot_bgcolor="white", paper_bgcolor="white")
         st.plotly_chart(fig, use_container_width=True)
-        rows = [{"Bilan": lbl, "NDI /50": row.get("ndi_score_total", "—"),
-                 "NDI %": row.get("ndi_score_pct", "—"),
+        if show_print_controls:
+            _key = cls._print_chart_key('ndi', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
+        table_rows = [
+            {"label": "NDI /50", "col_key": "ndi_score_total",
+             "values": [r.get("ndi_score_total","—") for _,r in bilans_df.iterrows()]},
+            {"label": "NDI %", "col_key": "ndi_score_pct",
+             "values": [r.get("ndi_score_pct","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows = [{"Bilan": lbl, "NDI /50": row.get("ndi_score_total", "—"),
+                             "NDI %": row.get("ndi_score_pct", "—"),
                  "Interprétation": _ndi_interp(float(row.get("ndi_score_pct", 0) or 0))}
                 for lbl, (_, row) in zip(labels, bilans_df.iterrows())]
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
