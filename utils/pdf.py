@@ -2843,6 +2843,50 @@ def _make_evolution_charts(bilans_df, n_bilans, page_w, excluded_test_ids=None,
     return flowables
 
 
+def _get_checked_pdf_row_keys(cas_id: str = "") -> dict:
+    """
+    Retourne {test_id: set(col_keys)} des lignes cochées pour l'impression.
+    Lit st.session_state["pdf_rows"][cas_id].
+    """
+    try:
+        import streamlit as st
+        store = st.session_state.get("pdf_rows", {}).get(cas_id, {})
+        result = {}
+        for full_key, checked in store.items():
+            if not full_key.startswith("print_row_"): continue
+            if not full_key.endswith(f"_{cas_id}"): continue
+            # full_key = print_row_{tid}_{col_key}_{cas_id}
+            without_prefix = full_key[len("print_row_"):]
+            without_suffix = without_prefix[:-len(f"_{cas_id}")]
+            # Trouver le tid — c'est le premier segment
+            # On cherche dans le mapping test_id → colonnes
+            for tid in _TID_COL_MAP:
+                if without_suffix.startswith(tid + "_"):
+                    col_key = without_suffix[len(tid)+1:]
+                    if checked:
+                        result.setdefault(tid, set()).add(col_key)
+                    break
+        return result
+    except Exception:
+        return {}
+
+
+# Mapping test_id → colonnes associées (pour filtrage lignes PDF)
+_TID_COL_MAP = {
+    "tinetti":   {"tinetti_eq_score","tinetti_ma_score","tinetti_total","tinetti_interpretation"},
+    "berg":      {"berg_score","berg_interpretation"},
+    "tug":       {"tug_time","tug_aide_technique","tug_interpretation"},
+    "sts":       {"sts_1min_reps","sts_1min_interpretation"},
+    "unipodal":  {"uni_yo_d","uni_yo_g","uni_yf_d","uni_yf_g","uni_interpretation"},
+    "six_mwt":   {"mwt_distance","mwt_interpretation","mwt_spo2_avant","mwt_spo2_apres",
+                  "mwt_fc_avant","mwt_fc_apres","mwt_dyspnee_avant","mwt_dyspnee_apres"},
+    "had":       {"had_score_anxiete","had_score_depression","had_interpretation"},
+    "sf12":      {"sf12_pcs","sf12_mcs","sf12_interpretation"},
+    "nrs":       {"nrs_repos","nrs_mouvement","nrs_nuit","nrs_region"},
+    "eva":       {"eva"},
+}
+
+
 def _get_session_charts(cas_id: str = "") -> list:
     """
     Récupère les PNGs des graphiques cochés dans la vue évolution
@@ -3468,7 +3512,16 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
 
             # Titre du test (section_band sobre)
             rows = []
+            # Lire les lignes cochées pour ce test (si configuré via checkboxes)
+            _cas_id_pdf = patient_info.get("cas_id","") if "patient_info" in dir() else ""
+            _checked_rows = _get_checked_pdf_row_keys(_cas_id_pdf)
+            _tid_for_grp  = _TEST_NAME_TO_TID.get(test_name, "")
+            _allowed_cols = _checked_rows.get(_tid_for_grp, None)  # None = tout inclure
+
             for col in grp_active:
+                # Si des checkboxes sont définies pour ce test, filtrer
+                if _allowed_cols is not None and col not in _allowed_cols:
+                    continue
                 lbl  = _label(col)
                 vals = []
                 for _, r in bilans_df.iterrows():
