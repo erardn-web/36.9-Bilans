@@ -21,6 +21,8 @@ from tests.had        import HAD           # Anxiété / dépression (fréquents
 from tests.psfs       import PSFS          # Objectifs fonctionnels spécifiques
 from tests.groc       import GROC          # Changement global perçu
 
+from tests.testing_global import TestingGlobal
+
 VESTIBULAIRE = register_template(BilanTemplate(
     template_id = "vestibulaire",
     nom         = "Troubles vestibulaires",

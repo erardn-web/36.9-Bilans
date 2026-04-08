@@ -17,8 +17,8 @@ from tests.hvt               import HVT
 from tests.gazometrie        import Gazometrie
 from tests.pattern_respi     import PatternRespi
 from tests.snif_pimax_pemax  import SNIFPimaxPemax
-from tests.testing_mi        import TestingMI
-from tests.leg_press         import LegPress
+
+from tests.testing_global import TestingGlobal
 
 SHV = register_template(BilanTemplate(
     template_id = "shv",
@@ -28,6 +28,5 @@ SHV = register_template(BilanTemplate(
     tests       = [
         HAD, SF12, BOLT, HVT, Nijmegen,
         Gazometrie, PatternRespi, SNIFPimaxPemax,
-        MRCDyspnee, Comorbidites, TestingMI, LegPress,
-    ],
+        MRCDyspnee, Comorbidites, TestingGlobal,    ],
 ))

@@ -6,9 +6,10 @@ from tests.eva                   import EVA
 from tests.quick_dash            import QuickDASH
 from tests.ases                  import ASES
 from tests.amplitudes_epaule     import AmplitudesEpaule
-from tests.testing_epaule        import TestingEpaule
 from tests.tests_epaule_speciaux import TestsEpauleSpeciaux
 from tests.classification_epaule import ClassificationEpaule
+from tests.testing_global import TestingGlobal
+
 EPAULE_DOULOUREUSE = register_template(BilanTemplate(
     template_id = "epaule_douloureuse",
     nom         = "Épaule douloureuse",
@@ -19,7 +20,7 @@ EPAULE_DOULOUREUSE = register_template(BilanTemplate(
         QuickDASH,
         ASES,
         AmplitudesEpaule,
-        TestingEpaule,
+        TestingGlobal,
         TestsEpauleSpeciaux,
         ClassificationEpaule,
     ],

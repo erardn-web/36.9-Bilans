@@ -10,13 +10,13 @@ from tests.sts          import STS
 from tests.mmrc         import MMRC
 from tests.cat          import CAT
 from tests.bode         import BODE
-from tests.testing_mi   import TestingMI
-from tests.leg_press    import LegPress
+
+from tests.testing_global import TestingGlobal
 
 BPCO = register_template(BilanTemplate(
     template_id = "bpco",
     nom         = "BPCO",
     icone       = "🫁",
     description = "Bilan BPCO / pathologie respiratoire chronique",
-    tests       = [Spirometrie, SixMWT, STS, MMRC, CAT, BODE, TestingMI, LegPress],
+    tests       = [Spirometrie, SixMWT, STS, MMRC, CAT, BODE, TestingGlobal, LegPress],
 ))

@@ -9,7 +9,8 @@ from tests.groc       import GROC
 from tests.tug       import TUG
 from tests.sts       import STS
 from tests.six_mwt   import SixMWT
-from tests.testing_mi import TestingMI
+
+from tests.testing_global import TestingGlobal
 
 HANCHE = register_template(BilanTemplate(
     template_id = "hanche",
@@ -17,7 +18,7 @@ HANCHE = register_template(BilanTemplate(
     icone       = "🦴",
     description = "Bilan hanche — PTH, fracture — HOOS, testing musculaire, 6MWT",
     tests       = [
-        NRS, HOOS, TestingMI,
+        NRS, HOOS, TestingGlobal,
         TUG, STS, SixMWT,
         PSFS, GROC,
     ],

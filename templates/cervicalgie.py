@@ -9,6 +9,8 @@ from tests.psfs               import PSFS
 from tests.groc               import GROC
 from tests.had                import HAD
 
+from tests.testing_global import TestingGlobal
+
 CERVICALGIE = register_template(BilanTemplate(
     template_id = "cervicalgie",
     nom         = "Cervicalgie",
@@ -16,5 +18,6 @@ CERVICALGIE = register_template(BilanTemplate(
     description = "Bilan cervicalgie — NRS, drapeaux, NDI, PSFS, HAD, GROC",
     tests       = [
         NRS, Drapeaux, NDI, HAD, PSFS, GROC,
+        TestingGlobal,
     ],
 ))

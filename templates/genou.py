@@ -10,7 +10,8 @@ from tests.groc       import GROC
 from tests.tug       import TUG
 from tests.sts       import STS
 from tests.unipodal  import Unipodal
-from tests.testing_mi import TestingMI
+
+from tests.testing_global import TestingGlobal
 
 GENOU = register_template(BilanTemplate(
     template_id = "genou",
@@ -18,7 +19,7 @@ GENOU = register_template(BilanTemplate(
     icone       = "🦵",
     description = "Bilan genou — LCA, PTG, ménisque — KOOS, Lysholm, testing musculaire",
     tests       = [
-        NRS, KOOS, Lysholm, TestingMI,
+        NRS, KOOS, Lysholm, TestingGlobal,
         TUG, STS, Unipodal,
         PSFS, GROC,
     ],
