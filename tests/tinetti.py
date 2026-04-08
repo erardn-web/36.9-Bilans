@@ -165,14 +165,27 @@ class Tinetti(BaseTest):
                                            default=False)
                 cls._store_chart(key_sub, fig_sub, cas_id)
 
-        # ── Tableau récap ─────────────────────────────────────────────────────
-        rows = [{"Bilan": lbl,
-                 "Équilibre (/16)": row.get("tinetti_eq_score","—"),
-                 "Marche (/12)":    row.get("tinetti_ma_score","—"),
-                 "Total (/28)":     row.get("tinetti_total","—"),
-                 "Interprétation":  row.get("tinetti_interpretation","—")}
-                for lbl, (_, row) in zip(labels, bilans_df.iterrows())]
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        # ── Tableau récap avec checkboxes PDF ─────────────────────────────────
+        table_rows = [
+            {"label": "Équilibre (/16)", "col_key": "tinetti_eq_score",
+             "values": [r.get("tinetti_eq_score","—") for _,r in bilans_df.iterrows()]},
+            {"label": "Marche (/12)",    "col_key": "tinetti_ma_score",
+             "values": [r.get("tinetti_ma_score","—") for _,r in bilans_df.iterrows()]},
+            {"label": "Total (/28)",     "col_key": "tinetti_total",
+             "values": [r.get("tinetti_total","—") for _,r in bilans_df.iterrows()]},
+            {"label": "Interprétation", "col_key": "tinetti_interpretation",
+             "values": [r.get("tinetti_interpretation","—") for _,r in bilans_df.iterrows()]},
+        ]
+        if show_print_controls:
+            cls._render_table_with_checkboxes(table_rows, cas_id)
+        else:
+            rows_df = [{"Bilan": lbl,
+                        "Équilibre (/16)": r.get("tinetti_eq_score","—"),
+                        "Marche (/12)":    r.get("tinetti_ma_score","—"),
+                        "Total (/28)":     r.get("tinetti_total","—"),
+                        "Interprétation":  r.get("tinetti_interpretation","—")}
+                       for lbl, (_,r) in zip(labels, bilans_df.iterrows())]
+            st.dataframe(pd.DataFrame(rows_df), use_container_width=True, hide_index=True)
 
     @classmethod
     def render_pdf_with_config(cls, story, styles, bilans_df, labels, config=None):
