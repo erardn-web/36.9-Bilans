@@ -53,7 +53,7 @@ def _load_templates():
     # Templates codés
     for _tmpl in ["templates.shv","templates.equilibre","templates.bpco","templates.lombalgie",
                   "templates.neutre","templates.epaule_douloureuse","templates.cervicalgie",
-                  "templates.genou","templates.hanche","templates.membre_superieur","templates.vestibulaire"]:
+                  "templates.genou","templates.hanche","templates.membre_superieur"]:
         try: _iml.import_module(_tmpl)
         except Exception: pass
     # Templates cabinet (depuis GSheets)
@@ -1136,7 +1136,8 @@ def render_evolution():
                                        or S.get(f"analyse_text_{cid}")
                                        or load_analyse_cas(cid))
                         _medecin_info = get_medecin_destinataire(cid)
-                        S[_pdf_cache_key] = generate_pdf(be, info,
+                        _info_with_cid = {**info, "cas_id": cid}
+                        S[_pdf_cache_key] = generate_pdf(be, _info_with_cid,
                             analyse_text=analyse_txt,
                             template_id=_tid, template_nom=_tnom,
                             medecin_info=_medecin_info,
