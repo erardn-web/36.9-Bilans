@@ -303,6 +303,68 @@ class BaseTest(ABC):
                 st.session_state["pdf_charts"][cas_id] = {}
             st.session_state["pdf_charts"][cas_id][key] = png
 
+    @classmethod
+    def _render_table_with_checkboxes(cls, rows: list, cas_id: str = "") -> None:
+        """
+        Affiche un tableau avec une checkbox par ligne pour l'impression PDF.
+        rows = [{"label": str, "col_key": str, "values": [val_b1, val_b2, ...]}, ...]
+        col_key est utilisé comme clé unique pour la checkbox.
+        L'état est stocké dans session_state["pdf_rows"][cas_id][full_key].
+        """
+        import streamlit as st
+        tid = cls.meta()["id"]
+
+        if not rows:
+            return
+
+        # Header
+        n_bilans = max(len(r["values"]) for r in rows)
+        bilan_labels = [f"B{i+1}" for i in range(n_bilans)]
+
+        cols_header = st.columns([0.35] + [1] * n_bilans + [0.5])
+        cols_header[0].markdown("<small style='color:#888'>**Indicateur**</small>",
+                                unsafe_allow_html=True)
+        for i, lbl in enumerate(bilan_labels):
+            cols_header[i+1].markdown(f"<small style='color:#888'>**{lbl}**</small>",
+                                      unsafe_allow_html=True)
+        cols_header[-1].markdown("<small style='color:#888'>**PDF**</small>",
+                                 unsafe_allow_html=True)
+        st.markdown("<hr style='margin:2px 0 6px 0;border-color:#eee'>",
+                    unsafe_allow_html=True)
+
+        if "pdf_rows" not in st.session_state:
+            st.session_state["pdf_rows"] = {}
+        if cas_id not in st.session_state["pdf_rows"]:
+            st.session_state["pdf_rows"][cas_id] = {}
+
+        for row in rows:
+            full_key = f"print_row_{tid}_{row['col_key']}_{cas_id}"
+            cols = st.columns([0.35] + [1] * n_bilans + [0.5])
+            cols[0].markdown(f"<small>{row['label']}</small>", unsafe_allow_html=True)
+            for i, val in enumerate(row["values"]):
+                v = str(val) if val not in (None, "", "nan", "None") else "—"
+                cols[i+1].markdown(f"<small>{v}</small>", unsafe_allow_html=True)
+            # Checkbox PDF
+            default = st.session_state["pdf_rows"][cas_id].get(full_key, True)
+            checked = cols[-1].checkbox("", value=default, key=full_key,
+                                        label_visibility="collapsed")
+            st.session_state["pdf_rows"][cas_id][full_key] = checked
+
+    @classmethod
+    def _get_checked_row_keys(cls, cas_id: str = "") -> set:
+        """Retourne l'ensemble des col_key dont la checkbox est cochée."""
+        import streamlit as st
+        tid = cls.meta()["id"]
+        result = set()
+        store = st.session_state.get("pdf_rows", {}).get(cas_id, {})
+        for full_key, checked in store.items():
+            prefix = f"print_row_{tid}_"
+            suffix = f"_{cas_id}"
+            if full_key.startswith(prefix) and full_key.endswith(suffix) and checked:
+                col_key = full_key[len(prefix):-len(suffix)]
+                result.add(col_key)
+        return result
+
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     @classmethod
