@@ -55,12 +55,12 @@ st.markdown("---")
 
 # ── Onglets selon niveau ──────────────────────────────────────────────────────
 if level == "super":
-    tabs = st.tabs(["📋 Templates", "👥 Thérapeutes", "🧪 Validation tests", "📄 PDFs fixes", "💬 Feedback", "📋 Audit Log", "📊 Statistiques"])
-    tab_tmpl, tab_thera, tab_valid, tab_pdf, tab_fb, tab_audit, tab_stats = tabs
+    tabs = st.tabs(["📋 Templates", "👥 Thérapeutes", "🧪 Validation tests", "🖨️ Config PDF", "📄 PDFs fixes", "💬 Feedback", "📋 Audit Log", "📊 Statistiques"])
+    tab_tmpl, tab_thera, tab_valid, tab_printcfg, tab_pdf, tab_fb, tab_audit, tab_stats = tabs
 else:
     tabs = st.tabs(["📋 Templates", "👥 Thérapeutes", "📊 Statistiques"])
     tab_tmpl, tab_thera, tab_stats = tabs
-    tab_valid = tab_pdf = tab_fb = tab_audit = None
+    tab_valid = tab_printcfg = tab_pdf = tab_fb = tab_audit = None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -456,6 +456,67 @@ if tab_valid:
                     if save_validation(tid, auto_stat, crit_vals, new_notes):
                         st.success(f"✅ {auto_stat}")
                         get_all_validations.clear(); st.rerun()
+                    else:
+                        st.error("❌ Erreur GSheets.")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ONGLET CONFIG PDF (super admin uniquement)
+# ═══════════════════════════════════════════════════════════════════════════════
+if tab_printcfg:
+    with tab_printcfg:
+        st.markdown("### 🖨️ Configuration d'impression par test")
+        st.caption("Définissez une fois pour toutes ce qui s'imprime dans le PDF d'évolution pour chaque test.")
+
+        from utils.db import get_all_print_configs, save_print_config
+        _load_all_tests_admin()
+        tests_map_cfg = _at()
+        all_configs   = get_all_print_configs()
+
+        # Filtre
+        cfg_search = st.text_input("🔍 Filtrer les tests", placeholder="ex: berg, tinetti…",
+                                   key="cfg_search")
+        items_cfg = [(tid, cls) for tid, cls in
+                     sorted(tests_map_cfg.items(), key=lambda x: x[1].tab_label())
+                     if not cfg_search or cfg_search.lower() in cls.tab_label().lower()
+                     or cfg_search.lower() in cls.meta().get("nom","").lower()]
+
+        st.caption(f"{len(items_cfg)} test(s)")
+        st.markdown("---")
+
+        for tid, cls in items_cfg:
+            options = cls.print_options()
+            if not options:
+                # Test sans print_options() → afficher note
+                with st.expander(f"{cls.tab_label()} — ⚙️ non configuré", expanded=False):
+                    st.caption("Ce test n'a pas encore de méthode `print_options()`. "
+                               "Tout son contenu sera imprimé par défaut.")
+                continue
+
+            stored_cfg = all_configs.get(tid, {})
+            # Calculer config effective (stored ou default)
+            effective = {o["key"]: stored_cfg.get(o["key"], o["default"]) for o in options}
+            n_on = sum(1 for v in effective.values() if v)
+
+            with st.expander(
+                f"{cls.tab_label()} — {n_on}/{len(options)} éléments actifs",
+                expanded=False):
+
+                st.markdown("**Cochez ce qui doit apparaître dans le PDF d'évolution :**")
+                new_cfg = {}
+                c1, c2 = st.columns(2)
+                for i, opt in enumerate(options):
+                    col = c1 if i % 2 == 0 else c2
+                    new_cfg[opt["key"]] = col.checkbox(
+                        opt["label"],
+                        value=effective.get(opt["key"], opt["default"]),
+                        key=f"pcfg_{tid}_{opt['key']}")
+
+                if st.button("💾 Enregistrer", key=f"pcfg_save_{tid}", type="primary"):
+                    if save_print_config(tid, new_cfg):
+                        st.success("✅ Configuration sauvegardée.")
+                        get_all_print_configs.clear()
+                        st.rerun()
                     else:
                         st.error("❌ Erreur GSheets.")
 
