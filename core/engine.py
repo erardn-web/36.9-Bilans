@@ -476,19 +476,26 @@ def render_evolution_view(bilans_df, patient_info: dict,
     n_bilans = len(bilans_df)
 
     # Onglets par test (visibles seulement)
+    import inspect as _inspect
+
     for i, test_cls in enumerate(visible_classes):
         with tabs[i + 1]:
             st.markdown(
                 f'<div class="section-title">{test_cls.tab_label()} — Évolution</div>',
                 unsafe_allow_html=True
             )
-            # Appel render_evolution — passe les nouveaux params si le test les supporte
-            import inspect as _inspect
-            _ev_params = _inspect.signature(test_cls.render_evolution).parameters
-            if "show_print_controls" in _ev_params:
-                test_cls.render_evolution(bilans_df, labels,
-                                          show_print_controls=(n_bilans >= 2),
-                                          cas_id=cas_id)
+            _ev_params    = _inspect.signature(test_cls.render_evolution).parameters
+            _supports_new = "show_print_controls" in _ev_params
+            _show_ctrl    = _supports_new and (n_bilans >= 2)
+
+            if _show_ctrl:
+                # Fragment : le rerun reste local à cet onglet
+                @st.fragment
+                def _render_ev_fragment(_cls=test_cls, _cid=cas_id):
+                    _cls.render_evolution(bilans_df, labels,
+                                          show_print_controls=True,
+                                          cas_id=_cid)
+                _render_ev_fragment()
             else:
                 test_cls.render_evolution(bilans_df, labels)
 
