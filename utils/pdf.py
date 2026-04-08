@@ -2843,6 +2843,49 @@ def _make_evolution_charts(bilans_df, n_bilans, page_w, excluded_test_ids=None,
     return flowables
 
 
+def _get_session_charts(cas_id: str = "") -> list:
+    """
+    Récupère les PNGs des graphiques cochés dans la vue évolution
+    depuis st.session_state["pdf_charts"][cas_id].
+    Retourne une liste de Flowables ReportLab disposés en grille 2 colonnes.
+    """
+    try:
+        import streamlit as st
+        from reportlab.platypus import Table, TableStyle, Image as RLImage, Spacer
+        from reportlab.lib import colors as _rc
+        import io
+
+        charts_dict = st.session_state.get("pdf_charts", {}).get(cas_id, {})
+        if not charts_dict:
+            return []
+
+        chart_w = (A4[0] - 3*cm - 0.4*cm) / 2
+        chart_h = chart_w * 0.5
+
+        pngs = list(charts_dict.values())
+        flowables = []
+        for i in range(0, len(pngs), 2):
+            row_pngs = pngs[i:i+2]
+            cells = []
+            for png in row_pngs:
+                img = RLImage(io.BytesIO(png), width=chart_w, height=chart_h)
+                cells.append(img)
+            while len(cells) < 2:
+                cells.append("")
+            tbl = Table([cells], colWidths=[chart_w + 0.2*cm, chart_w + 0.2*cm])
+            tbl.setStyle(TableStyle([
+                ("VALIGN",       (0,0),(-1,-1), "TOP"),
+                ("LEFTPADDING",  (0,0),(-1,-1), 0),
+                ("RIGHTPADDING", (0,0),(-1,-1), 8),
+                ("TOPPADDING",   (0,0),(-1,-1), 0),
+                ("BOTTOMPADDING",(0,0),(-1,-1), 12),
+            ]))
+            flowables.append(tbl)
+        return flowables
+    except Exception:
+        return []
+
+
 def generate_pdf_generic(bilans_df, patient_info: dict,
                           analyse_text: str = "",
                           template_nom: str = "Bilan",
@@ -3528,19 +3571,29 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         # ── Graphiques d'évolution ─────────────────────────────────────────────
         if show_charts and n_bilans >= 2:
             story.append(Spacer(1, 0.5*cm))
-            charts = _make_evolution_charts(bilans_df, n_bilans, w,
-                                            excluded_test_ids=set(excluded_sections or []),
-                                            ordered_test_ids=ordered_test_ids,
-                                            active_test_ids=_active_test_ids_all if _filter_by_tests else None,
-                                            print_configs=_print_configs)
-            if charts:
-                # Garder le titre avec au moins le premier graphique
+            # 1. Graphiques cochés dans la vue évolution (Plotly PNG via session_state)
+            _ev_charts = _get_session_charts(cas_id=patient_info.get("cas_id",""))
+            if _ev_charts:
                 story.append(KeepTogether([
                     section_band("Évolution graphique"),
                     Spacer(1, 0.3*cm),
-                    charts[0],
+                    _ev_charts[0],
                 ]))
-                story.extend(charts[1:])
+                story.extend(_ev_charts[1:])
+            else:
+                # Fallback : sparklines matplotlib pour les tests sans render_evolution upgradé
+                charts = _make_evolution_charts(bilans_df, n_bilans, w,
+                                                excluded_test_ids=set(excluded_sections or []),
+                                                ordered_test_ids=ordered_test_ids,
+                                                active_test_ids=_active_test_ids_all if _filter_by_tests else None,
+                                                print_configs=_print_configs)
+                if charts:
+                    story.append(KeepTogether([
+                        section_band("Évolution graphique"),
+                        Spacer(1, 0.3*cm),
+                        charts[0],
+                    ]))
+                    story.extend(charts[1:])
 
         # ── Notes générales ────────────────────────────────────────────────────
         any_notes = any(
