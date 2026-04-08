@@ -3339,7 +3339,58 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         else:
             _TESTS_ORDERED = _TESTS
 
+        # ── Charger la configuration d'impression ────────────────────────────────
+        _print_configs = {}
+        try:
+            from utils.db import get_all_print_configs as _gapc
+            _print_configs = _gapc()
+        except Exception:
+            pass
+
+        # Mapping test_name → test_id pour la config
+        _TEST_NAME_TO_TID_CFG = {v: k for k, v in {
+            "spirometrie":"Spirométrie","six_mwt":"Test de Marche 6min",
+            "sts":"STS 1 minute","mmrc":"Dyspnée mMRC","cat":"CAT — COPD Assessment",
+            "bode":"Score BODE","tinetti":"Tinetti","berg":"Échelle de Berg",
+            "tug":"TUG","unipodal":"Test Unipodal","bolt":"BOLT",
+            "nijmegen":"HVT / Nijmegen","hvt":"HVT / Nijmegen","eva":"EVA Douleur",
+            "testing_mi":"Testing musculaire MI","leg_press":"Leg Press (1RM)",
+            "nrs":"NRS — Douleur","psfs":"PSFS","groc":"GROC","eq5d":"EQ-5D",
+            "ndi":"NDI","koos":"KOOS","hoos":"HOOS","lysholm":"Lysholm","dash":"DASH",
+            "lefs":"LEFS","womac":"WOMAC","spadi":"SPADI","constant_murley":"Constant-Murley",
+            "prtee":"PRTEE","bctq":"BCTQ","roland_morris":"Roland-Morris",
+            "start_back":"STarT Back","fabq":"FABQ","dn4":"DN4","faos":"FAOS",
+            "kujala":"Kujala AKPS","acl_rsi":"ACL-RSI","visa_a":"VISA-A",
+            "visa_p":"VISA-P","visa_h":"VISA-H","visa_g":"VISA-G",
+            "cait":"CAIT","tegner":"Tegner","dhi":"DHI","hit6":"HIT-6",
+            "hagos":"HAGOS","ikdc":"IKDC","csi":"CSI","qbpds":"QBPDS",
+            "atrs":"ATRS","wosi":"WOSI","borg_rpe":"Borg RPE","sgrq":"SGRQ",
+            "lcadl":"LCADL","pcfs":"PCFS","psqi":"PSQI","abc_scale":"ABC Scale",
+            "mini_bestest":"Mini-BESTest","fes_i":"FES-I","barthel":"Barthel",
+            "ten_mwt":"10MWT","iciq_ui":"ICIQ-UI","pfdi20":"PFDI-20","pcs":"PCS",
+            "phq9":"PHQ-9","gad7":"GAD-7","isi":"ISI","haq":"HAQ","basdai":"BASDAI",
+            "frailty_scale":"Clinical Frailty","frail_scale":"FRAIL Scale",
+            "gait_speed":"Vitesse marche 4m","k_ses":"K-SES","prwe":"PRWE","bpi":"BPI",
+            "had":"HAD","sf12":"SF-12","hvt":"HVT",
+        }.items()}
+
+        def _test_excluded_by_config(test_name, test_id=None):
+            """Retourne True si le test entier est désactivé dans la config."""
+            tid = test_id or _TEST_NAME_TO_TID_CFG.get(test_name)
+            if not tid or tid not in _print_configs:
+                return False  # pas de config → imprimer
+            cfg = _print_configs[tid]
+            # Si toutes les options sont False → exclure
+            if cfg and all(not v for v in cfg.values()):
+                return True
+            return False
+
         for test_name, test_cols in _TESTS_ORDERED:
+            # Vérifier config d'impression
+            _tid_cfg = _TEST_NAME_TO_TID.get(test_name) or _TEST_NAME_TO_TID_CFG.get(test_name)
+            if _test_excluded_by_config(test_name, _tid_cfg):
+                continue
+
             # None = capturer toutes les colonnes du préfixe correspondant
             if test_cols is None:
                 tid = _TEST_NAME_TO_TID.get(test_name, "")
