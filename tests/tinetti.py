@@ -22,12 +22,13 @@ class Tinetti(BaseTest):
     @classmethod
     def print_options(cls) -> list:
         return [
-            {"key": "score_total", "label": "Score total (/28)", "default": True},
-            {"key": "score_equilibre", "label": "Score équilibre (/16)", "default": True},
-            {"key": "score_marche", "label": "Score marche (/12)", "default": True},
-            {"key": "interpretation", "label": "Interprétation (risque de chute)", "default": True},
-            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
-            {"key": "detail_items", "label": "Détail des items", "default": False},
+            {"key": "score_total",         "label": "Score total (/28)",              "default": True},
+            {"key": "score_equilibre",      "label": "Score équilibre (/16)",          "default": True},
+            {"key": "score_marche",         "label": "Score marche (/12)",             "default": True},
+            {"key": "interpretation",       "label": "Interprétation (risque chute)",  "default": True},
+            {"key": "graphique_total",      "label": "Graphique score total",          "default": True},
+            {"key": "graphique_sous_scores","label": "Graphiques sous-scores (éq/marche)", "default": False},
+            {"key": "detail_items",         "label": "Détail des items",               "default": False},
         ]
 
     def render(self, lv, key_prefix):
@@ -123,6 +124,23 @@ class Tinetti(BaseTest):
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
 
     @classmethod
+    def render_pdf_with_config(cls, story, styles, bilans_df, labels, config=None):
+        """Tinetti : respecte la config graphique (total vs sous-scores)."""
+        if config is None:
+            cls.render_pdf(story, styles, bilans_df, labels)
+            return
+
+        n = len(bilans_df)
+        show_graphique_total      = config.get("graphique_total", True)
+        show_graphique_sous_scores = config.get("graphique_sous_scores", False)
+
+        # Passer les colonnes à exclure selon config
+        # On délègue à render_pdf en masquant les colonnes non voulues
+        cls.render_pdf(story, styles, bilans_df, labels,
+                       show_graphique_total=show_graphique_total and n >= 2,
+                       show_graphique_sous_scores=show_graphique_sous_scores and n >= 2)
+
+    @classmethod
     def render_print_sheet(cls, story: list, styles: dict) -> None:
         from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
         from reportlab.lib.units import cm
@@ -174,4 +192,3 @@ class Tinetti(BaseTest):
         ]))
         story.append(score_tbl)
         story.append(Paragraph("< 19 → risque élevé · 19–23 → risque modéré · ≥ 24 → risque faible", styles["note"]))
-
