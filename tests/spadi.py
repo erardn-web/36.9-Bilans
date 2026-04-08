@@ -32,6 +32,14 @@ class SPADI(BaseTest):
     def fields(cls):
         return [k for k,_ in SPADI_PAIN+SPADI_DIS]+["spadi_pain","spadi_disability","spadi_total"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score SPADI (/100)", "default": True},
+            {"key": "sous_scores", "label": "Sous-scores douleur/incapacité", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">💪 SPADI — Indice douleur et incapacité épaule</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0 = aucune douleur/difficulté · 10 = pire douleur/totalement incapable</div>', unsafe_allow_html=True)

@@ -14,6 +14,14 @@ class Unipodal(BaseTest):
     def fields(cls):
         return ["unipodal_d_ouvert","unipodal_g_ouvert","unipodal_d_ferme","unipodal_g_ferme"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "yeux_ouverts", "label": "Yeux ouverts D/G (s)", "default": True},
+            {"key": "yeux_fermes", "label": "Yeux fermés D/G (s)", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">Équilibre unipodal (secondes)</div>',
                     unsafe_allow_html=True)

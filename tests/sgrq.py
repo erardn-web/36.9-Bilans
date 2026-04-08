@@ -15,6 +15,14 @@ class SGRQ(BaseTest):
     @classmethod
     def fields(cls):
         return ["sgrq_symptomes","sgrq_activite","sgrq_impact","sgrq_total","sgrq_notes"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score SGRQ total", "default": True},
+            {"key": "sous_scores", "label": "Sous-scores (symptômes, activité, impact)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🫁 SGRQ — Qualité de vie respiratoire</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Saisie des scores calculés depuis le questionnaire papier SGRQ. Score 0 = meilleure santé · 100 = pire santé. MCID = 4 points.</div>', unsafe_allow_html=True)

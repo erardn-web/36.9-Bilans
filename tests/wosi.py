@@ -25,6 +25,13 @@ class WOSI(BaseTest):
         "Impact sur confiance","Impact vie quotidienne",
     ]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score WOSI (%)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">💪 WOSI — Instabilité épaule</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Évaluez l\'impact de votre épaule sur chaque item (0 = aucun impact · 100 = impact maximal).</div>', unsafe_allow_html=True)

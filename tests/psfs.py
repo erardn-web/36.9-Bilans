@@ -24,6 +24,14 @@ class PSFS(BaseTest):
             fields += [f"psfs_activite_{i}", f"psfs_score_{i}"]
         return fields + ["psfs_score_moyen"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_moyen", "label": "Score moyen (/10)", "default": True},
+            {"key": "activites", "label": "Activités et scores", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🎯 PSFS — Échelle fonctionnelle spécifique</div>',
                     unsafe_allow_html=True)

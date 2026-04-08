@@ -44,6 +44,15 @@ class TestsEpauleSpeciaux(BaseTest):
     def fields(cls):
         return ALL_KEYS
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "coiffe", "label": "Tests coiffe (Jobe, Patte, Gerber...)", "default": True},
+            {"key": "conflit", "label": "Tests conflit (Neer, Hawkins...)", "default": True},
+            {"key": "biceps_slap", "label": "Tests biceps/SLAP", "default": True},
+            {"key": "ac", "label": "Tests AC", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         collected = {}
         for section_title, tests in [

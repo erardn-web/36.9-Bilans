@@ -49,6 +49,14 @@ class RolandMorris(BaseTest):
     def fields(cls):
         return [k for k,_ in RMQ_ITEMS]+["rmq_score"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score RMQ (/24)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">📋 Roland-Morris — Incapacité lombaire</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Cochez les phrases qui décrivent votre situation aujourd\'hui. Score 0 = pas d\'incapacité · 24 = incapacité maximale.</div>', unsafe_allow_html=True)

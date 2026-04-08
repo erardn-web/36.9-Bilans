@@ -34,6 +34,13 @@ class TestingEpaule(BaseTest):
     def fields(cls):
         return [f"{m[0]}_{s}" for m in MUSCLES_EPAULE for s in ("d","g")] + ["ep_musc_notes"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "tableau", "label": "Tableau MRC par muscle", "default": True},
+            {"key": "notes", "label": "Notes", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         def _li(k):
             v=lv(k,None)

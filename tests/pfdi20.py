@@ -36,6 +36,14 @@ class PFDI20(BaseTest):
     def fields(cls):
         all_items=cls.POPDI+cls.CRADI+cls.UDI
         return [k for k,_ in all_items]+["pfdi_popdi","pfdi_cradi","pfdi_udi","pfdi_total"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score PFDI-20 (/300)", "default": True},
+            {"key": "sous_scores", "label": "Sous-scores UDI/POPDI/CRADI", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🔵 PFDI-20 — Plancher pelvien</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0 = pas du tout gêné(e) · 3 = très gêné(e). Score total /300 (3 sous-échelles × 100).</div>', unsafe_allow_html=True)

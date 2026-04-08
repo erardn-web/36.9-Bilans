@@ -28,6 +28,12 @@ class SNIFPimaxPemax(BaseTest):
                 "pemax_val","pemax_pred","pemax_pct",
                 "snif_pimax_pemax_notes"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "tableau", "label": "SNIF / PImax / PEmax", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">💪 SNIF Test · PImax · PEmax</div>',
                     unsafe_allow_html=True)

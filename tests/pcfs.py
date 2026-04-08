@@ -21,6 +21,13 @@ class PCFS(BaseTest):
         3:"Grade 3 — Limitation importante (aide pour les tâches ménagères ou AVQ)",
         4:"Grade 4 — Limitation sévère (dépendance totale pour les soins personnels)",
     }
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "grade", "label": "Grade PCFS (0-5)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦠 PCFS — État fonctionnel post-COVID</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Évaluation fonctionnelle globale après infection COVID-19. Grade 0 = pas de limitation · Grade 4 = limitation sévère.</div>', unsafe_allow_html=True)

@@ -19,6 +19,17 @@ class SixMWT(BaseTest):
                 "mwt_fatigue_avant","mwt_fatigue_apres",
                 "mwt_aide_technique","mwt_incidents","mwt_interpretation"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "distance", "label": "Distance (m)", "default": True},
+            {"key": "spo2", "label": "SpO₂ avant/après", "default": True},
+            {"key": "fc", "label": "Fréquence cardiaque", "default": True},
+            {"key": "dyspnee_fatigue", "label": "Dyspnée / Fatigue", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         def _lf(key):
             v = lv(key,None)

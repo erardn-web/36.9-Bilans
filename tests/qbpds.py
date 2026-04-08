@@ -25,6 +25,13 @@ class QBPDS(BaseTest):
     ]
     OPTS=["0 — Pas difficile","1 — Minimum","2 — Peu","3 — Modérément","4 — Très","5 — Extrêmement"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score QBPDS (/100)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">📋 QBPDS — Incapacité lombaire</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0 = pas difficile · 5 = extrêmement difficile. Score /100.</div>', unsafe_allow_html=True)

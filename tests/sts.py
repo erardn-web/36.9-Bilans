@@ -14,6 +14,14 @@ class STS(BaseTest):
     def fields(cls):
         return ["sts_1min_reps","sts_1min_interpretation"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Répétitions / min", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">STS — Sit to Stand 1 minute</div>',
                     unsafe_allow_html=True)

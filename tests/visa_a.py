@@ -75,6 +75,13 @@ class VISAA(_VISABase):
     def fields(cls):
         return [f"visa_a_q{i}" for i in range(1,9)]+["visa_a_score"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score VISA-A (/100)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦶 VISA-A — Tendinopathie Achille</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Score 0 = incapacité totale · 100 = asymptomatique</div>', unsafe_allow_html=True)

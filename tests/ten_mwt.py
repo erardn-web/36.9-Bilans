@@ -14,6 +14,14 @@ class TenMWT(BaseTest):
                 "description":"10-Metre Walk Test — vitesse de marche confortable et maximale (m/s)"}
     @classmethod
     def fields(cls): return ["ten_mwt_confort_temps","ten_mwt_confort_vitesse","ten_mwt_max_temps","ten_mwt_max_vitesse","ten_mwt_aide","ten_mwt_notes"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "confort", "label": "Vitesse confort (m/s)", "default": True},
+            {"key": "max", "label": "Vitesse max (m/s)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🚶 10MWT — Test de marche 10 mètres</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Mesurer le temps sur 10 mètres (vitesse confortable et maximale). Normale > 1.0 m/s. Seuil communautaire ≥ 0.8 m/s.</div>', unsafe_allow_html=True)

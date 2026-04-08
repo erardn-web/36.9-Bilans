@@ -32,6 +32,14 @@ class PHQ9(BaseTest):
         if s<=14: return "Modérée"
         if s<=19: return "Modérément sévère"
         return "Sévère"
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score PHQ-9 (/27)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🫀 PHQ-9 — Dépistage dépression</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Au cours des 2 dernières semaines, à quelle fréquence avez-vous été gêné(e) par les problèmes suivants ?</div>', unsafe_allow_html=True)

@@ -45,6 +45,14 @@ class WOMAC(BaseTest):
             except: pass
         return round(sum(vals)/len(items)*25,1) if len(vals)==len(items) else None
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score WOMAC total", "default": True},
+            {"key": "sous_scores", "label": "Sous-scores (douleur, raideur, fonction)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦴 WOMAC — Indice d\'arthrose</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0 = aucune limitation → 100 = limitation maximale (score normalisé)</div>', unsafe_allow_html=True)

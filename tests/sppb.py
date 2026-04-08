@@ -18,6 +18,15 @@ class SPPB(BaseTest):
         return ["sppb_balance","sppb_walk_time","sppb_walk_score",
                 "sppb_chair_time","sppb_chair_score","sppb_score","sppb_interpretation"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score total (/12)", "default": True},
+            {"key": "sous_scores", "label": "Sous-scores (équilibre, marche, lever)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">SPPB — Short Physical Performance Battery (0–12)</div>',
                     unsafe_allow_html=True)

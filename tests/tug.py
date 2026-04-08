@@ -14,6 +14,15 @@ class TUG(BaseTest):
     def fields(cls):
         return ["tug_temps","tug_aide","tug_interpretation"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Temps (secondes)", "default": True},
+            {"key": "aide_technique", "label": "Aide technique", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">TUG — Timed Up and Go</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Lever, marcher 3 m, demi-tour, revenir, s\'asseoir. '

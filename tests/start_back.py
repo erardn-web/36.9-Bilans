@@ -28,6 +28,13 @@ class STarTBack(BaseTest):
     def fields(cls):
         return [k for k,*_ in START_ITEMS]+["sb_total","sb_psycho","sb_risque"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score STarT Back", "default": True},
+            {"key": "risque", "label": "Niveau de risque", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🚦 STarT Back — Dépistage lombaire</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Questions sur votre dos au cours des 2 dernières semaines.</div>', unsafe_allow_html=True)

@@ -75,6 +75,13 @@ class VISAH(_VISABase):
     def fields(cls):
         return [f"visa_h_q{i}" for i in range(1,9)]+["visa_h_score"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score VISA-H (/100)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦵 VISA-H — Tendinopathie ischio-jambiers</div>', unsafe_allow_html=True)
         collected={}; total=0

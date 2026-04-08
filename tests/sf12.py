@@ -44,6 +44,16 @@ class SF12(BaseTest):
         return ([f"sf12_{q['key']}" for q in SF12_QUESTIONS]
                 + [f"sf12_{k}" for k in SF12_DIMENSIONS.keys()])
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "pcs", "label": "PCS — Santé physique", "default": True},
+            {"key": "mcs", "label": "MCS — Santé mentale", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+            {"key": "detail_items", "label": "Détail des items", "default": False},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">📊 SF-12 — Qualité de vie</div>',
                     unsafe_allow_html=True)

@@ -24,6 +24,14 @@ class PCS(BaseTest):
     OPTS=["0 — Pas du tout","1 — Un peu","2 — Modérément","3 — Beaucoup","4 — Tout le temps"]
     @classmethod
     def fields(cls): return [k for k,_ in cls.ITEMS]+["pcs_rumination","pcs_amplification","pcs_desespoir","pcs_total"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score PCS (/52)", "default": True},
+            {"key": "sous_scores", "label": "Sous-scores (rumination, amplification, désespoir)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">😰 PCS — Catastrophisation de la douleur</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Quand vous avez de la douleur, dans quelle mesure avez-vous ces pensées. Score ≥ 30/52 = catastrophisation cliniquement significative.</div>', unsafe_allow_html=True)

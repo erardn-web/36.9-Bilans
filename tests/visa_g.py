@@ -75,6 +75,13 @@ class VISAG(_VISABase):
     def fields(cls):
         return [f"visa_g_q{i}" for i in range(1,9)]+["visa_g_score"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score VISA-G (/100)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🦴 VISA-G — Tendinopathie fessière</div>', unsafe_allow_html=True)
         collected={}; total=0

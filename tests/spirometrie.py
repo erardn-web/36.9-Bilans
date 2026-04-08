@@ -15,6 +15,16 @@ class Spirometrie(BaseTest):
         return ["spiro_vems","spiro_cvf","spiro_ratio","spiro_vems_pct","spiro_cvf_pct",
                 "spiro_gold","spiro_notes"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "vems", "label": "VEMS (% prédit)", "default": True},
+            {"key": "cvf", "label": "CVF (L)", "default": True},
+            {"key": "rapport", "label": "Rapport VEMS/CVF", "default": True},
+            {"key": "gold", "label": "Stade GOLD", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         def _lf(k):
             v=lv(k,None)

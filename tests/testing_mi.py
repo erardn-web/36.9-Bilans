@@ -76,6 +76,13 @@ class TestingMI(BaseTest):
         fields += ["musc_notes"]
         return fields
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "tableau", "label": "Tableau MRC par muscle", "default": True},
+            {"key": "notes", "label": "Notes", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">Testing musculaire — Membres inférieurs</div>',
                     unsafe_allow_html=True)

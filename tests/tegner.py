@@ -21,6 +21,13 @@ class Tegner(BaseTest):
           8:"8 — Compétition : squash, badminton ou ski alpin de compétition",9:"9 — Compétition : football (D3/D4), hockey sur glace",
           10:"10 — Compétition nationale/internationale football"}
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "actuel", "label": "Niveau actuel", "default": True},
+            {"key": "avant", "label": "Niveau avant blessure", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🏅 Tegner — Niveau d\'activité</div>', unsafe_allow_html=True)
         collected={}

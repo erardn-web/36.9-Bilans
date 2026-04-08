@@ -37,6 +37,12 @@ class TestsObjectifsLombaire(BaseTest):
     def fields(cls):
         return ALL_FIELDS
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "tableau", "label": "Tests objectifs lombaires", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         collected={}
         st.markdown('<div class="section-title">Observation posturale</div>', unsafe_allow_html=True)

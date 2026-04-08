@@ -40,6 +40,15 @@ class QuickDASH(BaseTest):
     def fields(cls):
         return [i[0] for i in QDASH_ITEMS] + ["qdash_score","qdash_interpretation"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score total (/100)", "default": True},
+            {"key": "interpretation", "label": "Interprétation", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+            {"key": "detail_items", "label": "Détail des items", "default": False},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">QuickDASH — Incapacité du membre supérieur</div>',
                     unsafe_allow_html=True)

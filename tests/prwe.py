@@ -22,6 +22,13 @@ class PRWE(BaseTest):
                    ("prwe_fs10","Activités de votre famille ou amis")]
     @classmethod
     def fields(cls): return [k for k,_ in cls.PAIN_ITEMS+cls.FUNC_SPECIFIC]+["prwe_pain","prwe_func","prwe_total"]
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score PRWE (/100)", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🤚 PRWE — Poignet/Main</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0 = aucune douleur/difficulté · 10 = pire douleur/incapable. Score total /150.</div>', unsafe_allow_html=True)

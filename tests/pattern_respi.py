@@ -23,6 +23,12 @@ class PatternRespi(BaseTest):
         return ["pattern_frequence","pattern_amplitude","pattern_mode",
                 "pattern_rythme","pattern_notes"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "tableau", "label": "Pattern respiratoire", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🔬 Pattern respiratoire</div>',
                     unsafe_allow_html=True)

@@ -19,6 +19,17 @@ class Tinetti(BaseTest):
         return (TINETTI_EQ_KEYS + TINETTI_MA_KEYS +
                 ["tinetti_eq_score","tinetti_ma_score","tinetti_total","tinetti_interpretation"])
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score total (/28)", "default": True},
+            {"key": "score_equilibre", "label": "Score équilibre (/16)", "default": True},
+            {"key": "score_marche", "label": "Score marche (/12)", "default": True},
+            {"key": "interpretation", "label": "Interprétation (risque de chute)", "default": True},
+            {"key": "graphique", "label": "Graphique d'évolution", "default": True},
+            {"key": "detail_items", "label": "Détail des items", "default": False},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">Tinetti — POMA</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">Évaluation de l\'équilibre et de la marche. '

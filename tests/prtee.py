@@ -33,6 +33,14 @@ class PRTEE(BaseTest):
     def fields(cls):
         return [k for k,_ in PRTEE_PAIN+PRTEE_FUNC]+["prtee_pain","prtee_func","prtee_total"]
 
+    @classmethod
+    def print_options(cls) -> list:
+        return [
+            {"key": "score_total", "label": "Score PRTEE (/100)", "default": True},
+            {"key": "sous_scores", "label": "Sous-scores douleur/fonction", "default": True},
+            {"key": "graphique", "label": "Graphique", "default": True},
+        ]
+
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">🎾 PRTEE — Évaluation coude (Tennis Elbow)</div>', unsafe_allow_html=True)
         st.markdown('<div class="info-box">0 = aucune douleur/difficulté · 10 = pire douleur/incapable</div>', unsafe_allow_html=True)
