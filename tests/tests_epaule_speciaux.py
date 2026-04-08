@@ -87,7 +87,8 @@ class TestsEpauleSpeciaux(BaseTest):
                    for t in ALL_TESTS)
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import pandas as pd
         key_tests = [("ep_jobe","Jobe"),("ep_hawkins","Hawkins"),
                      ("ep_neer","Neer"),("ep_gerber","Gerber"),

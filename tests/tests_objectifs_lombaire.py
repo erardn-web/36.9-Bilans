@@ -70,7 +70,8 @@ class TestsObjectifsLombaire(BaseTest):
                    for tests in TESTS_CLINIQUES.values() for t in tests)
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import pandas as pd
         for section,tests in TESTS_CLINIQUES.items():
             st.markdown(f"**{section}**")

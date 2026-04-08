@@ -153,7 +153,8 @@ class TestingMI(BaseTest):
         return bool(bilan_data.get("lp_1rm_estime",""))
 
     @classmethod
-    def render_evolution(cls, bilans_df, labels):
+    def render_evolution(cls, bilans_df, labels,
+                         show_print_controls=False, cas_id=''):
         import plotly.graph_objects as go
         import pandas as pd
         vals_1rm = []
@@ -169,6 +170,10 @@ class TestingMI(BaseTest):
         fig.update_layout(height=300,yaxis_title="kg",title="1RM Leg Press",
                           plot_bgcolor="white",paper_bgcolor="white")
         if xp: st.plotly_chart(fig,use_container_width=True)
+        if show_print_controls and xp:
+            _key = cls._print_chart_key('testing_mi', cas_id)
+            cls._render_print_checkbox(_key)
+            cls._store_chart(_key, fig, cas_id)
 
         rows = []
         for lbl,(_,row) in zip(labels,bilans_df.iterrows()):
@@ -180,4 +185,6 @@ class TestingMI(BaseTest):
                 r[f"{label_m[:12]} G"] = vg
             r["1RM (kg)"] = row.get("lp_1rm_estime","—")
             rows.append(r)
+        if show_print_controls:
+            st.caption("ℹ️ Sélection par ligne non disponible pour ce test — tout sera imprimé.")
         st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
