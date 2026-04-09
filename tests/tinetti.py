@@ -207,78 +207,108 @@ class Tinetti(BaseTest):
     @classmethod
     def render_print_sheet(cls, story: list, styles: dict) -> None:
         from reportlab.platypus import (Paragraph, Spacer, Table, TableStyle,
-                                        PageBreak, KeepTogether)
-        from reportlab.lib.units import cm
+                                        PageBreak, Flowable)
+        from reportlab.lib.units import cm, mm
         from reportlab.lib import colors
         from reportlab.lib.styles import ParagraphStyle
+        from reportlab.graphics.shapes import Drawing, Rect
 
         LINE = colors.HexColor("#CCCCCC")
         BLEU = colors.HexColor("#2B57A7")
         GREY = colors.HexColor("#555555")
 
-        # Styles locaux
+        # Checkbox dessinée (vrai carré vide)
+        class Checkbox(Flowable):
+            def __init__(self, size=8):
+                self.size = size
+                self.width = size
+                self.height = size
+            def draw(self):
+                self.canv.setStrokeColor(colors.HexColor("#333"))
+                self.canv.setLineWidth(0.6)
+                self.canv.rect(0, 0, self.size, self.size, fill=0)
+
+        def _cb():
+            return Checkbox(7)
+
+        # Styles locaux — taille réduite pour tenir sur une page
         ctx_style = ParagraphStyle("ctx", fontName="Helvetica-BoldOblique",
-                                   fontSize=9, textColor=GREY,
-                                   spaceBefore=8, spaceAfter=3,
-                                   borderPad=4, backColor=colors.HexColor("#F5F5F5"),
+                                   fontSize=8, textColor=GREY,
+                                   spaceBefore=5, spaceAfter=2,
+                                   borderPad=3, backColor=colors.HexColor("#F5F5F5"),
                                    borderWidth=0.5, borderColor=LINE,
-                                   leftIndent=4, rightIndent=4)
+                                   leftIndent=2, rightIndent=2)
+        q_style = ParagraphStyle("q2", fontName="Helvetica-Bold",
+                                 fontSize=8.5, spaceBefore=4, spaceAfter=1)
+        opt_style = ParagraphStyle("opt", fontName="Helvetica",
+                                   fontSize=8, leftIndent=10,
+                                   spaceBefore=0, spaceAfter=0)
 
         story.append(Paragraph("Tinetti — POMA (Performance Oriented Mobility Assessment)",
                                 styles["section"]))
         story.append(Paragraph(
             "Seuil risque de chute : &lt; 24/28  |  19–23 : risque modéré  |  &lt; 19 : risque élevé",
             styles["intro"]))
-        story.append(Spacer(1, 0.2*cm))
+        story.append(Spacer(1, 0.15*cm))
         hdr = Table([["Patient : " + "_"*28, "Date : " + "_"*14, "Praticien : " + "_"*14]],
                     colWidths=[8*cm, 4.5*cm, 4.5*cm])
         hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
                                   ("TEXTCOLOR",(0,0),(-1,-1),GREY)]))
         story.append(hdr)
-        story.append(Spacer(1, 0.4*cm))
+        story.append(Spacer(1, 0.25*cm))
 
         def _context_band(text):
-            """Bandeau de contexte situationnel."""
             story.append(Paragraph(text, ctx_style))
 
         def _item(label, options):
-            """Un item avec cases vides ☐."""
-            story.append(Paragraph(label, styles["question"]))
-            opt_cells = [f"☐  {s} — {d}" for s, d in options]
-            if len(opt_cells) == 2:
-                tbl = Table([opt_cells], colWidths=[8.5*cm, 8.5*cm])
+            story.append(Paragraph(label, q_style))
+            if len(options) == 2:
+                # 2 colonnes côte à côte
+                row = []
+                for s, d in options:
+                    row.append(Table(
+                        [[_cb(), Paragraph(f" {s} — {d}", opt_style)]],
+                        colWidths=[0.35*cm, 8*cm],
+                        style=[("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+                               ("LEFTPADDING",(0,0),(-1,-1),0),
+                               ("RIGHTPADDING",(0,0),(-1,-1),2),
+                               ("TOPPADDING",(0,0),(-1,-1),1),
+                               ("BOTTOMPADDING",(0,0),(-1,-1),1)]))
+                tbl = Table([row], colWidths=[8.5*cm, 8.5*cm])
+                tbl.setStyle(TableStyle([
+                    ("VALIGN",(0,0),(-1,-1),"TOP"),
+                    ("LEFTPADDING",(0,0),(-1,-1),0),
+                    ("TOPPADDING",(0,0),(-1,-1),0),
+                    ("BOTTOMPADDING",(0,0),(-1,-1),1)]))
             else:
-                tbl = Table([[o] for o in opt_cells], colWidths=[17*cm])
-            tbl.setStyle(TableStyle([
-                ("FONTSIZE",    (0,0),(-1,-1), 9),
-                ("TEXTCOLOR",   (0,0),(-1,-1), colors.HexColor("#222")),
-                ("TOPPADDING",  (0,0),(-1,-1), 2),
-                ("BOTTOMPADDING",(0,0),(-1,-1), 2),
-            ]))
+                rows = []
+                for s, d in options:
+                    rows.append([_cb(), Paragraph(f" {s} — {d}", opt_style)])
+                tbl = Table(rows, colWidths=[0.35*cm, 16.65*cm])
+                tbl.setStyle(TableStyle([
+                    ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+                    ("LEFTPADDING",(0,0),(-1,-1),0),
+                    ("TOPPADDING",(0,0),(-1,-1),1),
+                    ("BOTTOMPADDING",(0,0),(-1,-1),1)]))
             story.append(tbl)
-            story.append(Spacer(1, 0.08*cm))
 
         # ── PARTIE I — ÉQUILIBRE ──────────────────────────────────────────────
         story.append(Paragraph(f"Partie I — Équilibre (/{TINETTI_EQ_MAX})",
                                 styles["subsection"]))
 
-        # Groupe 1 : assis
-        _context_band("Le patient est assis sur une chaise sans accoudoirs :")
         eq_items = list(TINETTI_EQUILIBRE)
-        _item(eq_items[0][1], eq_items[0][2])   # Équilibre assis
+        _context_band("Le patient est assis sur une chaise sans accoudoirs :")
+        _item(eq_items[0][1], eq_items[0][2])
 
-        # Groupe 2 : lever
         _context_band("On demande au patient de se lever, si possible sans s'appuyer sur les accoudoirs :")
-        _item(eq_items[1][1], eq_items[1][2])   # Lever
-        _item(eq_items[2][1], eq_items[2][2])   # Tentatives
+        _item(eq_items[1][1], eq_items[1][2])
+        _item(eq_items[2][1], eq_items[2][2])
 
-        # Groupe 3 : debout (stabilité)
         _context_band("Test d'équilibre en position debout :")
         for item in eq_items[3:]:
             _item(item[1], item[2])
 
-        # Score équilibre
-        story.append(Spacer(1, 0.2*cm))
+        story.append(Spacer(1, 0.15*cm))
         eq_score = Table([["Score Équilibre : _____ / " + str(TINETTI_EQ_MAX)]],
                          colWidths=[17*cm])
         eq_score.setStyle(TableStyle([
@@ -286,8 +316,8 @@ class Tinetti(BaseTest):
             ("FONTNAME",  (0,0),(-1,-1), "Helvetica-Bold"),
             ("TEXTCOLOR", (0,0),(-1,-1), BLEU),
             ("BOX",       (0,0),(-1,-1), 0.5, LINE),
-            ("TOPPADDING",(0,0),(-1,-1), 5),
-            ("BOTTOMPADDING",(0,0),(-1,-1), 5),
+            ("TOPPADDING",(0,0),(-1,-1), 4),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 4),
         ]))
         story.append(eq_score)
 
@@ -295,11 +325,7 @@ class Tinetti(BaseTest):
         story.append(PageBreak())
         story.append(Paragraph(f"Partie II — Marche (/{TINETTI_MA_MAX})",
                                 styles["subsection"]))
-        story.append(Paragraph(
-            "Tinetti — POMA (Performance Oriented Mobility Assessment)",
-            styles["intro"]))
         story.append(Spacer(1, 0.1*cm))
-
         _context_band(
             "Le patient doit marcher au moins 3 mètres, faire demi-tour et revenir. "
             "Il utilise son aide technique habituelle (canne, déambulateur) :")
@@ -307,7 +333,7 @@ class Tinetti(BaseTest):
         for item in TINETTI_MARCHE:
             _item(item[1], item[2])
 
-        story.append(Spacer(1, 0.3*cm))
+        story.append(Spacer(1, 0.25*cm))
         score_tbl = Table([[
             "Score Équilibre : _____ / " + str(TINETTI_EQ_MAX),
             "Score Marche : _____ / " + str(TINETTI_MA_MAX),
