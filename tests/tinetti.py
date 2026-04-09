@@ -137,7 +137,7 @@ class Tinetti(BaseTest):
             height=350, plot_bgcolor="white", paper_bgcolor="white",
             title="Tinetti — Score total (/28)",
             margin=dict(t=40, r=20, b=70),
-            legend=dict(orientation="h", y=-0.25, font=dict(size=9)))
+            legend=dict(orientation="h", y=-0.28, font=dict(size=11)))
         st.plotly_chart(fig_total, use_container_width=True)
         if show_print_controls:
             key_total = cls._print_chart_key("total", cas_id)
@@ -173,7 +173,7 @@ class Tinetti(BaseTest):
                 title="Tinetti — Sous-scores",
                 yaxis=dict(range=[0, _ymax_sub * 1.35 + 1]),
                 margin=dict(t=40, r=20, b=70),
-                legend=dict(orientation="h", y=-0.3, font=dict(size=9)))
+                legend=dict(orientation="h", y=-0.32, font=dict(size=11)))
             st.plotly_chart(fig_sub, use_container_width=True)
             if show_print_controls:
                 key_sub = cls._print_chart_key("sous_scores", cas_id)
