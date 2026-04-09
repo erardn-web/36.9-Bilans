@@ -2887,10 +2887,11 @@ _TID_COL_MAP = {
 }
 
 
-def _get_session_charts(cas_id: str = "") -> list:
+def _get_session_charts(cas_id: str = "", excluded_test_ids: set = None) -> list:
     """
     Récupère les PNGs des graphiques cochés dans la vue évolution
     depuis st.session_state["pdf_charts"][cas_id].
+    Filtre selon excluded_test_ids (clés de type print_chart_{tid}_...).
     Retourne une liste de Flowables ReportLab disposés en grille 2 colonnes.
     """
     try:
@@ -2900,6 +2901,16 @@ def _get_session_charts(cas_id: str = "") -> list:
         import io
 
         charts_dict = st.session_state.get("pdf_charts", {}).get(cas_id, {})
+        if not charts_dict:
+            return []
+
+        # Filtrer les charts des tests exclus
+        if excluded_test_ids:
+            charts_dict = {
+                k: v for k, v in charts_dict.items()
+                if not any(f"print_chart_{tid}_" in k or f"print_chart_{tid}" == k.rsplit("_", 1)[0]
+                           for tid in excluded_test_ids)
+            }
         if not charts_dict:
             return []
 
@@ -3625,7 +3636,9 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         if show_charts and n_bilans >= 2:
             story.append(Spacer(1, 0.5*cm))
             # 1. Graphiques cochés dans la vue évolution (Plotly PNG via session_state)
-            _ev_charts = _get_session_charts(cas_id=patient_info.get("cas_id",""))
+            _ev_charts = _get_session_charts(
+                cas_id=patient_info.get("cas_id",""),
+                excluded_test_ids=set(excluded_sections or []))
             if _ev_charts:
                 story.append(KeepTogether([
                     section_band("Évolution graphique"),
