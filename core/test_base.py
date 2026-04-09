@@ -301,9 +301,7 @@ class BaseTest(ABC):
             if cas_id not in st.session_state["pdf_charts"]:
                 st.session_state["pdf_charts"][cas_id] = {}
             st.session_state["pdf_charts"][cas_id][key] = png
-            st.caption(f"✅ Chart stocké : `{key}` ({len(png)//1024} KB)")
-        else:
-            st.warning(f"⚠️ Export PNG échoué pour `{key}` — kaleido indisponible, fallback matplotlib")
+
 
     @classmethod
     def _render_table_with_checkboxes(cls, rows: list, cas_id: str = "") -> None:
