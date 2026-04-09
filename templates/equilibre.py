@@ -4,7 +4,6 @@ templates/equilibre.py — Template Bilan d'Équilibre
 from core.bilan_template import BilanTemplate
 from core.registry import register_template
 
-from tests.mrc_dyspnee    import MRCDyspnee
 from tests.tinetti       import Tinetti
 from tests.berg          import Berg
 from tests.tug           import TUG
@@ -20,6 +19,5 @@ EQUILIBRE = register_template(BilanTemplate(
     icone       = "⚖️",
     description = "Équilibre, marche et mobilité fonctionnelle",
     tests       = [
-        Tinetti, Berg, TUG, STS, Unipodal, SPPB,
-        MRCDyspnee, TestingGlobal,    ],
+        Tinetti, Berg, TUG, STS, Unipodal, SPPB, TestingGlobal,    ],
 ))
