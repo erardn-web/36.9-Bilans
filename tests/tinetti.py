@@ -120,13 +120,23 @@ class Tinetti(BaseTest):
                 x=xp, y=yp, mode="lines+markers+text", name="Tinetti /28",
                 line=dict(color="#2B57A7", width=2.5), marker=dict(size=9),
                 text=[f"{v:.0f}/28" for v in yp], textposition="top center"))
-        for y, color, lbl in [(19,"#d32f2f","< 19 risque élevé"),(24,"#f57c00","< 24 risque modéré")]:
-            fig_total.add_hline(y=y, line_dash="dot", line_color=color,
-                                annotation_text=lbl, annotation_position="right")
-        fig_total.update_layout(yaxis=dict(range=[0,30], title="Score /28"),
-                                height=350, plot_bgcolor="white", paper_bgcolor="white",
-                                title="Tinetti — Score total (/28)",
-                                margin=dict(r=120))
+        for y, color in [(19,"#d32f2f"),(24,"#f57c00")]:
+            fig_total.add_hline(y=y, line_dash="dot", line_color=color)
+        fig_total.update_layout(
+            yaxis=dict(range=[0,30], title="Score /28"),
+            height=350, plot_bgcolor="white", paper_bgcolor="white",
+            title="Tinetti — Score total (/28)",
+            margin=dict(t=40, r=20, b=60),
+            annotations=[
+                dict(x=1, y=19, xref="paper", yref="y",
+                     text="< 19 risque élevé", showarrow=False,
+                     xanchor="right", yanchor="top",
+                     font=dict(size=9, color="#d32f2f"), bgcolor="white"),
+                dict(x=1, y=24, xref="paper", yref="y",
+                     text="< 24 risque modéré", showarrow=False,
+                     xanchor="right", yanchor="top",
+                     font=dict(size=9, color="#f57c00"), bgcolor="white"),
+            ])
         st.plotly_chart(fig_total, use_container_width=True)
         if show_print_controls:
             key_total = cls._print_chart_key("total", cas_id)
@@ -158,8 +168,8 @@ class Tinetti(BaseTest):
             fig_sub.update_layout(
                 height=300, plot_bgcolor="white", paper_bgcolor="white",
                 title="Tinetti — Sous-scores",
-                margin=dict(r=120),
-                legend=dict(orientation="h", y=-0.2))
+                margin=dict(t=40, r=20, b=60),
+                legend=dict(orientation="h", y=-0.25))
             st.plotly_chart(fig_sub, use_container_width=True)
             if show_print_controls:
                 key_sub = cls._print_chart_key("sous_scores", cas_id)
