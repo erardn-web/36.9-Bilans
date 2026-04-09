@@ -122,21 +122,21 @@ class Tinetti(BaseTest):
                 text=[f"{v:.0f}/28" for v in yp], textposition="top center"))
         for y, color in [(19,"#d32f2f"),(24,"#f57c00")]:
             fig_total.add_hline(y=y, line_dash="dot", line_color=color)
+        # Ajouter les seuils comme traces de légende (pas d'annotation inline)
+        fig_total.add_trace(go.Scatter(
+            x=[None], y=[None], mode="lines",
+            line=dict(dash="dot", color="#d32f2f", width=1.5),
+            name="< 19 risque élevé", showlegend=True))
+        fig_total.add_trace(go.Scatter(
+            x=[None], y=[None], mode="lines",
+            line=dict(dash="dot", color="#f57c00", width=1.5),
+            name="< 24 risque modéré", showlegend=True))
         fig_total.update_layout(
-            yaxis=dict(range=[0,30], title="Score /28"),
+            yaxis=dict(range=[0, 32], title="Score /28"),
             height=350, plot_bgcolor="white", paper_bgcolor="white",
             title="Tinetti — Score total (/28)",
-            margin=dict(t=40, r=20, b=60),
-            annotations=[
-                dict(x=1, y=19, xref="paper", yref="y",
-                     text="< 19 risque élevé", showarrow=False,
-                     xanchor="right", yanchor="top",
-                     font=dict(size=9, color="#d32f2f"), bgcolor="white"),
-                dict(x=1, y=24, xref="paper", yref="y",
-                     text="< 24 risque modéré", showarrow=False,
-                     xanchor="right", yanchor="top",
-                     font=dict(size=9, color="#f57c00"), bgcolor="white"),
-            ])
+            margin=dict(t=40, r=20, b=70),
+            legend=dict(orientation="h", y=-0.25, font=dict(size=9)))
         st.plotly_chart(fig_total, use_container_width=True)
         if show_print_controls:
             key_total = cls._print_chart_key("total", cas_id)
@@ -165,11 +165,14 @@ class Tinetti(BaseTest):
                     x=xm, y=ym, mode="lines+markers+text", name="Marche (/12)",
                     line=dict(color="#D85A30", width=2), marker=dict(size=8),
                     text=[f"{v:.0f}" for v in ym], textposition="top center"))
+            _ymax_sub = max((max(v for v in vals_eq if v is not None) if any(v is not None for v in vals_eq) else 0),
+                              (max(v for v in vals_ma if v is not None) if any(v is not None for v in vals_ma) else 0))
             fig_sub.update_layout(
                 height=300, plot_bgcolor="white", paper_bgcolor="white",
                 title="Tinetti — Sous-scores",
-                margin=dict(t=40, r=20, b=60),
-                legend=dict(orientation="h", y=-0.25))
+                yaxis=dict(range=[0, _ymax_sub * 1.35 + 1]),
+                margin=dict(t=40, r=20, b=70),
+                legend=dict(orientation="h", y=-0.3, font=dict(size=9)))
             st.plotly_chart(fig_sub, use_container_width=True)
             if show_print_controls:
                 key_sub = cls._print_chart_key("sous_scores", cas_id)
