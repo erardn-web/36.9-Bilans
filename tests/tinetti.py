@@ -119,7 +119,8 @@ class Tinetti(BaseTest):
             fig_total.add_trace(go.Scatter(
                 x=xp, y=yp, mode="lines+markers+text", name="Tinetti /28",
                 line=dict(color="#2B57A7", width=2.5), marker=dict(size=9),
-                text=[f"{v:.0f}/28" for v in yp], textposition="top center"))
+                text=[f"{v:.0f}/28" for v in yp], textposition="top center",
+                textfont=dict(size=12, color="#2B57A7")))
         for y, color in [(19,"#d32f2f"),(24,"#f57c00")]:
             fig_total.add_hline(y=y, line_dash="dot", line_color=color)
         # Ajouter les seuils comme traces de légende (pas d'annotation inline)
