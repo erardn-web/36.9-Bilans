@@ -206,41 +206,106 @@ class Tinetti(BaseTest):
 
     @classmethod
     def render_print_sheet(cls, story: list, styles: dict) -> None:
-        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        from reportlab.platypus import (Paragraph, Spacer, Table, TableStyle,
+                                        PageBreak, KeepTogether)
         from reportlab.lib.units import cm
         from reportlab.lib import colors
+        from reportlab.lib.styles import ParagraphStyle
 
-        story.append(Paragraph("Tinetti — POMA (Performance Oriented Mobility Assessment)", styles["section"]))
-        story.append(Paragraph("Seuil risque de chute : < 24/28  |  19–23 : risque modéré  |  < 19 : risque élevé", styles["intro"]))
+        LINE = colors.HexColor("#CCCCCC")
+        BLEU = colors.HexColor("#2B57A7")
+        GREY = colors.HexColor("#555555")
+
+        # Styles locaux
+        ctx_style = ParagraphStyle("ctx", fontName="Helvetica-BoldOblique",
+                                   fontSize=9, textColor=GREY,
+                                   spaceBefore=8, spaceAfter=3,
+                                   borderPad=4, backColor=colors.HexColor("#F5F5F5"),
+                                   borderWidth=0.5, borderColor=LINE,
+                                   leftIndent=4, rightIndent=4)
+
+        story.append(Paragraph("Tinetti — POMA (Performance Oriented Mobility Assessment)",
+                                styles["section"]))
+        story.append(Paragraph(
+            "Seuil risque de chute : &lt; 24/28  |  19–23 : risque modéré  |  &lt; 19 : risque élevé",
+            styles["intro"]))
         story.append(Spacer(1, 0.2*cm))
         hdr = Table([["Patient : " + "_"*28, "Date : " + "_"*14, "Praticien : " + "_"*14]],
                     colWidths=[8*cm, 4.5*cm, 4.5*cm])
         hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
-                                  ("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555555"))]))
+                                  ("TEXTCOLOR",(0,0),(-1,-1),GREY)]))
         story.append(hdr)
-        story.append(Spacer(1, 0.3*cm))
+        story.append(Spacer(1, 0.4*cm))
 
-        LINE = colors.HexColor("#CCCCCC")
-        BLEU = colors.HexColor("#2B57A7")
+        def _context_band(text):
+            """Bandeau de contexte situationnel."""
+            story.append(Paragraph(text, ctx_style))
 
-        def _section(titre, items, max_score):
-            story.append(Paragraph(f"{titre} (/{max_score})", styles["subsection"]))
-            for key, label, options in items:
-                story.append(Paragraph(label, styles["question"]))
-                opt_cells = [f"☐  {s} — {d}" for s, d in options]
-                if len(opt_cells) == 2:
-                    tbl = Table([opt_cells], colWidths=[8.5*cm, 8.5*cm])
-                else:
-                    tbl = Table([[o] for o in opt_cells], colWidths=[17*cm])
-                tbl.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),
-                    ("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#222")),
-                    ("TOPPADDING",(0,0),(-1,-1),2),("BOTTOMPADDING",(0,0),(-1,-1),2)]))
-                story.append(tbl)
-            story.append(Spacer(1, 0.15*cm))
+        def _item(label, options):
+            """Un item avec cases vides ☐."""
+            story.append(Paragraph(label, styles["question"]))
+            opt_cells = [f"☐  {s} — {d}" for s, d in options]
+            if len(opt_cells) == 2:
+                tbl = Table([opt_cells], colWidths=[8.5*cm, 8.5*cm])
+            else:
+                tbl = Table([[o] for o in opt_cells], colWidths=[17*cm])
+            tbl.setStyle(TableStyle([
+                ("FONTSIZE",    (0,0),(-1,-1), 9),
+                ("TEXTCOLOR",   (0,0),(-1,-1), colors.HexColor("#222")),
+                ("TOPPADDING",  (0,0),(-1,-1), 2),
+                ("BOTTOMPADDING",(0,0),(-1,-1), 2),
+            ]))
+            story.append(tbl)
+            story.append(Spacer(1, 0.08*cm))
 
-        _section("Partie I — Équilibre", TINETTI_EQUILIBRE, TINETTI_EQ_MAX)
+        # ── PARTIE I — ÉQUILIBRE ──────────────────────────────────────────────
+        story.append(Paragraph(f"Partie I — Équilibre (/{TINETTI_EQ_MAX})",
+                                styles["subsection"]))
+
+        # Groupe 1 : assis
+        _context_band("Le patient est assis sur une chaise sans accoudoirs :")
+        eq_items = list(TINETTI_EQUILIBRE)
+        _item(eq_items[0][1], eq_items[0][2])   # Équilibre assis
+
+        # Groupe 2 : lever
+        _context_band("On demande au patient de se lever, si possible sans s'appuyer sur les accoudoirs :")
+        _item(eq_items[1][1], eq_items[1][2])   # Lever
+        _item(eq_items[2][1], eq_items[2][2])   # Tentatives
+
+        # Groupe 3 : debout (stabilité)
+        _context_band("Test d'équilibre en position debout :")
+        for item in eq_items[3:]:
+            _item(item[1], item[2])
+
+        # Score équilibre
         story.append(Spacer(1, 0.2*cm))
-        _section("Partie II — Marche", TINETTI_MARCHE, TINETTI_MA_MAX)
+        eq_score = Table([["Score Équilibre : _____ / " + str(TINETTI_EQ_MAX)]],
+                         colWidths=[17*cm])
+        eq_score.setStyle(TableStyle([
+            ("FONTSIZE",  (0,0),(-1,-1), 10),
+            ("FONTNAME",  (0,0),(-1,-1), "Helvetica-Bold"),
+            ("TEXTCOLOR", (0,0),(-1,-1), BLEU),
+            ("BOX",       (0,0),(-1,-1), 0.5, LINE),
+            ("TOPPADDING",(0,0),(-1,-1), 5),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 5),
+        ]))
+        story.append(eq_score)
+
+        # ── PARTIE II — MARCHE (nouvelle page) ───────────────────────────────
+        story.append(PageBreak())
+        story.append(Paragraph(f"Partie II — Marche (/{TINETTI_MA_MAX})",
+                                styles["subsection"]))
+        story.append(Paragraph(
+            "Tinetti — POMA (Performance Oriented Mobility Assessment)",
+            styles["intro"]))
+        story.append(Spacer(1, 0.1*cm))
+
+        _context_band(
+            "Le patient doit marcher au moins 3 mètres, faire demi-tour et revenir. "
+            "Il utilise son aide technique habituelle (canne, déambulateur) :")
+
+        for item in TINETTI_MARCHE:
+            _item(item[1], item[2])
 
         story.append(Spacer(1, 0.3*cm))
         score_tbl = Table([[
@@ -256,4 +321,3 @@ class Tinetti(BaseTest):
         ]))
         story.append(score_tbl)
         story.append(Paragraph("< 19 → risque élevé · 19–23 → risque modéré · ≥ 24 → risque faible", styles["note"]))
-
