@@ -230,32 +230,41 @@ class TestingGlobal(BaseTest):
                 cls._render_print_checkbox(_key, "🖨️ Inclure ce graphique dans le PDF")
                 cls._store_chart(_key, fig, cas_id)
 
-        # Tableau par zone
+        # Tableau par zone dans accordéons
+        st.markdown("---")
         for zone_id, zone in ZONES.items():
-            st.markdown(f"**{zone['label']}**")
-            rows = []
-            for key, label, _ in zone["muscles"]:
-                row_data = {"Muscle": label}
-                for i, (_, bilan_row) in enumerate(bilans_df.iterrows()):
-                    vd = str(bilan_row.get(f"{key}_d", "") or "").strip() or "—"
-                    vg = str(bilan_row.get(f"{key}_g", "") or "").strip() or "—"
-                    row_data[f"{labels[i]} D"] = vd
-                    row_data[f"{labels[i]} G"] = vg
-                rows.append(row_data)
-
-            if show_print_controls:
-                table_rows = []
+            # Vérifier si ce zone a des données
+            has_data = any(
+                str(r.get(f"{key}_d", "") or "").strip() not in ("", "None", "nan")
+                for _, r in bilans_df.iterrows()
+                for key, _, _ in zone["muscles"]
+            )
+            with st.expander(zone["label"] + (" ✅" if has_data else " —"), expanded=False):
+                rows = []
                 for key, label, _ in zone["muscles"]:
-                    for side, side_lbl in [("d", "D"), ("g", "G")]:
-                        col_key = f"{key}_{side}"
-                        table_rows.append({
-                            "label": f"{label} {side_lbl}",
-                            "col_key": col_key,
-                            "values": [str(r.get(col_key, "") or "—") for _, r in bilans_df.iterrows()],
-                        })
-                cls._render_table_with_checkboxes(table_rows, cas_id + f"_{zone_id}")
-            else:
-                st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+                    row_data = {"Muscle": label}
+                    for i, (_, bilan_row) in enumerate(bilans_df.iterrows()):
+                        vd = str(bilan_row.get(f"{key}_d", "") or "").strip() or "—"
+                        vg = str(bilan_row.get(f"{key}_g", "") or "").strip() or "—"
+                        row_data[f"{labels[i]} D"] = vd
+                        row_data[f"{labels[i]} G"] = vg
+                    rows.append(row_data)
+
+                if show_print_controls:
+                    table_rows = []
+                    for key, label, _ in zone["muscles"]:
+                        for side, side_lbl in [("d", "D"), ("g", "G")]:
+                            col_key = f"{key}_{side}"
+                            table_rows.append({
+                                "label": f"{label} {side_lbl}",
+                                "col_key": col_key,
+                                "values": [str(r.get(col_key, "") or "—")
+                                           for _, r in bilans_df.iterrows()],
+                            })
+                    cls._render_table_with_checkboxes(table_rows, cas_id + f"_{zone_id}")
+                else:
+                    st.dataframe(pd.DataFrame(rows),
+                                 use_container_width=True, hide_index=True)
 
     @classmethod
     def render_print_sheet(cls, story: list, styles: dict) -> None:
