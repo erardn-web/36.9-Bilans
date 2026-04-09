@@ -292,7 +292,6 @@ class BaseTest(ABC):
         """Si la checkbox est cochée, exporte la figure et la stocke dans session_state."""
         import streamlit as st
         if not st.session_state.get(key, True):
-            # Décoché → retirer du store
             st.session_state.get("pdf_charts", {}).get(cas_id, {}).pop(key, None)
             return
         png = cls._export_plotly_png(fig)
@@ -302,6 +301,9 @@ class BaseTest(ABC):
             if cas_id not in st.session_state["pdf_charts"]:
                 st.session_state["pdf_charts"][cas_id] = {}
             st.session_state["pdf_charts"][cas_id][key] = png
+            st.caption(f"✅ Chart stocké : `{key}` ({len(png)//1024} KB)")
+        else:
+            st.warning(f"⚠️ Export PNG échoué pour `{key}` — kaleido indisponible, fallback matplotlib")
 
     @classmethod
     def _render_table_with_checkboxes(cls, rows: list, cas_id: str = "") -> None:
