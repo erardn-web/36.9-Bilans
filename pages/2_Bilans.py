@@ -1136,7 +1136,8 @@ def render_evolution():
                                        or S.get(f"analyse_text_{cid}")
                                        or load_analyse_cas(cid))
                         _medecin_info = get_medecin_destinataire(cid)
-                        S[_pdf_cache_key] = generate_pdf(be, info,
+                        _info_pdf = {**info, "cas_id": cid}
+                        S[_pdf_cache_key] = generate_pdf(be, _info_pdf,
                             analyse_text=analyse_txt,
                             template_id=_tid, template_nom=_tnom,
                             medecin_info=_medecin_info,
