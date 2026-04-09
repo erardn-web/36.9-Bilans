@@ -27,7 +27,7 @@ class Tinetti(BaseTest):
             {"key": "score_marche",         "label": "Score marche (/12)",             "default": True},
             {"key": "interpretation",       "label": "Interprétation (risque chute)",  "default": True},
             {"key": "graphique_total",      "label": "Graphique score total",          "default": True},
-            {"key": "graphique_sous_scores","label": "Graphiques sous-scores (éq/marche)", "default": True},
+            {"key": "graphique_sous_scores","label": "Graphiques sous-scores (éq/marche)", "default": False},
             {"key": "detail_items",         "label": "Détail des items",               "default": False},
         ]
 
