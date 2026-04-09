@@ -2914,28 +2914,16 @@ def _get_session_charts(cas_id: str = "", excluded_test_ids: set = None) -> list
         if not charts_dict:
             return []
 
-        chart_w = (A4[0] - 3*cm - 0.4*cm) / 2
-        chart_h = chart_w * 0.5
+        # Pleine largeur — 1 graphique par ligne pour meilleure lisibilité
+        chart_w = A4[0] - 3*cm
+        chart_h = chart_w * 0.38  # ratio 16:6 environ
 
         pngs = list(charts_dict.values())
         flowables = []
-        for i in range(0, len(pngs), 2):
-            row_pngs = pngs[i:i+2]
-            cells = []
-            for png in row_pngs:
-                img = RLImage(io.BytesIO(png), width=chart_w, height=chart_h)
-                cells.append(img)
-            while len(cells) < 2:
-                cells.append("")
-            tbl = Table([cells], colWidths=[chart_w + 0.2*cm, chart_w + 0.2*cm])
-            tbl.setStyle(TableStyle([
-                ("VALIGN",       (0,0),(-1,-1), "TOP"),
-                ("LEFTPADDING",  (0,0),(-1,-1), 0),
-                ("RIGHTPADDING", (0,0),(-1,-1), 8),
-                ("TOPPADDING",   (0,0),(-1,-1), 0),
-                ("BOTTOMPADDING",(0,0),(-1,-1), 12),
-            ]))
-            flowables.append(tbl)
+        for png in pngs:
+            img = RLImage(io.BytesIO(png), width=chart_w, height=chart_h)
+            flowables.append(img)
+            flowables.append(Spacer(1, 0.3*cm))
         return flowables
     except Exception:
         return []
