@@ -3624,11 +3624,6 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         # ── Graphiques d'évolution ─────────────────────────────────────────────
         if show_charts and n_bilans >= 2:
             story.append(Spacer(1, 0.5*cm))
-            # Debug temporaire
-            import streamlit as _st_dbg
-            _cid_dbg = patient_info.get("cas_id","")
-            _all_keys = list(_st_dbg.session_state.get("pdf_charts", {}).keys())
-            _st_dbg.warning(f"🔍 PDF gen — cas_id=`{_cid_dbg}` | pdf_charts keys={_all_keys}")
             # 1. Graphiques cochés dans la vue évolution (Plotly PNG via session_state)
             _ev_charts = _get_session_charts(cas_id=patient_info.get("cas_id",""))
             if _ev_charts:
