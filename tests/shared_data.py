@@ -350,8 +350,10 @@ TINETTI_EQUILIBRE = [
      [(0,"Commence à tomber"), (1,"Chancelle, s'agrippe, se stabilise"), (2,"Stable")]),
     ("tin_eq_yeuxferm", "Équilibre yeux fermés (pieds joints)",
      [(0,"Instable"), (1,"Stable")]),
-    ("tin_eq_demi_tour","Demi-tour (360°)",
-     [(0,"Pas discontinus ou instable"), (1,"Pas continus et instable"), (2,"Pas continus et stable")]),
+    ("tin_eq_demi_pas",   "Pivotement 360° — Qualité des pas",
+     [(0,"Pas discontinus"), (1,"Pas continus")]),
+    ("tin_eq_demi_stable","Pivotement 360° — Stabilité",
+     [(0,"Instable (chancelant, s'agrippe)"), (1,"Stable")]),
     ("tin_eq_assis2",   "S'asseoir",
      [(0,"Instable, tombe dans la chaise"), (1,"Utilise les bras ou mouvement saccadé"), (2,"Sûr, mouvement fluide")]),
 ]
