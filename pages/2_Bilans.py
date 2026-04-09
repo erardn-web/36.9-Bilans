@@ -810,7 +810,7 @@ def render_formulaire():
             options=["accordeon", "grille", "onglets"],
             format_func=lambda x: {"accordeon":"🪗 Accordéon","grille":"⊞ Grille","onglets":"📑 Onglets"}[x],
             index=["accordeon","grille","onglets"].index(
-                st.session_state.get("bilan_layout_mode","accordeon")),
+                st.session_state.get("bilan_layout_mode","onglets")),
             key="bilan_layout_radio",
             label_visibility="collapsed"
         )
@@ -1136,8 +1136,7 @@ def render_evolution():
                                        or S.get(f"analyse_text_{cid}")
                                        or load_analyse_cas(cid))
                         _medecin_info = get_medecin_destinataire(cid)
-                        _info_with_cid = {**info, "cas_id": cid}
-                        S[_pdf_cache_key] = generate_pdf(be, _info_with_cid,
+                        S[_pdf_cache_key] = generate_pdf(be, info,
                             analyse_text=analyse_txt,
                             template_id=_tid, template_nom=_tnom,
                             medecin_info=_medecin_info,
