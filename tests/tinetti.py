@@ -156,14 +156,14 @@ class Tinetti(BaseTest):
                 xq = [labels[i] for i,v in enumerate(vals_eq) if v is not None]
                 yq = [v for v in vals_eq if v is not None]
                 fig_sub.add_trace(go.Scatter(
-                    x=xq, y=yq, mode="lines+markers+text", name="Équilibre (/16)",
+                    x=xq, y=yq, mode="lines+markers", name="Équilibre (/16)",
                     line=dict(color="#1D9E75", width=2), marker=dict(size=8),
                     text=[f"{v:.0f}" for v in yq], textposition="top center"))
             if has_ma:
                 xm = [labels[i] for i,v in enumerate(vals_ma) if v is not None]
                 ym = [v for v in vals_ma if v is not None]
                 fig_sub.add_trace(go.Scatter(
-                    x=xm, y=ym, mode="lines+markers+text", name="Marche (/12)",
+                    x=xm, y=ym, mode="lines+markers", name="Marche (/12)",
                     line=dict(color="#D85A30", width=2), marker=dict(size=8),
                     text=[f"{v:.0f}" for v in ym], textposition="top center"))
             _ymax_sub = max((max(v for v in vals_eq if v is not None) if any(v is not None for v in vals_eq) else 0),
