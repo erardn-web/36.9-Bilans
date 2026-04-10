@@ -168,10 +168,13 @@ class Tinetti(BaseTest):
                     text=[f"{v:.0f}" for v in ym], textposition="top center"))
             _ymax_sub = max((max(v for v in vals_eq if v is not None) if any(v is not None for v in vals_eq) else 0),
                               (max(v for v in vals_ma if v is not None) if any(v is not None for v in vals_ma) else 0))
+            _ymin_sub = min((min(v for v in vals_eq if v is not None) if any(v is not None for v in vals_eq) else 0),
+                              (min(v for v in vals_ma if v is not None) if any(v is not None for v in vals_ma) else 0))
+            _pad = max((_ymax_sub - _ymin_sub) * 0.3, 2)
             fig_sub.update_layout(
-                height=300, plot_bgcolor="white", paper_bgcolor="white",
+                height=320, plot_bgcolor="white", paper_bgcolor="white",
                 title="Tinetti — Sous-scores",
-                yaxis=dict(range=[0, _ymax_sub * 1.35 + 1]),
+                yaxis=dict(range=[max(0, _ymin_sub - _pad), _ymax_sub + _pad * 1.5]),
                 margin=dict(t=40, r=20, b=70),
                 legend=dict(orientation="h", y=-0.32, font=dict(size=11)))
             st.plotly_chart(fig_sub, use_container_width=True)
