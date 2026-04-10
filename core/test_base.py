@@ -262,6 +262,35 @@ class BaseTest(ABC):
     # ── Helpers impression graphiques ─────────────────────────────────────────
 
     @classmethod
+    def _fig_layout(cls, fig, title: str = "", y_title: str = "",
+                    height: int = 380, y_min: float = None) -> None:
+        """Applique le layout standard à une figure Plotly.
+        - Marges correctes (étiquettes visibles en haut, légende en bas)
+        - Légende horizontale sous le graphique
+        - Y démarre à 0 par défaut
+        """
+        y_range = [0 if y_min is None else y_min, None]
+        fig.update_layout(
+            title=title,
+            yaxis=dict(title=y_title, range=y_range, rangemode="tozero"),
+            height=height,
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            margin=dict(t=40, r=20, b=80),
+            legend=dict(orientation="h", y=-0.28, font=dict(size=11)),
+        )
+
+    @classmethod
+    def _threshold_trace(cls, fig, y: float, color: str, label: str) -> None:
+        """Ajoute un seuil comme ligne pointillée + entrée dans la légende (pas d'annotation)."""
+        import plotly.graph_objects as go
+        fig.add_hline(y=y, line_dash="dot", line_color=color)
+        fig.add_trace(go.Scatter(
+            x=[None], y=[None], mode="lines",
+            line=dict(dash="dot", color=color, width=1.5),
+            name=label, showlegend=True))
+
+    @classmethod
     def _print_chart_key(cls, suffix: str = "", cas_id: str = "") -> str:
         """Clé session_state pour une checkbox d'impression."""
         tid = cls.meta()["id"]
