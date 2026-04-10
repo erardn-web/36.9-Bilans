@@ -94,139 +94,139 @@ from core.registry import all_tests as _all_tests
 
 
 def _ensure_registry():
-    """S'assure que tests ET templates sont enregistrés."""
-    from core.registry import all_tests as _at_check
-    if not _at_check():
-        try:
-            from tests.had              import HAD              # noqa
-            from tests.sf12             import SF12             # noqa
-            from tests.nijmegen         import Nijmegen         # noqa
-            from tests.mrc_dyspnee      import MRCDyspnee      # noqa
-            from tests.comorbidites     import Comorbidites     # noqa
-            from tests.bolt             import BOLT             # noqa
-            from tests.hvt              import HVT              # noqa
-            from tests.gazometrie       import Gazometrie       # noqa
-            from tests.pattern_respi    import PatternRespi     # noqa
-            from tests.snif_pimax_pemax import SNIFPimaxPemax  # noqa
-            from tests.testing_global   import TestingGlobal    # noqa
-            from tests.tinetti          import Tinetti          # noqa
-            from tests.berg             import Berg             # noqa
-            from tests.tug              import TUG              # noqa
-            from tests.sts              import STS              # noqa
-            from tests.unipodal         import Unipodal         # noqa
-            from tests.six_mwt          import SixMWT           # noqa
-            from tests.sppb             import SPPB             # noqa
-            from tests.spirometrie      import Spirometrie      # noqa
-            from tests.mmrc             import MMRC             # noqa
-            from tests.cat              import CAT              # noqa
-            from tests.bode             import BODE             # noqa
-            from tests.eva              import EVA              # noqa
-            from tests.drapeaux         import Drapeaux         # noqa
-            from tests.mobilite_lombaire        import MobiliteLombaire        # noqa
-            from tests.luomajoki                import Luomajoki               # noqa
-            from tests.tests_objectifs_lombaire import TestsObjectifsLombaire  # noqa
-            from tests.classification_lombaire  import ClassificationLombaire  # noqa
-            from tests.quick_dash            import QuickDASH            # noqa
-            from tests.ases                  import ASES                  # noqa
-            from tests.amplitudes_epaule     import AmplitudesEpaule     # noqa
-            from tests.tests_epaule_speciaux import TestsEpauleSpeciaux  # noqa
-            from tests.classification_epaule import ClassificationEpaule # noqa
-            from tests.odi              import ODI              # noqa
-            from tests.tampa            import Tampa            # noqa
-            from tests.orebro           import Orebro           # noqa
-            from tests.nrs              import NRS              # noqa
-            from tests.psfs             import PSFS             # noqa
-            from tests.groc             import GROC             # noqa
-            from tests.eq5d             import EQ5D             # noqa
-            from tests.ndi              import NDI              # noqa
-            from tests.koos             import KOOS             # noqa
-            from tests.hoos             import HOOS             # noqa
-            from tests.lysholm          import Lysholm          # noqa
-            from tests.dash             import DASH             # noqa
-            from tests.lefs             import LEFS             # noqa
-            from tests.womac            import WOMAC            # noqa
-            from tests.spadi            import SPADI            # noqa
-            from tests.constant_murley  import ConstantMurley  # noqa
-            from tests.prtee            import PRTEE            # noqa
-            from tests.bctq             import BCTQ             # noqa
-            from tests.roland_morris    import RolandMorris     # noqa
-            from tests.start_back       import STarTBack        # noqa
-            from tests.fabq             import FABQ             # noqa
-            from tests.dn4              import DN4              # noqa
-            from tests.faos             import FAOS             # noqa
-            from tests.kujala           import Kujala           # noqa
-            from tests.acl_rsi          import ACLRSI           # noqa
-            from tests.visa_a           import VISAA            # noqa
-            from tests.visa_p           import VISAP            # noqa
-            from tests.visa_h           import VISAH            # noqa
-            from tests.visa_g           import VISAG            # noqa
-            from tests.cait             import CAIT             # noqa
-            from tests.tegner           import Tegner           # noqa
-            from tests.dhi              import DHI              # noqa
-            from tests.hit6             import HIT6             # noqa
-            from tests.hagos            import HAGOS            # noqa
-            from tests.ikdc             import IKDC             # noqa
-            from tests.csi              import CSI              # noqa
-            from tests.qbpds            import QBPDS            # noqa
-            from tests.atrs             import ATRS             # noqa
-            from tests.wosi             import WOSI             # noqa
-            from tests.borg_rpe         import BorgRPE          # noqa
-            from tests.sgrq             import SGRQ             # noqa
-            from tests.lcadl            import LCADL            # noqa
-            from tests.pcfs             import PCFS             # noqa
-            from tests.psqi             import PSQI             # noqa
-            from tests.abc_scale        import ABCScale         # noqa
-            from tests.mini_bestest     import MiniBESTest      # noqa
-            from tests.fes_i            import FESI             # noqa
-            from tests.barthel          import Barthel          # noqa
-            from tests.ten_mwt          import TenMWT           # noqa
-            from tests.ashworth         import AshworthScale    # noqa
-            from tests.iciq_ui          import ICIQUI           # noqa
-            from tests.pfdi20           import PFDI20           # noqa
-            from tests.pcs              import PCS              # noqa
-            from tests.phq9             import PHQ9             # noqa
-            from tests.gad7             import GAD7             # noqa
-            from tests.isi              import ISI              # noqa
-            from tests.haq              import HAQ              # noqa
-            from tests.basdai           import BASDAI           # noqa
-            from tests.frailty_scale    import ClinicalFrailtyScale # noqa
-            from tests.frail_scale      import FRAILScale       # noqa
-            from tests.gait_speed       import GaitSpeed4m      # noqa
-            from tests.k_ses            import KSES             # noqa
-            from tests.prwe             import PRWE             # noqa
-            from tests.bpi              import BPI              # noqa
-        except Exception as _e:
-            st.error(f"Erreur import tests : {_e}")
-            return
-
-    # Toujours vérifier les templates (même si tests déjà chargés par app.py)
+    """S'assure que le registre est peuplé — toujours vérifier le registre réel."""
+    from core.registry import all_tests
+    if all_tests():
+        return  # Registre déjà peuplé
+    # Registre vide — (re)importer les tests
+    try:
+        from tests.had              import HAD              # noqa
+        from tests.sf12             import SF12             # noqa
+        from tests.nijmegen         import Nijmegen         # noqa
+        from tests.mrc_dyspnee      import MRCDyspnee      # noqa
+        from tests.comorbidites     import Comorbidites     # noqa
+        from tests.bolt             import BOLT             # noqa
+        from tests.hvt              import HVT              # noqa
+        from tests.gazometrie       import Gazometrie       # noqa
+        from tests.pattern_respi    import PatternRespi     # noqa
+        from tests.snif_pimax_pemax import SNIFPimaxPemax  # noqa
+        from tests.testing_global   import TestingGlobal    # noqa
+        from tests.tinetti          import Tinetti          # noqa
+        from tests.berg             import Berg             # noqa
+        from tests.tug              import TUG              # noqa
+        from tests.sts              import STS              # noqa
+        from tests.unipodal         import Unipodal         # noqa
+        from tests.six_mwt          import SixMWT           # noqa
+        from tests.sppb             import SPPB             # noqa
+        from tests.spirometrie      import Spirometrie      # noqa
+        from tests.mmrc             import MMRC             # noqa
+        from tests.cat              import CAT              # noqa
+        from tests.bode             import BODE             # noqa
+        from tests.eva              import EVA              # noqa
+        from tests.drapeaux         import Drapeaux         # noqa
+        from tests.mobilite_lombaire        import MobiliteLombaire        # noqa
+        from tests.luomajoki                import Luomajoki                # noqa
+        from tests.tests_objectifs_lombaire import TestsObjectifsLombaire  # noqa
+        from tests.classification_lombaire  import ClassificationLombaire  # noqa
+        from tests.quick_dash            import QuickDASH            # noqa
+        from tests.ases                  import ASES                  # noqa
+        from tests.amplitudes_epaule     import AmplitudesEpaule     # noqa
+        from tests.tests_epaule_speciaux import TestsEpauleSpeciaux  # noqa
+        from tests.classification_epaule import ClassificationEpaule # noqa
+        from tests.odi              import ODI              # noqa
+        from tests.tampa            import Tampa            # noqa
+        from tests.orebro           import Orebro           # noqa
+        from tests.nrs       import NRS           # noqa
+        from tests.psfs       import PSFS          # noqa
+        from tests.groc       import GROC          # noqa
+        from tests.eq5d       import EQ5D          # noqa
+        from tests.ndi        import NDI           # noqa
+        from tests.koos       import KOOS          # noqa
+        from tests.hoos       import HOOS          # noqa
+        from tests.lysholm    import Lysholm       # noqa
+        from tests.dash       import DASH          # noqa
+        from tests.lefs          import LEFS          # noqa
+        from tests.womac         import WOMAC         # noqa
+        from tests.spadi         import SPADI         # noqa
+        from tests.constant_murley import ConstantMurley # noqa
+        from tests.prtee         import PRTEE         # noqa
+        from tests.bctq          import BCTQ          # noqa
+        from tests.roland_morris import RolandMorris  # noqa
+        from tests.start_back    import STarTBack     # noqa
+        from tests.fabq          import FABQ          # noqa
+        from tests.dn4           import DN4           # noqa
+        from tests.faos          import FAOS          # noqa
+        from tests.kujala        import Kujala        # noqa
+        from tests.acl_rsi       import ACLRSI        # noqa
+        from tests.visa_a        import VISAA        # noqa
+        from tests.visa_p        import VISAP        # noqa
+        from tests.visa_h        import VISAH        # noqa
+        from tests.visa_g        import VISAG        # noqa
+        from tests.cait          import CAIT         # noqa
+        from tests.tegner        import Tegner       # noqa
+        from tests.dhi           import DHI          # noqa
+        from tests.hit6          import HIT6         # noqa
+        from tests.hagos         import HAGOS        # noqa
+        from tests.ikdc          import IKDC         # noqa
+        from tests.csi           import CSI          # noqa
+        from tests.qbpds         import QBPDS        # noqa
+        from tests.atrs          import ATRS         # noqa
+        from tests.wosi          import WOSI         # noqa
+        from tests.borg_rpe      import BorgRPE              # noqa
+        from tests.sgrq          import SGRQ                 # noqa
+        from tests.lcadl         import LCADL                # noqa
+        from tests.pcfs          import PCFS                 # noqa
+        from tests.psqi          import PSQI                 # noqa
+        from tests.abc_scale     import ABCScale             # noqa
+        from tests.mini_bestest  import MiniBESTest          # noqa
+        from tests.fes_i         import FESI                 # noqa
+        from tests.barthel       import Barthel              # noqa
+        from tests.ten_mwt       import TenMWT               # noqa
+        from tests.ashworth      import AshworthScale        # noqa
+        from tests.iciq_ui       import ICIQUI               # noqa
+        from tests.pfdi20        import PFDI20               # noqa
+        from tests.pcs           import PCS                  # noqa
+        from tests.phq9          import PHQ9                 # noqa
+        from tests.gad7          import GAD7                 # noqa
+        from tests.isi           import ISI                  # noqa
+        from tests.haq           import HAQ                  # noqa
+        from tests.basdai        import BASDAI               # noqa
+        from tests.frailty_scale import ClinicalFrailtyScale # noqa
+        from tests.frail_scale   import FRAILScale           # noqa
+        from tests.gait_speed    import GaitSpeed4m          # noqa
+        from tests.k_ses         import KSES                 # noqa
+        from tests.prwe          import PRWE                 # noqa
+        from tests.bpi           import BPI                  # noqa
+    except Exception as _e:
+        st.error(f"Erreur import tests : {_e}")
+        return
+    # Enregistrer les templates si manquants
     from core.registry import all_templates as _at
     _templates = _at()
     if "shv" not in _templates:
-        import templates.shv  # noqa
+        import templates.shv        # noqa — auto-enregistre via register_template
     if "equilibre" not in _templates:
         import templates.equilibre  # noqa
     if "bpco" not in _templates:
-        import templates.bpco  # noqa
+        import templates.bpco       # noqa
     if "lombalgie" not in _templates:
-        import templates.lombalgie  # noqa
+        import templates.lombalgie           # noqa
     if "epaule_douloureuse" not in _templates:
         import templates.epaule_douloureuse  # noqa
     if "cervicalgie" not in _templates:
-        import templates.cervicalgie  # noqa
+        import templates.cervicalgie         # noqa
     if "genou" not in _templates:
-        import templates.genou  # noqa
+        import templates.genou               # noqa
     if "hanche" not in _templates:
-        import templates.hanche  # noqa
+        import templates.hanche              # noqa
     if "membre_superieur" not in _templates:
-        import templates.membre_superieur  # noqa
+        import templates.membre_superieur    # noqa
     if "vestibulaire" not in _templates:
-        import templates.vestibulaire  # noqa
+        import templates.vestibulaire        # noqa
     if "neutre" not in _templates:
-        import templates.neutre  # noqa
+        import templates.neutre              # noqa
     # Templates cabinet
     _load_cabinet_templates()
-
 
 # ── CSS (copie fidèle v1) ─────────────────────────────────────────────────────
 st.markdown("""
@@ -812,6 +812,12 @@ def render_formulaire():
             label_visibility="collapsed"
         )
         st.session_state["bilan_layout_mode"] = _layout
+        # Bouton changer de patient (hors accueil)
+        if S.mode not in ("accueil",):
+            st.markdown("---")
+            if st.button("↩ Changer de patient", use_container_width=True,
+                         key="sb_change_patient"):
+                _go("accueil")
         st.markdown("---")
     cas  = S.cas_info
     bid  = S.bilan_id
@@ -1175,10 +1181,8 @@ def render_evolution():
 
 
     _ensure_registry()
-    tc_key = f"test_classes_ev_{cid}"
-    if tc_key not in S or not S[tc_key]:
-        S[tc_key] = build_tests_from_snapshot(snap)
-    test_classes = S[tc_key]
+    # Toujours reconstruire depuis le snapshot pour éviter les artefacts post-reboot
+    test_classes = build_tests_from_snapshot(snap)
     render_evolution_view(
         bilans_df=be, patient_info=info,
         test_classes=test_classes,
@@ -1390,7 +1394,7 @@ def render_bibliotheque():
             _TEST_TO_Q = {
                 "had":"had","sf12":"sf12","hvt":"hvt","bolt":"bolt",
                 "nijmegen":"nijmegen","mrc_dyspnee":"mrc","comorbidites":"comorb",
-                "testing_mi":"muscle","leg_press":"leg_press",
+                "testing_global":"muscle",
                 "odi":"odi","tampa":"tampa","orebro":"orebro",
                 "mmrc":"mmrc_bpco","cat":"cat_bpco",
                 "quick_dash":"quick_dash","ases":"ases",
