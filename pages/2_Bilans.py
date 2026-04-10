@@ -110,7 +110,7 @@ def _ensure_registry():
         from tests.gazometrie       import Gazometrie       # noqa
         from tests.pattern_respi    import PatternRespi     # noqa
         from tests.snif_pimax_pemax import SNIFPimaxPemax  # noqa
-        from tests.testing_mi       import TestingMI        # noqa
+        from tests.testing_global   import TestingGlobal    # noqa
         from tests.leg_press        import LegPress         # noqa
         from tests.tinetti          import Tinetti          # noqa
         from tests.berg             import Berg             # noqa
@@ -132,13 +132,6 @@ def _ensure_registry():
         from tests.quick_dash            import QuickDASH            # noqa
         from tests.ases                  import ASES                  # noqa
         from tests.amplitudes_epaule     import AmplitudesEpaule     # noqa
-        from tests.testing_epaule        import TestingEpaule        # noqa
-        from tests.tests_epaule_speciaux import TestsEpauleSpeciaux  # noqa
-        from tests.classification_epaule import ClassificationEpaule # noqa
-        from tests.quick_dash            import QuickDASH            # noqa
-        from tests.ases                  import ASES                  # noqa
-        from tests.amplitudes_epaule     import AmplitudesEpaule     # noqa
-        from tests.testing_epaule        import TestingEpaule        # noqa
         from tests.tests_epaule_speciaux import TestsEpauleSpeciaux  # noqa
         from tests.classification_epaule import ClassificationEpaule # noqa
         from tests.odi              import ODI              # noqa
@@ -219,6 +212,7 @@ def _ensure_registry():
         import templates.bpco       # noqa
     if "lombalgie" not in _templates:
         import templates.lombalgie           # noqa
+    if "epaule_douloureuse" not in _templates:
         import templates.epaule_douloureuse  # noqa
     if "cervicalgie" not in _templates:
         import templates.cervicalgie         # noqa
@@ -228,6 +222,10 @@ def _ensure_registry():
         import templates.hanche              # noqa
     if "membre_superieur" not in _templates:
         import templates.membre_superieur    # noqa
+    if "vestibulaire" not in _templates:
+        import templates.vestibulaire        # noqa
+    if "neutre" not in _templates:
+        import templates.neutre              # noqa
     # Templates cabinet
     _load_cabinet_templates()
 
@@ -1055,7 +1053,7 @@ def render_evolution():
     if S.get(_pdf_sig_key) != _current_sig:
         S.pop(_pdf_cache_key, None)
 
-    with st.expander("⚙️ Options du rapport PDF", expanded=False):
+    with st.expander("⚙️ Options d'impression du rapport PDF", expanded=False):
         _draft = S[_pdf_draft_key]
         _draft_set = set(_draft)
         _avail_draft = [lbl for lbl in _active_labels if lbl not in _draft_set]
