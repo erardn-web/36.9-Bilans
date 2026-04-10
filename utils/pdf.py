@@ -1825,11 +1825,26 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
                   ordered_test_ids: list = None,
                   show_charts: bool = True) -> bytes:
     """
-    Génère le PDF d'évolution.
-    Utilise le PDF SHV détaillé pour SHV, le PDF générique pour les autres.
+    Génère le PDF d'évolution via le moteur générique (tous templates).
     """
-    import pandas as pd
+    return generate_pdf_generic(bilans_df, patient_info,
+                                analyse_text=analyse_text,
+                                template_nom=template_nom,
+                                medecin_info=medecin_info,
+                                excluded_sections=excluded_test_ids,
+                                ordered_test_ids=ordered_test_ids,
+                                show_charts=show_charts)
 
+
+def _generate_pdf_shv_legacy(bilans_df, patient_info: dict, analyse_text: str = "",
+                  template_id: str = "shv", template_nom: str = "Bilan",
+                  medecin_info: dict = None,
+                  excluded_test_ids: set = None,
+                  ordered_test_ids: list = None,
+                  show_charts: bool = True) -> bytes:
+    """[LEGACY] Ancien générateur SHV — conservé pour référence."""
+    import pandas as pd
+    _excl = set(excluded_test_ids or [])
     # Templates non-SHV → PDF générique
     if template_id not in ("shv", "", None):
         return generate_pdf_generic(bilans_df, patient_info,
@@ -1841,6 +1856,8 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
                                     show_charts=show_charts)
 
     buffer = io.BytesIO()
+
+    _excl = set(excluded_test_ids or [])
 
     # Trier bilans par date
     bilans_df = bilans_df.copy()
@@ -2064,12 +2081,12 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
     # ══════════════════════════════════════════════════════════════════
     #  GRAPHIQUES D'ÉVOLUTION — seulement si données présentes
     # ══════════════════════════════════════════════════════════════════
-    any_had  = has_data("had_score_anxiete") or has_data("had_score_depression")
-    any_bolt = has_data("bolt_score")
-    any_sf12 = any(has_data(k) for k in ["sf12_pf","sf12_rp","sf12_bp","sf12_gh",
+    any_had  = ("had"      not in _excl) and (has_data("had_score_anxiete") or has_data("had_score_depression"))
+    any_bolt = ("bolt"     not in _excl) and has_data("bolt_score")
+    any_sf12 = ("sf12"     not in _excl) and any(has_data(k) for k in ["sf12_pf","sf12_rp","sf12_bp","sf12_gh",
                                           "sf12_vt","sf12_sf","sf12_re","sf12_mh"])
-    any_hvt  = has_data("hvt_duree_retour") or has_data_str("hvt_symptomes_reproduits")
-    any_nij  = has_data("nij_score")
+    any_hvt  = ("hvt"      not in _excl) and (has_data("hvt_duree_retour") or has_data_str("hvt_symptomes_reproduits"))
+    any_nij  = ("nijmegen" not in _excl) and has_data("nij_score")
 
     if any_had or any_bolt or any_sf12 or any_hvt or any_nij:
         story.append(section_band("Graphiques d'évolution"))
@@ -2179,7 +2196,7 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
             story.append(Paragraph(str(row["notes_generales"]), styles["note"]))
 
         # ── HAD ─────────────────────────────────────────────────────
-        if safe_num(row.get("had_score_anxiete")) is not None or safe_num(row.get("had_score_depression")) is not None:
+        if "had" not in _excl and (safe_num(row.get("had_score_anxiete")) is not None or safe_num(row.get("had_score_depression")) is not None):
             story.append(Paragraph("Échelle HAD", styles["subsection"]))
             had_data = [
                 ["", "Score", "Interprétation"],
@@ -2199,7 +2216,7 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
             story.append(make_table(had_data, col_widths=[4*cm, 3*cm, w - 7*cm]))
 
         # ── BOLT ────────────────────────────────────────────────────
-        if safe_num(row.get("bolt_score")) is not None:
+        if "bolt" not in _excl and safe_num(row.get("bolt_score")) is not None:
             story.append(Paragraph("Test BOLT", styles["subsection"]))
             bolt_interp = row.get("bolt_interpretation", "—") or "—"
             bolt_data   = [
@@ -2220,7 +2237,7 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
             ("Santé psychique",                "sf12_mh"),
         ]
         sf_has_data = any(safe_num(row.get(key)) is not None for _, key in sf_dims)
-        if sf_has_data:
+        if sf_has_data and "sf12" not in _excl:
             story.append(Paragraph("SF-12 — Qualité de vie", styles["subsection"]))
             sf_header = [["Dimension", "Score /100"]]
             sf_rows   = [[label, val_str(row.get(key))] for label, key in sf_dims]
@@ -2236,7 +2253,7 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
         # ── HVT ─────────────────────────────────────────────────────
         hvt_has = (safe_num(row.get("hvt_duree_retour")) is not None or
                    str(row.get("hvt_symptomes_reproduits","") or "").strip() not in ("","—","Non réalisé"))
-        if hvt_has:
+        if hvt_has and "hvt" not in _excl:
             story.append(Paragraph("Test d'hyperventilation volontaire", styles["subsection"]))
             hvt_rows = [
                 ["Symptômes reproduits",    str(row.get("hvt_symptomes_reproduits", "—") or "—")],
@@ -2434,7 +2451,7 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
             except Exception as e:
                 story.append(Paragraph(f"Graphique non disponible.", styles["small"]))
         nij_score = val_str(row.get("nij_score"))
-        if nij_score != "—":
+        if nij_score != "—" and "nijmegen" not in _excl:
             story.append(Paragraph("Questionnaire de Nijmegen", styles["subsection"]))
             nij_data = [
                 ["Score Nijmegen", "Interprétation"],
@@ -2443,7 +2460,7 @@ def generate_pdf(bilans_df, patient_info: dict, analyse_text: str = "",
             story.append(make_table(nij_data, col_widths=[4*cm, w - 4*cm]))
 
         # ── Capnographie ─────────────────────────────────────────────────────
-        if any(row.get(k) for k in ["etco2_repos","etco2_post_effort","etco2_pattern"]):
+        if "etco2" not in _excl and any(row.get(k) for k in ["etco2_repos","etco2_post_effort","etco2_pattern"]):
             story.append(Paragraph("Capnographie — ETCO₂", styles["subsection"]))
             etco2_data = [["Paramètre", "Valeur"]]
             if row.get("etco2_repos"):
