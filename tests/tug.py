@@ -37,11 +37,11 @@ class TUG(BaseTest):
                                         default, 0.1, key=f"{key_prefix}_tug_t",
                                         help="0 = non mesuré")
         with t2:
-            aide_opts = ["— Non renseigné —","Aucune","Canne","Déambulateur","Autre"]
             stored_aide = lv("tug_aide","")
-            aide_idx = aide_opts.index(stored_aide) if stored_aide in aide_opts else 0
-            tug_aide = st.selectbox("Aide technique", aide_opts,
-                                    index=aide_idx, key=f"{key_prefix}_tug_aide")
+            tug_aide = st.text_input("Aide technique",
+                                     value=stored_aide if stored_aide else "",
+                                     placeholder="ex: canne, O\u2082, d\u00e9ambulateur...",
+                                     key=f"{key_prefix}_tug_aide")
 
         tug_interp = ""
         if tug_temps and tug_temps > 0:
@@ -56,7 +56,7 @@ class TUG(BaseTest):
                                   placeholder="Équilibre lors du lever, longueur de pas, balancement postural...")
         return {
             "tug_temps":          tug_temps or "",
-            "tug_aide":           "" if tug_aide == "— Non renseigné —" else tug_aide,
+            "tug_aide":           tug_aide.strip(),
             "tug_interpretation": tug_interp,
             "tug_notes":          tug_notes,
         }
