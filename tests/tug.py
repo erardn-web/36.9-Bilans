@@ -91,12 +91,23 @@ class TUG(BaseTest):
         if xp:
             fig.add_trace(go.Scatter(x=xp,y=yp,mode="lines+markers+text",name="TUG (sec)",
                 line=dict(color="#C4603A",width=2.5),marker=dict(size=9),
-                text=[f"{v:.1f}s" for v in yp],textposition="top center"))
-        for y,color,label in [(12,"#f57c00","12s seuil"),(20,"#d32f2f","20s risque élevé")]:
-            fig.add_hline(y=y,line_dash="dot",line_color=color,
-                          annotation_text=label,annotation_position="right")
-        fig.update_layout(yaxis=dict(title="Secondes"),height=320,
-                          plot_bgcolor="white",paper_bgcolor="white")
+                text=[f"{v:.1f}s" for v in yp],textposition="top center",
+                textfont=dict(size=12, color="#C4603A")))
+        fig.add_hline(y=12, line_dash="dot", line_color="#f57c00")
+        fig.add_hline(y=20, line_dash="dot", line_color="#d32f2f")
+        fig.add_trace(go.Scatter(x=[None], y=[None], mode="lines",
+            line=dict(dash="dot", color="#f57c00", width=1.5),
+            name="12 s — risque modéré", showlegend=True))
+        fig.add_trace(go.Scatter(x=[None], y=[None], mode="lines",
+            line=dict(dash="dot", color="#d32f2f", width=1.5),
+            name="20 s — risque élevé", showlegend=True))
+        _ymax = max(yp + [25]) if yp else 25
+        fig.update_layout(
+            title="TUG — Timed Up and Go (secondes)",
+            yaxis=dict(range=[0, _ymax * 1.25 + 2], title="Secondes"),
+            height=380, plot_bgcolor="white", paper_bgcolor="white",
+            margin=dict(t=40, r=20, b=80),
+            legend=dict(orientation="h", y=-0.28, font=dict(size=11)))
         st.plotly_chart(fig,use_container_width=True)
         if show_print_controls:
             _key = cls._print_chart_key('tug', cas_id)
