@@ -3186,7 +3186,7 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         # Fonction / force
         "sts_1min_reps": "STS 1 min (répétitions)", "sts_1min_interpretation": "Interprétation STS",
         "sts_30s_reps": "STS 30s (répétitions)", "sts_30s_interpretation": "Interprétation STS 30s",
-        "tug_temps": "TUG (secondes)", "tug_interpretation": "Interprétation TUG",
+        "tug_temps": "TUG (secondes)", "tug_aide": "TUG — Aide technique", "tug_interpretation": "Interprétation TUG",
         # Lombalgie / BPCO divers
         "schober": "Schober (cm)", "luomajoki": "Score Luomajoki",
         "eva": "Douleur EVA (0-10)",
