@@ -116,27 +116,123 @@ class TUG(BaseTest):
 
     @classmethod
     def render_print_sheet(cls, story: list, styles: dict) -> None:
-        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
-        from reportlab.lib.units import cm; from reportlab.lib import colors
-        LINE = colors.HexColor("#CCCCCC"); BLEU = colors.HexColor("#2B57A7")
-        story.append(Paragraph("TUG — Timed Up and Go", styles["section"]))
-        story.append(Paragraph("Lever d'une chaise, marcher 3 m, demi-tour, revenir s'asseoir. Chronométrer.", styles["intro"]))
-        hdr = Table([["Patient : "+"_"*28,"Date : "+"_"*14,"Praticien : "+"_"*14]],colWidths=[8*cm,4.5*cm,4.5*cm])
-        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),colors.HexColor("#555"))]))
-        story.append(hdr); story.append(Spacer(1,0.5*cm))
-        for label in ["Aide technique utilisée (aucune / canne / déambulateur) : "+"_"*20,
-                      "Essai 1 — Temps : _____ secondes",
-                      "Essai 2 — Temps : _____ secondes",
-                      "Essai 3 — Temps : _____ secondes (si pratiqué)"]:
-            t = Table([[label]],colWidths=[17*cm])
-            t.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),10),("LINEBELOW",(0,0),(-1,-1),0.3,LINE),("BOTTOMPADDING",(0,0),(-1,-1),8)]))
-            story.append(t); story.append(Spacer(1,0.1*cm))
-        story.append(Spacer(1,0.3*cm))
-        sc = Table([["Temps retenu : _____ secondes"]], colWidths=[17*cm])
-        sc.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),11),("FONTNAME",(0,0),(-1,-1),"Helvetica-Bold"),
-            ("TEXTCOLOR",(0,0),(-1,-1),BLEU),("BOX",(0,0),(-1,-1),0.5,LINE),("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6)]))
-        story.append(sc)
-        story.append(Paragraph("< 10 s : normal  ·  10–19 s : mobilité réduite  ·  ≥ 20 s : assistance nécessaire  ·  > 30 s : très dépendant", styles["note"]))
-        story.append(Spacer(1,0.3*cm))
-        story.append(Paragraph("Observations : "+"_"*60, styles["normal"]))
+        from reportlab.platypus import (Paragraph, Spacer, Table, TableStyle,
+                                        KeepTogether)
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+        from reportlab.lib.styles import ParagraphStyle
 
+        LINE  = colors.HexColor("#CCCCCC")
+        BLEU  = colors.HexColor("#2B57A7")
+        GREY  = colors.HexColor("#555555")
+        LGREY = colors.HexColor("#F5F5F5")
+
+        box_style  = ParagraphStyle("box2",  fontName="Helvetica",      fontSize=9,
+                                    leftIndent=6, rightIndent=6, spaceBefore=3, spaceAfter=3)
+        bold_style = ParagraphStyle("bold2", fontName="Helvetica-Bold",  fontSize=9,
+                                    leftIndent=6)
+
+        story.append(Paragraph("TUG — Timed Up and Go Test", styles["section"]))
+        story.append(Paragraph(
+            "Mesure le temps nécessaire pour se lever d’une chaise, marcher 3 m, "
+            "faire demi-tour et revenir s’asseoir. Validé pour évaluer la "
+            "mobilité fonctionnelle et le risque de chute.",
+            styles["intro"]))
+        story.append(Spacer(1, 0.15*cm))
+
+        hdr = Table([["Patient : " + "_"*28, "Date : " + "_"*14, "Praticien : " + "_"*14]],
+                    colWidths=[8*cm, 4.5*cm, 4.5*cm])
+        hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),GREY)]))
+        story.append(hdr)
+        story.append(Spacer(1, 0.3*cm))
+
+        story.append(Paragraph("(1) Matériel", styles["subsection"]))
+        story.append(Paragraph(
+            "Chaise avec accoudoirs (hauteur ~46 cm) · Ruban de 3 m sur le sol · Chronomètre",
+            styles["normal"]))
+        story.append(Spacer(1, 0.2*cm))
+
+        story.append(Paragraph("(2) Instructions au patient", styles["subsection"]))
+        instr_html = (
+            "<b>Quand je dis « Go », je veux que vous :</b><br/>"
+            "1. Vous leviez de la chaise<br/>"
+            "2. Marchiez jusqu’à la ligne à une vitesse normale et confortable<br/>"
+            "3. Fassiez demi-tour<br/>"
+            "4. Retourniez jusqu’à la chaise à une vitesse normale et confortable<br/>"
+            "5. Vous rasseyiez"
+        )
+        instr_tbl = Table([[Paragraph(instr_html, box_style)]], colWidths=[17*cm])
+        instr_tbl.setStyle(TableStyle([
+            ("BOX",          (0,0),(-1,-1), 0.5, LINE),
+            ("BACKGROUND",   (0,0),(-1,-1), LGREY),
+            ("TOPPADDING",   (0,0),(-1,-1), 8),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 8),
+            ("LEFTPADDING",  (0,0),(-1,-1), 8),
+        ]))
+        story.append(instr_tbl)
+        story.append(Spacer(1, 0.2*cm))
+
+        story.append(Paragraph("(3) Procédure", styles["subsection"]))
+        story.append(Paragraph(
+            "• Démarrer le chronomètre quand vous dites « Go »<br/>"
+            "• Stopper le chronomètre quand le patient est assis de nouveau<br/>"
+            "• Le patient peut utiliser son aide technique habituelle<br/>"
+            "• Un essai d’entraînement est recommandé avant les essais officiels",
+            styles["normal"]))
+        story.append(Spacer(1, 0.25*cm))
+
+        story.append(Paragraph("(4) Résultats", styles["subsection"]))
+        res_data = [
+            ["Aide technique",      "☐ Aucune   ☐ Canne   ☐ Déambulateur   ☐ Autre : " + "_"*10],
+            ["Essai 1",             "_____ secondes"],
+            ["Essai 2",             "_____ secondes"],
+            ["Essai 3 (optionnel)", "_____ secondes"],
+        ]
+        res_tbl = Table(res_data, colWidths=[5*cm, 12*cm])
+        res_tbl.setStyle(TableStyle([
+            ("FONTSIZE",     (0,0),(-1,-1), 9),
+            ("FONTNAME",     (0,0),(0,-1),  "Helvetica-Bold"),
+            ("TEXTCOLOR",    (0,0),(0,-1),  BLEU),
+            ("GRID",         (0,0),(-1,-1), 0.3, LINE),
+            ("BACKGROUND",   (0,0),(0,-1),  colors.HexColor("#E8EEF9")),
+            ("TOPPADDING",   (0,0),(-1,-1), 6),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 6),
+            ("LEFTPADDING",  (0,0),(-1,-1), 6),
+        ]))
+        story.append(res_tbl)
+        story.append(Spacer(1, 0.2*cm))
+
+        sc = Table([["⏱  Temps retenu : _________ secondes"]], colWidths=[17*cm])
+        sc.setStyle(TableStyle([
+            ("FONTSIZE",     (0,0),(-1,-1), 12),
+            ("FONTNAME",     (0,0),(-1,-1), "Helvetica-Bold"),
+            ("TEXTCOLOR",    (0,0),(-1,-1), BLEU),
+            ("BOX",          (0,0),(-1,-1), 1, BLEU),
+            ("TOPPADDING",   (0,0),(-1,-1), 8),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 8),
+            ("LEFTPADDING",  (0,0),(-1,-1), 10),
+        ]))
+        story.append(sc)
+        story.append(Spacer(1, 0.1*cm))
+        story.append(Paragraph(
+            "< 10 s : normal  ·  10–19 s : mobilité réduite  ·  "
+            "≥ 20 s : assistance nécessaire  ·  > 30 s : très dépendant",
+            styles["note"]))
+        story.append(Spacer(1, 0.25*cm))
+
+        story.append(Paragraph("(5) Observations", styles["subsection"]))
+        obs_header = [Paragraph(
+            "<b>Observer :</b> équilibre lors du lever · longueur de pas · "
+            "balancement postural · utilisation des accoudoirs · demi-tour",
+            bold_style)]
+        obs_rows = [[obs_header]] + [[""] for _ in range(6)]
+        obs_tbl = Table(obs_rows, colWidths=[17*cm])
+        obs_tbl.setStyle(TableStyle([
+            ("BOX",          (0,0),(-1,-1), 0.5, LINE),
+            ("BACKGROUND",   (0,0),(0,0),   LGREY),
+            ("LINEBELOW",    (0,1),(0,-1),  0.3, LINE),
+            ("TOPPADDING",   (0,0),(-1,-1), 5),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 12),
+            ("LEFTPADDING",  (0,0),(-1,-1), 6),
+        ]))
+        story.append(obs_tbl)
