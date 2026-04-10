@@ -12,7 +12,7 @@ class TUG(BaseTest):
 
     @classmethod
     def fields(cls):
-        return ["tug_temps","tug_aide","tug_interpretation"]
+        return ["tug_temps","tug_aide","tug_interpretation","tug_notes"]
 
     @classmethod
     def print_options(cls) -> list:
@@ -51,10 +51,14 @@ class TUG(BaseTest):
             else:                tc,tug_interp = "#d32f2f","Risque élevé de chute (≥ 20 sec)"
             st.markdown(f'<div class="score-box" style="background:{tc};">'
                         f'TUG : {tug_temps} sec — {tug_interp}</div>', unsafe_allow_html=True)
+        tug_notes = st.text_area("Observations", value=lv("tug_notes",""),
+                                  height=80, key=f"{key_prefix}_tug_notes",
+                                  placeholder="Équilibre lors du lever, longueur de pas, balancement postural...")
         return {
-            "tug_temps":       tug_temps or "",
-            "tug_aide":        "" if tug_aide == "— Non renseigné —" else tug_aide,
+            "tug_temps":          tug_temps or "",
+            "tug_aide":           "" if tug_aide == "— Non renseigné —" else tug_aide,
             "tug_interpretation": tug_interp,
+            "tug_notes":          tug_notes,
         }
 
     @classmethod
@@ -183,7 +187,7 @@ class TUG(BaseTest):
 
         story.append(Paragraph("(4) Résultats", styles["subsection"]))
         res_data = [
-            ["Aide technique",      "☐ Aucune   ☐ Canne   ☐ Déambulateur   ☐ Autre : " + "_"*10],
+            ["Aide technique",      "_" * 45],
             ["Essai 1",             "_____ secondes"],
             ["Essai 2",             "_____ secondes"],
             ["Essai 3 (optionnel)", "_____ secondes"],
