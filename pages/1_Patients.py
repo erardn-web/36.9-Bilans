@@ -39,10 +39,9 @@ with tab_cabinet:
     st.markdown("### 👥 Patients du cabinet")
 
     # ── Sidebar search & filters ──────────────────────────────────────────────
-    col_s, col_f1, col_f2 = st.columns([3, 1, 1])
+    col_s, col_f1 = st.columns([4, 1])
     search_q    = col_s.text_input("🔍 Rechercher", placeholder="Nom, prénom…", key="pt_search")
     show_inact  = col_f1.checkbox("Inactifs", value=False, key="pt_inact")
-    sexe_filter = col_f2.selectbox("Sexe", ["Tous","M","F"], key="pt_sexe")
 
     # ── Charger patients ──────────────────────────────────────────────────────
     @st.cache_data(ttl=30)
@@ -69,8 +68,6 @@ with tab_cabinet:
     else:
         df_view = df_all.copy()
 
-    if sexe_filter != "Tous" and "sexe" in df_view.columns:
-        df_view = df_view[df_view["sexe"] == sexe_filter]
 
     if search_q.strip():
         mask = df_view.apply(lambda r: search_q.lower() in
