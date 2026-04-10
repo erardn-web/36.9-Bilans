@@ -716,9 +716,7 @@ def render_cas():
         else:
             sel_key = f"sel_bilans_{S.cas_id}"
             if sel_key not in S:
-                # Par défaut tous les bilans sont cochés
-                _bid_col = "bilan_id" if "bilan_id" in bilans_df.columns else bilans_df.columns[0] if not bilans_df.empty else None
-                S[sel_key] = list(bilans_df[_bid_col]) if _bid_col else []
+                S[sel_key] = []
             for _, b in bilans_df.iterrows():
                 bid2 = b["bilan_id"]
                 d    = b.get("date_bilan","")
@@ -1057,7 +1055,7 @@ def render_evolution():
     if S.get(_pdf_sig_key) != _current_sig:
         S.pop(_pdf_cache_key, None)
 
-    with st.expander("⚙️ Options d'impression du rapport PDF", expanded=False):
+    with st.expander("⚙️ Options du rapport PDF", expanded=False):
         _draft = S[_pdf_draft_key]
         _draft_set = set(_draft)
         _avail_draft = [lbl for lbl in _active_labels if lbl not in _draft_set]
