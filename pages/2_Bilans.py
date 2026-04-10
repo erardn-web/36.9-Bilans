@@ -203,17 +203,28 @@ return
 # Toujours vérifier les templates (même si tests déjà chargés par app.py)
 from core.registry import all_templates as _at
 _templates = _at()
-if "shv"              not in _templates: import templates.shv                # noqa
-if "equilibre"        not in _templates: import templates.equilibre          # noqa
-if "bpco"             not in _templates: import templates.bpco               # noqa
-if "lombalgie"        not in _templates: import templates.lombalgie          # noqa
-if "epaule_douloureuse" not in _templates: import templates.epaule_douloureuse # noqa
-if "cervicalgie"      not in _templates: import templates.cervicalgie        # noqa
-if "genou"            not in _templates: import templates.genou              # noqa
-if "hanche"           not in _templates: import templates.hanche             # noqa
-if "membre_superieur" not in _templates: import templates.membre_superieur   # noqa
-if "vestibulaire"     not in _templates: import templates.vestibulaire       # noqa
-if "neutre"           not in _templates: import templates.neutre             # noqa
+if "shv" not in _templates:
+    import templates.shv  # noqa
+if "equilibre" not in _templates:
+    import templates.equilibre  # noqa
+if "bpco" not in _templates:
+    import templates.bpco  # noqa
+if "lombalgie" not in _templates:
+    import templates.lombalgie  # noqa
+if "epaule_douloureuse" not in _templates:
+    import templates.epaule_douloureuse  # noqa
+if "cervicalgie" not in _templates:
+    import templates.cervicalgie  # noqa
+if "genou" not in _templates:
+    import templates.genou  # noqa
+if "hanche" not in _templates:
+    import templates.hanche  # noqa
+if "membre_superieur" not in _templates:
+    import templates.membre_superieur  # noqa
+if "vestibulaire" not in _templates:
+    import templates.vestibulaire  # noqa
+if "neutre" not in _templates:
+    import templates.neutre  # noqa
 # Templates cabinet
 _load_cabinet_templates()
 ```
