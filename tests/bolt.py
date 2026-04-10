@@ -96,12 +96,17 @@ class BOLT(BaseTest):
             fig.add_trace(go.Scatter(x=xp,y=yp,mode="lines+markers+text",name="BOLT (s)",
                 line=dict(color="#2B57A7",width=2.5),marker=dict(size=9),
                 text=[f"{v:.0f}s" for v in yp if v is not None and v==v],textposition="top center"))
-        for y,color,label in [(10,"#d32f2f","< 10s très bas"),(20,"#f57c00","20s"),(40,"#388e3c","40s bon")]:
-            fig.add_hline(y=y,line_dash="dot",line_color=color,
-                          annotation_text=label,annotation_position="right")
-        fig.update_layout(yaxis=dict(range=[0,max(max(yp or [0])+10,50)],title="Secondes"),
-                          height=350,plot_bgcolor="white",paper_bgcolor="white")
-        st.plotly_chart(fig,use_container_width=True)
+        for y, color, label in [
+            (10,"#d32f2f","< 10 s — très bas"),
+            (20,"#f57c00","< 20 s — bas"),
+            (40,"#388e3c","≥ 40 s — bon"),
+        ]:
+            cls._threshold_trace(fig, y, color, label)
+        _ymax = max(max(yp or [0])+10, 50)
+        cls._fig_layout(fig, title="BOLT — Body Oxygen Level Test",
+                        y_title="Secondes", height=380)
+        fig.update_layout(yaxis_range=[0, _ymax])
+        st.plotly_chart(fig, use_container_width=True)
         if show_print_controls:
             _key = cls._print_chart_key('bolt', cas_id)
             cls._render_print_checkbox(_key)

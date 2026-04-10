@@ -107,11 +107,10 @@ class SF12(BaseTest):
             marker_color=["#388e3c" if s>=66 else "#f57c00" if s>=33 else "#d32f2f"
                           for s in scores_vals],
             text=[f"{s}" for s in scores_vals], textposition="outside"))
-        fig.update_layout(yaxis=dict(range=[0,115],title="Score (0–100)"),
-                          xaxis_tickangle=-30, height=360,
-                          margin=dict(t=20,b=80), plot_bgcolor="white")
-        fig.add_hline(y=50, line_dash="dot", line_color="grey",
-                      annotation_text="50 (référence)", annotation_position="right")
+        cls._threshold_trace(fig, 50, "grey", "50 — référence")
+        cls._fig_layout(fig, title="SF-12 — Évolution par dimension",
+                        y_title="Score (0–100)", height=380)
+        fig.update_layout(yaxis_range=[0, 115], xaxis_tickangle=-30)
         st.plotly_chart(fig, use_container_width=True)
 
         collected = {f"sf12_{k}": v if v is not None else "" for k,v in sf_ans.items()}

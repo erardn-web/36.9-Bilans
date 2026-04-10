@@ -25,8 +25,8 @@ class TUG(BaseTest):
 
     def render(self, lv, key_prefix):
         st.markdown('<div class="section-title">TUG — Timed Up and Go</div>', unsafe_allow_html=True)
-        st.markdown('<div class="info-box">Lever, marcher 3 m, demi-tour, revenir, s\'asseoir. '
-                    'Normal &lt; 12 sec chez l\'adulte âgé. &lt; 20 sec = indépendant.</div>',
+        st.markdown('<div class="info-box">Lever d\'une chaise, marcher 3 m, faire demi-tour, revenir s\'asseoir. '
+                    'Chronométrer. Seuils : &lt; 12 s = normal · 12–19 s = risque modéré · ≥ 20 s = risque élevé.</div>',
                     unsafe_allow_html=True)
         t1, t2 = st.columns(2)
         with t1:
@@ -93,22 +93,12 @@ class TUG(BaseTest):
                 line=dict(color="#C4603A",width=2.5),marker=dict(size=9),
                 text=[f"{v:.1f}s" for v in yp],textposition="top center",
                 textfont=dict(size=12, color="#C4603A")))
-        fig.add_hline(y=12, line_dash="dot", line_color="#f57c00")
-        fig.add_hline(y=20, line_dash="dot", line_color="#d32f2f")
-        fig.add_trace(go.Scatter(x=[None], y=[None], mode="lines",
-            line=dict(dash="dot", color="#f57c00", width=1.5),
-            name="12 s — risque modéré", showlegend=True))
-        fig.add_trace(go.Scatter(x=[None], y=[None], mode="lines",
-            line=dict(dash="dot", color="#d32f2f", width=1.5),
-            name="20 s — risque élevé", showlegend=True))
+        cls._threshold_trace(fig, 12, "#f57c00", "≥ 12 s — risque modéré")
+        cls._threshold_trace(fig, 20, "#d32f2f", "≥ 20 s — risque élevé")
         _ymax = max(yp + [25]) if yp else 25
-        fig.update_layout(
-            title="TUG — Timed Up and Go (secondes)",
-            yaxis=dict(range=[0, _ymax * 1.25 + 2], title="Secondes"),
-            height=380, plot_bgcolor="white", paper_bgcolor="white",
-            margin=dict(t=40, r=20, b=80),
-            legend=dict(orientation="h", y=-0.28, font=dict(size=11)))
-        st.plotly_chart(fig,use_container_width=True)
+        cls._fig_layout(fig, title="TUG — Timed Up and Go", y_title="Secondes")
+        fig.update_layout(yaxis_range=[0, _ymax * 1.25 + 2])
+        st.plotly_chart(fig, use_container_width=True)
         if show_print_controls:
             _key = cls._print_chart_key('tug', cas_id)
             cls._render_print_checkbox(_key)
