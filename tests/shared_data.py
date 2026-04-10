@@ -219,13 +219,22 @@ HVT_PARAMS = [
 # ─── Nijmegen ─────────────────────────────────────────────────────────────────
 
 NIJMEGEN_ITEMS = [
-    "Douleurs dans la poitrine","Sensation de tension","Vision trouble",
-    "Étourdissements","Confusion ou perte de contact avec l'environnement",
-    "Mains et/ou pieds froids","Fourmillements dans les mains et/ou les pieds",
-    "Bouche sèche","Fourmillements autour de la bouche",
-    "Rigidité dans les mains et/ou les pieds","Palpitations","Anxiété",
-    "Respiration rapide","Respiration difficile","Sensation d'étouffement",
-    "Ballonnements abdominaux",
+    "Tension nerveuse",
+    "Incapacité à respirer profondément",
+    "Respiration accélérée ou ralentie",
+    "Respiration courte",
+    "Palpitations",
+    "Froideur des extrémités",
+    "Vertiges",
+    "Anxiété",
+    "Poitrine serrée",
+    "Douleurs thoraciques",
+    "Flou visuel",
+    "Fourmillements dans les doigts",
+    "Ankylose des bras et des doigts",
+    "Sensation de confusion",
+    "Ballonnement abdominal",
+    "Fourmillements péribuccaux",
 ]
 NIJMEGEN_OPTIONS = [(0,"Jamais"),(1,"Rarement"),(2,"Parfois"),(3,"Souvent"),(4,"Très souvent")]
 NIJMEGEN_KEYS    = [f"nij_{i+1}" for i in range(16)]
@@ -350,10 +359,8 @@ TINETTI_EQUILIBRE = [
      [(0,"Commence à tomber"), (1,"Chancelle, s'agrippe, se stabilise"), (2,"Stable")]),
     ("tin_eq_yeuxferm", "Équilibre yeux fermés (pieds joints)",
      [(0,"Instable"), (1,"Stable")]),
-    ("tin_eq_demi_pas",   "Pivotement 360° — Qualité des pas",
-     [(0,"Pas discontinus"), (1,"Pas continus")]),
-    ("tin_eq_demi_stable","Pivotement 360° — Stabilité",
-     [(0,"Instable (chancelant, s'agrippe)"), (1,"Stable")]),
+    ("tin_eq_demi_tour","Demi-tour (360°)",
+     [(0,"Pas discontinus ou instable"), (1,"Pas continus et instable"), (2,"Pas continus et stable")]),
     ("tin_eq_assis2",   "S'asseoir",
      [(0,"Instable, tombe dans la chaise"), (1,"Utilise les bras ou mouvement saccadé"), (2,"Sûr, mouvement fluide")]),
 ]
