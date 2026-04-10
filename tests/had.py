@@ -125,13 +125,10 @@ class HAD(BaseTest):
                 fig.add_trace(go.Scatter(x=xp,y=yp,mode="lines+markers+text",name=label,
                     line=dict(color=color,width=2.5),marker=dict(size=9),
                     text=[f"{v:.0f}/21" for v in yp if v is not None and v==v],textposition="top center"))
-        for y,color,label in [(7,"#388e3c","Normal ≤7"),(10,"#f57c00","Douteux ≤10")]:
-            fig.add_hline(y=y,line_dash="dot",line_color=color,
-                          annotation_text=label,annotation_position="right")
-        fig.update_layout(yaxis=dict(range=[0,22],title="Score /21"),height=380,
-                          legend=dict(orientation="h",y=-0.2),
-                          plot_bgcolor="white",paper_bgcolor="white")
-        st.plotly_chart(fig,use_container_width=True)
+        for y, color, label in [(7,"#388e3c","≤ 7 normal"),(10,"#f57c00","≤ 10 douteux")]:
+            cls._threshold_trace(fig, y, color, label)
+        cls._fig_layout(fig, title="HAD — Anxiété & Dépression", y_title="Score /21")
+        st.plotly_chart(fig, use_container_width=True)
         if show_print_controls:
             _key = cls._print_chart_key('had', cas_id)
             cls._render_print_checkbox(_key)
