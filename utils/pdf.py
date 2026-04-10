@@ -1864,6 +1864,7 @@ def _generate_pdf_shv_legacy(bilans_df, patient_info: dict, analyse_text: str = 
     bilans_df["date_bilan"] = pd.to_datetime(bilans_df["date_bilan"], errors="coerce")
     bilans_df = bilans_df.sort_values("date_bilan").reset_index(drop=True)
     n_bilans  = len(bilans_df)
+    labels    = [r["date_bilan"].strftime("%d/%m/%y") if pd.notna(r.get("date_bilan")) else f"B{i+1}" for i, (_, r) in enumerate(bilans_df.iterrows())]
 
     def bilan_label(row):
         d = row["date_bilan"]
@@ -1939,7 +1940,7 @@ def _generate_pdf_shv_legacy(bilans_df, patient_info: dict, analyse_text: str = 
     story.append(section_band("Synthèse des scores"))
     story.append(Spacer(1, 0.2*cm))
 
-    synth_header = [["Indicateur"] + [f"B{i+1}" for i in range(n_bilans)]]
+    synth_header = [["Indicateur"] + labels]
     synth_rows   = []
 
     def has_data(key):
@@ -3321,7 +3322,7 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             ("Tinetti",              ["tinetti_eq_score","tinetti_ma_score",
                                       "tinetti_total","tinetti_interpretation"]),
             ("Échelle de Berg",      ["berg_score","berg_interpretation"]),
-            ("TUG",                  ["tug_temps","tug_interpretation"]),
+            ("TUG",                  ["tug_temps","tug_aide","tug_interpretation"]),
             ("BOLT",                 ["bolt_score","bolt_interpretation"]),
             ("HVT / Nijmegen",       ["hvt_symptomes_reproduits",
                                       "nij_score","nij_interpretation"]),
@@ -3446,7 +3447,7 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             return Paragraph(t, style)
 
         header_p = [[Paragraph("Indicateur", _hdr_style)] +
-                    [Paragraph(f"B{i+1}", _hdr_style) for i in range(n_bilans)]]
+                    [Paragraph(str(labels[i]) if i < len(labels) else f"B{i+1}", _hdr_style) for i in range(n_bilans)]]
 
         story.append(section_band("Synthèse des données"))
         story.append(Spacer(1, 0.3*cm))
