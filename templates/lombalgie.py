@@ -13,8 +13,7 @@ from tests.classification_lombaire  import ClassificationLombaire
 from tests.odi                      import ODI
 from tests.tampa                    import Tampa
 from tests.orebro                   import Orebro
-from tests.testing_mi               import TestingMI
-from tests.leg_press                import LegPress
+from tests.testing_global import TestingGlobal
 
 LOMBALGIE = register_template(BilanTemplate(
     template_id = "lombalgie",
@@ -26,6 +25,6 @@ LOMBALGIE = register_template(BilanTemplate(
         MobiliteLombaire, Luomajoki, TestsObjectifsLombaire,
         ClassificationLombaire,
         ODI, Tampa, Orebro,
-        TestingMI, LegPress,
+        TestingGlobal,
     ],
 ))
