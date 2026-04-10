@@ -18,5 +18,5 @@ BPCO = register_template(BilanTemplate(
     nom         = "BPCO",
     icone       = "🫁",
     description = "Bilan BPCO / pathologie respiratoire chronique",
-    tests       = [Spirometrie, SixMWT, STS, MMRC, CAT, BODE, TestingGlobal, LegPress],
+    tests       = [Spirometrie, SixMWT, STS, MMRC, CAT, BODE, TestingGlobal],
 ))
