@@ -812,12 +812,6 @@ def render_formulaire():
             label_visibility="collapsed"
         )
         st.session_state["bilan_layout_mode"] = _layout
-        # Bouton changer de patient (hors accueil)
-        if S.mode not in ("accueil",):
-            st.markdown("---")
-            if st.button("↩ Changer de patient", use_container_width=True,
-                         key="sb_change_patient"):
-                _go("accueil")
         st.markdown("---")
     cas  = S.cas_info
     bid  = S.bilan_id
