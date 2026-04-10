@@ -1500,22 +1500,22 @@ def build_bolt(story, styles):
 
 # ─── Nijmegen data ────────────────────────────────────────────────────────────
 _NIJMEGEN_ITEMS = [
-    "Douleur thoracique",
-    "Sensation de tension",
-    "Vision troublée",
-    "Étourdissements",
-    "Confusion ou perte de contact",
-    "Accélération ou irrégularité du rythme cardiaque",
-    "Anxiété",
-    "Mains, pieds ou visage engourdis",
-    "Difficultés à respirer ou à avaler",
-    "Raideur des mains ou des pieds",
-    "Serrement autour de la bouche",
-    "Picotements dans les doigts",
-    "Abdomen tendu ou ballonné",
+    "Tension nerveuse",
+    "Incapacité à respirer profondément",
+    "Respiration accélérée ou ralentie",
+    "Respiration courte",
+    "Palpitations",
+    "Froideur des extrémités",
     "Vertiges",
-    "Impression d'étouffement",
-    "Tension dans la région thoracique",
+    "Anxiété",
+    "Poitrine serrée",
+    "Douleurs thoraciques",
+    "Flou visuel",
+    "Fourmillements dans les doigts",
+    "Ankylose des bras et des doigts",
+    "Sensation de confusion",
+    "Ballonnement abdominal",
+    "Fourmillements péribuccaux",
 ]
 _NIJMEGEN_OPTIONS = ["Jamais", "Rarement", "Parfois", "Souvent", "Très souvent"]
 
