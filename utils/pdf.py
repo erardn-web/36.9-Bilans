@@ -3210,7 +3210,9 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
         que cat_ dans keep_patterns ne court-circuite cat_1..cat_8."""
         # 1. Exclure TOUJOURS les items individuels de questionnaires
         # Whitelist explicite : ces colonnes sont TOUJOURS affichées
-        always_show = ("cat_score","cat_interpretation")
+        always_show = ("cat_score","cat_interpretation",
+                       "nij_score","nij_interpretation",
+                       "etco2_repos","etco2_post_effort")
         if col in always_show:
             return True
         skip_prefixes = (
@@ -3219,6 +3221,10 @@ def generate_pdf_generic(bilans_df, patient_info: dict,
             "tin_eq_","tin_ma_",    # items Tinetti individuels
             "cat_",                  # items CAT individuels (cat_1..cat_8)
             "o_tol_",
+            "nij_1","nij_2","nij_3","nij_4","nij_5","nij_6","nij_7","nij_8",
+            "nij_9","nij_10","nij_11","nij_12","nij_13","nij_14","nij_15","nij_16",
+            "etco2_pattern",        # item brut — pas utile dans synthèse générique
+            "hvt_repos_","hvt_hv_","hvt_rec_",  # grille mesures HVT individuelles
         )
         if any(col.startswith(p) for p in skip_prefixes):
             return False
