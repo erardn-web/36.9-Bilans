@@ -144,13 +144,13 @@ class TUG(BaseTest):
                     colWidths=[8*cm, 4.5*cm, 4.5*cm])
         hdr.setStyle(TableStyle([("FONTSIZE",(0,0),(-1,-1),9),("TEXTCOLOR",(0,0),(-1,-1),GREY)]))
         story.append(hdr)
-        story.append(Spacer(1, 0.3*cm))
+        story.append(Spacer(1, 0.15*cm))
 
         story.append(Paragraph("(1) Matériel", styles["subsection"]))
         story.append(Paragraph(
-            "Chaise avec accoudoirs (hauteur ~46 cm) · Ruban de 3 m sur le sol · Chronomètre",
+            "Chaise avec accoudoirs (hauteur ~46 cm) · Mesurer 3 mètres sur le sol · Chronomètre",
             styles["normal"]))
-        story.append(Spacer(1, 0.2*cm))
+        story.append(Spacer(1, 0.1*cm))
 
         story.append(Paragraph("(2) Instructions au patient", styles["subsection"]))
         instr_html = (
@@ -165,12 +165,12 @@ class TUG(BaseTest):
         instr_tbl.setStyle(TableStyle([
             ("BOX",          (0,0),(-1,-1), 0.5, LINE),
             ("BACKGROUND",   (0,0),(-1,-1), LGREY),
-            ("TOPPADDING",   (0,0),(-1,-1), 8),
-            ("BOTTOMPADDING",(0,0),(-1,-1), 8),
+            ("TOPPADDING",   (0,0),(-1,-1), 5),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 5),
             ("LEFTPADDING",  (0,0),(-1,-1), 8),
         ]))
         story.append(instr_tbl)
-        story.append(Spacer(1, 0.2*cm))
+        story.append(Spacer(1, 0.1*cm))
 
         story.append(Paragraph("(3) Procédure", styles["subsection"]))
         story.append(Paragraph(
@@ -179,7 +179,7 @@ class TUG(BaseTest):
             "• Le patient peut utiliser son aide technique habituelle<br/>"
             "• Un essai d’entraînement est recommandé avant les essais officiels",
             styles["normal"]))
-        story.append(Spacer(1, 0.25*cm))
+        story.append(Spacer(1, 0.1*cm))
 
         story.append(Paragraph("(4) Résultats", styles["subsection"]))
         res_data = [
@@ -200,7 +200,7 @@ class TUG(BaseTest):
             ("LEFTPADDING",  (0,0),(-1,-1), 6),
         ]))
         story.append(res_tbl)
-        story.append(Spacer(1, 0.2*cm))
+        story.append(Spacer(1, 0.1*cm))
 
         sc = Table([["⏱  Temps retenu : _________ secondes"]], colWidths=[17*cm])
         sc.setStyle(TableStyle([
@@ -208,8 +208,8 @@ class TUG(BaseTest):
             ("FONTNAME",     (0,0),(-1,-1), "Helvetica-Bold"),
             ("TEXTCOLOR",    (0,0),(-1,-1), BLEU),
             ("BOX",          (0,0),(-1,-1), 1, BLEU),
-            ("TOPPADDING",   (0,0),(-1,-1), 8),
-            ("BOTTOMPADDING",(0,0),(-1,-1), 8),
+            ("TOPPADDING",   (0,0),(-1,-1), 5),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 5),
             ("LEFTPADDING",  (0,0),(-1,-1), 10),
         ]))
         story.append(sc)
@@ -218,21 +218,21 @@ class TUG(BaseTest):
             "< 10 s : normal  ·  10–19 s : mobilité réduite  ·  "
             "≥ 20 s : assistance nécessaire  ·  > 30 s : très dépendant",
             styles["note"]))
-        story.append(Spacer(1, 0.25*cm))
+        story.append(Spacer(1, 0.1*cm))
 
         story.append(Paragraph("(5) Observations", styles["subsection"]))
         obs_header = [Paragraph(
             "<b>Observer :</b> équilibre lors du lever · longueur de pas · "
             "balancement postural · utilisation des accoudoirs · demi-tour",
             bold_style)]
-        obs_rows = [[obs_header]] + [[""] for _ in range(6)]
+        obs_rows = [[obs_header]] + [[""] for _ in range(4)]
         obs_tbl = Table(obs_rows, colWidths=[17*cm])
         obs_tbl.setStyle(TableStyle([
             ("BOX",          (0,0),(-1,-1), 0.5, LINE),
             ("BACKGROUND",   (0,0),(0,0),   LGREY),
             ("LINEBELOW",    (0,1),(0,-1),  0.3, LINE),
             ("TOPPADDING",   (0,0),(-1,-1), 5),
-            ("BOTTOMPADDING",(0,0),(-1,-1), 12),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 5),
             ("LEFTPADDING",  (0,0),(-1,-1), 6),
         ]))
         story.append(obs_tbl)
