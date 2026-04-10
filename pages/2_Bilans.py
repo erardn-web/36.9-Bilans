@@ -717,7 +717,8 @@ def render_cas():
             sel_key = f"sel_bilans_{S.cas_id}"
             if sel_key not in S:
                 # Par défaut tous les bilans sont cochés
-                S[sel_key] = list(bilans_df["bilan_id"])
+                _bid_col = "bilan_id" if "bilan_id" in bilans_df.columns else bilans_df.columns[0] if not bilans_df.empty else None
+                S[sel_key] = list(bilans_df[_bid_col]) if _bid_col else []
             for _, b in bilans_df.iterrows():
                 bid2 = b["bilan_id"]
                 d    = b.get("date_bilan","")
