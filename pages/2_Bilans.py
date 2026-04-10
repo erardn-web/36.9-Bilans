@@ -111,7 +111,6 @@ def _ensure_registry():
         from tests.pattern_respi    import PatternRespi     # noqa
         from tests.snif_pimax_pemax import SNIFPimaxPemax  # noqa
         from tests.testing_global   import TestingGlobal    # noqa
-        from tests.leg_press        import LegPress         # noqa
         from tests.tinetti          import Tinetti          # noqa
         from tests.berg             import Berg             # noqa
         from tests.tug              import TUG              # noqa
@@ -1391,7 +1390,7 @@ def render_bibliotheque():
             _TEST_TO_Q = {
                 "had":"had","sf12":"sf12","hvt":"hvt","bolt":"bolt",
                 "nijmegen":"nijmegen","mrc_dyspnee":"mrc","comorbidites":"comorb",
-                "testing_mi":"muscle","leg_press":"leg_press",
+                "testing_global":"muscle",
                 "odi":"odi","tampa":"tampa","orebro":"orebro",
                 "mmrc":"mmrc_bpco","cat":"cat_bpco",
                 "quick_dash":"quick_dash","ases":"ases",
