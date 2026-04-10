@@ -115,11 +115,17 @@ class Nijmegen(BaseTest):
             fig.add_trace(go.Scatter(x=xp,y=yp,mode="lines+markers+text",name="Nijmegen /64",
                 line=dict(color="#C4603A",width=2.5),marker=dict(size=9),
                 text=[f"{v:.0f}/64" for v in yp if v is not None and v==v],textposition="top center"))
-        fig.add_hline(y=23,line_dash="dot",line_color="#f57c00",
-                      annotation_text="Seuil SHV (23)",annotation_position="right")
-        fig.update_layout(yaxis=dict(range=[0,66],title="Score /64"),height=350,
-                          plot_bgcolor="white",paper_bgcolor="white")
-        st.plotly_chart(fig,use_container_width=True)
+        fig.add_hline(y=23, line_dash="dot", line_color="#f57c00")
+        fig.add_trace(go.Scatter(x=[None], y=[None], mode="lines",
+            line=dict(dash="dot", color="#f57c00", width=1.5),
+            name="≥ 23 SHV probable", showlegend=True))
+        fig.update_layout(
+            title="Questionnaire de Nijmegen — Score d'évolution",
+            yaxis=dict(range=[0, 70], title="Score /64"),
+            height=380, plot_bgcolor="white", paper_bgcolor="white",
+            margin=dict(t=40, r=20, b=70),
+            legend=dict(orientation="h", y=-0.25, font=dict(size=11)))
+        st.plotly_chart(fig, use_container_width=True)
         if show_print_controls:
             _key = cls._print_chart_key('nijmegen', cas_id)
             cls._render_print_checkbox(_key)
